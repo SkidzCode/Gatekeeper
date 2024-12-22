@@ -1,17 +1,36 @@
 # GateKeeper
 
-### NPM commands
+GateKeeper is a robust and scalable application designed to manage and secure access to your resources. This project leverages .NET 8 and MariaDB 10 to deliver high performance and reliability.
 
-After downloading you ahve to issue a few commands to get the latest npm packages
+## Getting Started
 
-1. change to the "gatekeeper.client" directory
-2. Issue the following command:
-  A. `Remove-Item -Recurse -Force node_modules, package-lock.json`
-  B. `npm install` 
+### Prerequisites
 
-### Appsetting.json
+Ensure you have the following installed:
+- .NET 8 SDK
+- Node.js and npm
+- MariaDB 10
 
-You will need to add the following itmes to the appsettings.
+### Installation
+
+Follow these steps to set up the project:
+
+#### NPM Commands
+
+1. Navigate to the `gatekeeper.client` directory.
+2. Execute the following commands to install the latest npm packages:
+
+#### Database Setup
+
+This project uses a MariaDB 10 database. To set it up:
+
+1. Run all the table scripts.
+2. Execute the stored procedures.
+3. Run the scripts located in the `script` folder.
+
+#### Appsettings Configuration
+
+Add the following items to your `appsettings.json` file:
 
 ```json
 {
@@ -37,3 +56,15 @@ You will need to add the following itmes to the appsettings.
   }
 }
 ```
+
+## Contributing
+
+We welcome contributions! Please read our [Contributing Guidelines](CONTRIBUTING.md) for more information.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Contact
+
+For any inquiries or issues, please contact us.

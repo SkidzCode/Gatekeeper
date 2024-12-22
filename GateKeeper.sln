@@ -9,7 +9,40 @@ Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "gatekeeper.client", "gateke
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{649319A0-1203-4717-AA50-417BDEF8485B}"
 	ProjectSection(SolutionItems) = preProject
+		CONTRIBUTING.md = CONTRIBUTING.md
 		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SQL", "SQL", "{F7DC7C89-6BF2-4560-BA72-F4D89CD9458D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tables", "Tables", "{BBF4AEB7-44AB-4127-8185-7A68EDF5C4BB}"
+	ProjectSection(SolutionItems) = preProject
+		SQL\Tables\Roles.sql = SQL\Tables\Roles.sql
+		SQL\Tables\User.sql = SQL\Tables\User.sql
+		SQL\Tables\UserRoles.sql = SQL\Tables\UserRoles.sql
+		SQL\Tables\Verification.sql = SQL\Tables\Verification.sql
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "StoredProcedures", "StoredProcedures", "{8F775521-B6D3-4F48-8383-D0725BFD4BAD}"
+	ProjectSection(SolutionItems) = preProject
+		SQL\StoreProcedures\AddUser.sql = SQL\StoreProcedures\AddUser.sql
+		SQL\StoreProcedures\AssignRoleToUser.sql = SQL\StoreProcedures\AssignRoleToUser.sql
+		SQL\StoreProcedures\CheckEmailExists.sql = SQL\StoreProcedures\CheckEmailExists.sql
+		SQL\StoreProcedures\CheckUsernameExists.sql = SQL\StoreProcedures\CheckUsernameExists.sql
+		SQL\StoreProcedures\GetUserDetailsForLogin.sql = SQL\StoreProcedures\GetUserDetailsForLogin.sql
+		SQL\StoreProcedures\GetUserProfile.sql = SQL\StoreProcedures\GetUserProfile.sql
+		SQL\StoreProcedures\GetUserRoles.sql = SQL\StoreProcedures\GetUserRoles.sql
+		SQL\StoreProcedures\RevokeVerifyToken.sql = SQL\StoreProcedures\RevokeVerifyToken.sql
+		SQL\StoreProcedures\PasswordChange.sql = SQL\StoreProcedures\PasswordChange.sql
+		SQL\StoreProcedures\UpdateUser.sql = SQL\StoreProcedures\UpdateUser.sql
+		SQL\StoreProcedures\ValidateFinish.sql = SQL\StoreProcedures\ValidateFinish.sql
+		SQL\StoreProcedures\ValidateUser.sql = SQL\StoreProcedures\ValidateUser.sql
+		SQL\StoreProcedures\VerificationInsert.sql = SQL\StoreProcedures\VerificationInsert.sql
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scripts", "Scripts", "{16EBC3CC-E821-4C22-BA38-EC6FDB7BAC17}"
+	ProjectSection(SolutionItems) = preProject
+		SQL\Scripts\Init.sql = SQL\Scripts\Init.sql
 	EndProjectSection
 EndProject
 Global
@@ -31,5 +64,10 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{BBF4AEB7-44AB-4127-8185-7A68EDF5C4BB} = {F7DC7C89-6BF2-4560-BA72-F4D89CD9458D}
+		{8F775521-B6D3-4F48-8383-D0725BFD4BAD} = {F7DC7C89-6BF2-4560-BA72-F4D89CD9458D}
+		{16EBC3CC-E821-4C22-BA38-EC6FDB7BAC17} = {F7DC7C89-6BF2-4560-BA72-F4D89CD9458D}
 	EndGlobalSection
 EndGlobal
