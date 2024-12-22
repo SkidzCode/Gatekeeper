@@ -1,0 +1,6 @@
+<h1>Dashboard</h1>
+<button (click)="testApi()">Test API (Protected)</button>
+<div *ngIf="data">
+  <h2>Response:</h2>
+  <pre>{{ data | json }}</pre>
+</div>

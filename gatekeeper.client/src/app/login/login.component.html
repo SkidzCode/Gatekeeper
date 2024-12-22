@@ -1,0 +1,43 @@
+<div class="login-container">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Login</mat-card-title>
+      <mat-card-subtitle>Enter your credentials to continue</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+        <!-- User Identifier Field -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>User Identifier</mat-label>
+          <input matInput formControlName="identifier" type="text" required />
+          <mat-icon matSuffix>person</mat-icon>
+          <mat-error *ngIf="loginForm.get('identifier')?.hasError('required')">
+            User Identifier is required.
+          </mat-error>
+        </mat-form-field>
+
+        <!-- Password Field -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Password</mat-label>
+          <input matInput formControlName="password" type="password" required />
+          <mat-icon matSuffix>lock</mat-icon>
+          <mat-error *ngIf="loginForm.get('password')?.hasError('required')">
+            Password is required.
+          </mat-error>
+          <mat-error *ngIf="loginForm.get('password')?.hasError('minlength')">
+            Password must be at least 4 characters.
+          </mat-error>
+        </mat-form-field>
+        <!-- Submit Button -->
+        <div class="action-buttons">
+          <app-forgot-password></app-forgot-password>
+          <button mat-raised-button color="primary" type="submit" [disabled]="loginForm.invalid">
+            Login
+          </button>
+        </div>
+        <!-- Error Message -->
+        <p *ngIf="errorMessage" class="error-message">{{ errorMessage }}</p>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>
