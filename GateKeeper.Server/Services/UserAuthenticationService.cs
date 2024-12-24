@@ -150,7 +150,11 @@ namespace GateKeeper.Server.Services
             try
             {
                 var (isValid, userTemp, validationType) = 
-                    await _verificationService.VerifyTokenAsync(verificationCode);
+                    await _verificationService.VerifyTokenAsync(new VerifyTokenRequest()
+                    {
+                        VerificationCode = verificationCode,
+                        TokenType = "NewUser",
+                    });
                 user = userTemp;
 
                 if (isValid && user != null && validationType == "NewUser")
@@ -179,7 +183,11 @@ namespace GateKeeper.Server.Services
         {
             try
             {
-                var (authenticated, user, verifyType) = await _verificationService.VerifyTokenAsync(refreshToken);
+                var (authenticated, user, verifyType) = await _verificationService.VerifyTokenAsync(new VerifyTokenRequest()
+                {
+                    TokenType = "Refresh",
+                    VerificationCode = refreshToken
+                });
                 
 
                 if (!authenticated || user == null || verifyType != "Refresh")
@@ -230,7 +238,11 @@ namespace GateKeeper.Server.Services
         public async Task<bool> ResetPasswordAsync(PasswordResetRequest resetRequest)
         {
             var (isValid, userTemp, validationType) =
-                await _verificationService.VerifyTokenAsync(resetRequest.ResetToken);
+                await _verificationService.VerifyTokenAsync(new VerifyTokenRequest()
+                {
+                    TokenType = "ForgotPassword",
+                    VerificationCode = resetRequest.ResetToken
+                });
             if (userTemp != null && isValid && validationType == "ForgotPassword")
                 return (await _userService.ChangePassword(userTemp.Id, resetRequest.NewPassword)) > 0;
              

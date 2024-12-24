@@ -29,6 +29,16 @@ export class UserService {
   }
 
   /**
+ * Retrieves the profile of the currently authenticated user.
+ * @returns An observable that emits the User profile data.
+ */
+  getUsers(): Observable<User[]> {
+    return this.http.get<User[]>(`${this.baseUrl}/users`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
    * Updates the authenticated user's details.
    * Please note that the endpoint requires the user data in query parameters.
    * @param user The updated user information.

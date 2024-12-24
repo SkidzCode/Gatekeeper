@@ -1,16 +1,16 @@
 import { Component } from '@angular/core';
-import { AuthService } from '../services/auth.service';
+import { AuthService } from '../../services/auth.service';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 
 @Component({
   standalone: false, // Explicitly specifying this to meet your requirements
-  selector: 'app-login',
-  templateUrl: './login.component.html',
-  styleUrls: ['./login.component.css'],
+  selector: 'app-user-login',
+  templateUrl: './user-login.component.html',
+  styleUrls: ['./user-login.component.css'],
   
 })
-export class LoginComponent {
+export class UserLoginComponent {
   loginForm: FormGroup;
   errorMessage: string = '';
 

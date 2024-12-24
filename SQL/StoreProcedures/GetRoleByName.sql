@@ -1,0 +1,11 @@
+DROP PROCEDURE IF EXISTS GetRoleByName;
+DELIMITER //
+
+CREATE PROCEDURE GetRoleByName(IN p_RoleName VARCHAR(50))
+BEGIN
+    SELECT *
+    FROM Roles
+    WHERE RoleName = p_RoleName;
+END //
+
+DELIMITER ;

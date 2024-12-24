@@ -9,5 +9,8 @@ namespace GateKeeper.Server.Models.Account;
 public class VerifyTokenRequest
 {
     [Required]
-    public string VerificationCode { get; set; } = string.Empty;
+    public string VerificationCode { get; set; }
+    [Required]
+    public string TokenType { get; set; }
+
 }

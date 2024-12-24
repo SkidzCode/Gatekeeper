@@ -1,0 +1,12 @@
+DROP PROCEDURE IF EXISTS InsertRole;
+DELIMITER //
+
+CREATE PROCEDURE InsertRole(
+    IN p_RoleName VARCHAR(50)
+)
+BEGIN
+    INSERT INTO Roles (RoleName)
+    VALUES (p_RoleName);
+END //
+
+DELIMITER ;

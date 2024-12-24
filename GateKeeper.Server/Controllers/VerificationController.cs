@@ -37,40 +37,28 @@ namespace GateKeeper.Server.Controllers
         /// </summary>
         /// <param name="verifyRequest">Verification code request.</param>
         /// <returns>Action result indicating the outcome of the verification.</returns>
-        [HttpGet("verify/{verificationCode}")]
+        [HttpPost("Validate")]
         [AllowAnonymous]
-        public async Task<IActionResult> VerifyUser(VerifyTokenRequest verificationCode)
+        public async Task<IActionResult> ValidateTokenAsync([FromBody] VerifyTokenRequest verifyRequest)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-
             try
             {
-                var (isVerified, user, verificationType) = await _verificationService.VerifyTokenAsync(verificationCode.VerificationCode);
-                if (isVerified && user != null)
-                {
-                    await _verificationService.RevokeTokensAsync(user.Id, verificationType);
-                    return verificationType switch
-                    {
-                        "NewUser" => 
-                            Ok(new { message = "User verified successfully." }),
-                        "ForgotPassword" => 
-                            Ok(new { message = "An email has been sent" }),
-                        _ => 
-                            Ok(new { message = "User verified successfully." })
-                    };
-                }
-                else
-                {
-                    return BadRequest(new { error = "Invalid verification code." });
-                }
+                var (isAuthenticated, user, verificationType) = await _verificationService.VerifyTokenAsync(verifyRequest);
+                if (!isAuthenticated)
+                    return BadRequest("Invalid Token");
+
+                _verificationService.RevokeTokensAsync(user.Id, verifyRequest.TokenType, verifyRequest.VerificationCode);
+
+                return Ok(new { message = "Token Valid" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred during user verification.");
-                return StatusCode(500, new { error = "An error occurred while verifying the user." });
+                _logger.LogError(ex, "An error occurred during validation token validation.");
+                return StatusCode(500, new { error = "An error occurred during validation token validation." });
             }
         }
 

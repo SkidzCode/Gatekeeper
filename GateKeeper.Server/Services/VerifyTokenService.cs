@@ -8,7 +8,7 @@ namespace GateKeeper.Server.Services
 {
     public interface IVerifyTokenService
     {
-        public Task<(bool, User?, string)> VerifyTokenAsync(string verificationCode);
+        public Task<(bool, User?, string)> VerifyTokenAsync(VerifyTokenRequest verificationCode);
         public Task<string> GenerateTokenAsync(int userId, string verifyType);
         public Task<int> RevokeTokensAsync(int userId, string verifyType, string? token = null);
     }
@@ -39,13 +39,26 @@ namespace GateKeeper.Server.Services
         }
 
         /// <inheritdoc />
-        public async Task<(bool, User?, string)> VerifyTokenAsync(string verificationCode)
+        public async Task<(bool, User?, string)> VerifyTokenAsync(VerifyTokenRequest verifyRequest)
         {
-            var tokenId = verificationCode.Split('.')[0];
+            string verificationCode = verifyRequest.VerificationCode;
+            var tokenParts = verificationCode.Split('.');
+            if (tokenParts.Length != 2)
+            {
+                _logger.LogWarning("Invalid verification code format.");
+                return (false, null, string.Empty);
+            }
+
+            var tokenId = tokenParts[0];
+            var providedTokenPart = tokenParts[1];
+            string tokenUsername = string.Empty;
             User? user = null;
             string validationType = string.Empty;
+
             try
             {
+
+
                 await using var connection = await _dbHelper.GetOpenConnectionAsync();
                 await using var cmd = new MySqlCommand("ValidateUser", connection)
                 {
@@ -61,11 +74,7 @@ namespace GateKeeper.Server.Services
                 validationType = reader["VerifyType"].ToString() ?? string.Empty;
                 string salt = reader["RefreshSalt"].ToString() ?? string.Empty;
                 string storedHashedToken = reader["HashedToken"].ToString() ?? string.Empty;
-                string providedTokenPart = verificationCode.Split('.')[1];
                 var hashedProvidedToken = PasswordHelper.HashPassword(providedTokenPart, salt);
-
-                if (storedHashedToken != hashedProvidedToken || alreadyComplete)
-                    return (false, null, validationType);
 
                 user = new User()
                 {
@@ -78,16 +87,22 @@ namespace GateKeeper.Server.Services
                     Password = reader["Password"].ToString() ?? string.Empty,
                     Username = reader["Username"].ToString() ?? string.Empty
                 };
-                reader?.Close();
+
+                
+                if (storedHashedToken != hashedProvidedToken ||
+                    alreadyComplete ||
+                    verifyRequest.TokenType != validationType)
+                    return (false, user, validationType);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error validating refresh token.");
+                _logger.LogError(ex, "Error validating verification token.");
                 throw;
             }
 
-            return (!string.IsNullOrEmpty(user.Username), user, validationType);
+            return (!string.IsNullOrEmpty(user?.Username), user, validationType);
         }
+
 
 
         /// <summary>

@@ -25,5 +25,6 @@ namespace GateKeeper.Server.Interface
         Task<User> UpdateUser(User user);
         Task<bool> UsernameExistsAsync(string username);
         Task<bool> EmailExistsAsync(string email);
+        Task<List<User>> GetUsers();
     }
 }

@@ -231,4 +231,42 @@ public class UserService : IUserService
         var resultCode = (bool)cmd.Parameters["@p_exists"].Value;
         return resultCode;
     }
+
+
+    /// <summary>
+    /// Retrieves all Roles via the GetAllRoles stored procedure.
+    /// </summary>
+    /// <returns>List of Role objects.</returns>
+    public async Task<List<User>> GetUsers()
+    {
+        var users = new List<User>();
+
+        await using var connection = await _dbHelper.GetOpenConnectionAsync();
+        await using var cmd = new MySqlCommand("GetAllUsers", connection)
+        {
+            CommandType = CommandType.StoredProcedure
+        };
+
+        await using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            var role = new User()
+            {
+                Id = Convert.ToInt32(reader["Id"]),
+                FirstName = reader["FirstName"].ToString() ?? string.Empty,
+                LastName = reader["LastName"].ToString() ?? string.Empty,
+                Email = reader["Email"].ToString() ?? string.Empty,
+                Phone = reader["Phone"].ToString() ?? string.Empty,
+                Salt = reader["Salt"].ToString() ?? string.Empty,
+                Password = reader["Password"].ToString() ?? string.Empty,
+                Username = reader["Username"].ToString() ?? string.Empty,
+                IsActive = Convert.ToBoolean(reader["IsActive"]),
+                CreatedAt = reader["CreatedAt"] as DateTime?,
+                UpdatedAt = reader["UpdatedAt"] as DateTime?
+            };
+            users.Add(role);
+        }
+
+        return users;
+    }
 }
