@@ -1,0 +1,57 @@
+<h2>Edit User</h2>
+
+<form (ngSubmit)="saveUser()">
+  <!-- FIRST NAME -->
+  <mat-form-field appearance="fill">
+    <mat-label>First Name</mat-label>
+    <input matInput
+           name="firstName"
+           [(ngModel)]="user.firstName"
+           required />
+  </mat-form-field>
+
+  <!-- LAST NAME -->
+  <mat-form-field appearance="fill">
+    <mat-label>Last Name</mat-label>
+    <input matInput
+           name="lastName"
+           [(ngModel)]="user.lastName"
+           required />
+  </mat-form-field>
+
+  <!-- USERNAME -->
+  <mat-form-field appearance="fill">
+    <mat-label>Username</mat-label>
+    <input matInput
+           name="username"
+           [(ngModel)]="user.username"
+           required />
+  </mat-form-field>
+
+  <!-- EMAIL -->
+  <mat-form-field appearance="fill">
+    <mat-label>Email</mat-label>
+    <input matInput
+           name="email"
+           [(ngModel)]="user.email"
+           required />
+  </mat-form-field>
+
+  <!-- PHONE -->
+  <mat-form-field appearance="fill">
+    <mat-label>Phone</mat-label>
+    <input matInput
+           name="phone"
+           [(ngModel)]="user.phone" />
+  </mat-form-field>
+
+  <!-- ACTION BUTTONS -->
+  <div style="margin-top: 1rem;">
+    <button mat-raised-button color="primary" type="submit">
+      Save
+    </button>
+    <button mat-raised-button color="accent" type="button" (click)="cancel()">
+      Cancel
+    </button>
+  </div>
+</form>

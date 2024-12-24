@@ -179,7 +179,7 @@ namespace GateKeeper.Server.Services
         }
 
         /// <inheritdoc />
-        public async Task<(bool isSuccessful, string accessToken, string refreshToken)> RefreshTokensAsync(string refreshToken)
+        public async Task<(bool isSuccessful, string accessToken, string refreshToken, User? user)> RefreshTokensAsync(string refreshToken)
         {
             try
             {
@@ -191,7 +191,7 @@ namespace GateKeeper.Server.Services
                 
 
                 if (!authenticated || user == null || verifyType != "Refresh")
-                    return (false, string.Empty, string.Empty);
+                    return (false, string.Empty, string.Empty, null);
 
                 // Generate new tokens
                 var newAccessToken = await GenerateJwtToken(user);
@@ -199,12 +199,12 @@ namespace GateKeeper.Server.Services
 
                 await _verificationService.RevokeTokensAsync(user.Id, "Refresh", refreshToken);
                 
-                return (true, newAccessToken, newRefreshToken);
+                return (true, newAccessToken, newRefreshToken, user);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error refreshing tokens.");
-                return (false, string.Empty, string.Empty);
+                return (false, string.Empty, string.Empty, null);
             }
         }
 

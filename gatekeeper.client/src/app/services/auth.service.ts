@@ -272,12 +272,12 @@ export class AuthService {
   }
 
   // User Management (Optional)
-  private setUser(user: User): void {
+  public setUser(user: User): void {
     localStorage.setItem('currentUser', JSON.stringify(user));
     this.currentUserSubject.next(user);
   }
 
-  private getUser(): User | null {
+  public getUser(): User | null {
     const userJson = localStorage.getItem('currentUser');
     return userJson ? JSON.parse(userJson) : null;
   }

@@ -71,6 +71,7 @@ export class AuthInterceptor implements HttpInterceptor {
         switchMap((res) => {
           this.refreshTokenInProgress = false;
           this.refreshTokenSubject.next(res.accessToken);
+          this.authService.setUser(res.user);
           // Retry the failed request with the new token
           return next.handle(this.addToken(req, res.accessToken));
         }),

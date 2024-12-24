@@ -42,7 +42,7 @@ namespace GateKeeper.Server.Interface
         /// </summary>
         /// <param name="refreshToken">The refresh token to validate and use for generating new tokens.</param>
         /// <returns>A tuple containing success status, new access token, and new refresh token.</returns>
-        Task<(bool isSuccessful, string accessToken, string refreshToken)> RefreshTokensAsync(string refreshToken);
+        Task<(bool isSuccessful, string accessToken, string refreshToken, User user)> RefreshTokensAsync(string refreshToken);
 
         /// <summary>
         /// Initiates a password reset process by sending a reset link or security challenge.

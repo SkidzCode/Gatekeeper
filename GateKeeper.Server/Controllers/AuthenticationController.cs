@@ -136,16 +136,17 @@ namespace GateKeeper.Server.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
             try
             {
-                var (isSuccessful, newAccessToken, newRefreshToken) =
+                var (isSuccessful, newAccessToken, newRefreshToken, user) =
                     await _authService.RefreshTokensAsync(refreshRequest.RefreshToken);
 
-                if (isSuccessful)
+                if (!isSuccessful)
                     return Unauthorized(new { error = DialogLogin.LoginInvalidRefreshToken });
 
                 return Ok(new
                 {
                     accessToken = newAccessToken,
-                    refreshToken = newRefreshToken
+                    refreshToken = newRefreshToken,
+                    user = user
                 });
             }
             catch (Exception ex)

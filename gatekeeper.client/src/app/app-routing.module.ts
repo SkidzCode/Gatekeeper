@@ -11,7 +11,10 @@ import { UserRegisterComponent } from './user/user-register/user-register.compon
 import { UserVerifyComponent } from './user/user-verify/user-verify.component';
 
 const routes: Routes = [
-
+  {
+    path: 'admin',
+    loadChildren: () => import('./admin/admin.module').then(m => m.AdminModule),
+  },
   { path: 'login', component: UserLoginComponent },
   { path: 'forgot', component: ForgotPasswordComponent },
   { path: 'resources', component: ResourcesEditorComponent, canActivate: [AuthGuard] },
