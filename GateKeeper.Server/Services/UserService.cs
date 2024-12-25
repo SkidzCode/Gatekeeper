@@ -137,6 +137,8 @@ public class UserService : IUserService
             };
         }
 
+        user.Roles = await GetRolesAsync(user.Id);
+
         return user;
     }
 
@@ -145,11 +147,11 @@ public class UserService : IUserService
         await using var connection = await _dbHelper.GetOpenConnectionAsync();
         User? user = null;
 
-        await using var cmd = new MySqlCommand("GetUserDetailsForLogin", connection)
+        await using var cmd = new MySqlCommand("GetUser", connection)
         {
             CommandType = CommandType.StoredProcedure
         };
-        cmd.Parameters.AddWithValue("@p_Identifier", identifier);
+        cmd.Parameters.AddWithValue("@p_UserId", identifier);
 
         await using var reader = await cmd.ExecuteReaderAsync();
         if (await reader.ReadAsync())
@@ -163,10 +165,13 @@ public class UserService : IUserService
                 Phone = reader["Phone"].ToString() ?? string.Empty,
                 Salt = reader["Salt"].ToString() ?? string.Empty,
                 Password = reader["Password"].ToString() ?? string.Empty,
-                Username = reader["Username"].ToString() ?? string.Empty
+                Username = reader["Username"].ToString() ?? string.Empty,
+                IsActive = Convert.ToBoolean(reader["IsActive"]),
+                CreatedAt = reader["CreatedAt"] as DateTime?,
+                UpdatedAt = reader["UpdatedAt"] as DateTime?
             };
         }
-
+        user.Roles = await GetRolesAsync(user.Id);
         return user;
     }
 
@@ -250,7 +255,7 @@ public class UserService : IUserService
         await using var reader = await cmd.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {
-            var role = new User()
+            var user = new User()
             {
                 Id = Convert.ToInt32(reader["Id"]),
                 FirstName = reader["FirstName"].ToString() ?? string.Empty,
@@ -264,9 +269,8 @@ public class UserService : IUserService
                 CreatedAt = reader["CreatedAt"] as DateTime?,
                 UpdatedAt = reader["UpdatedAt"] as DateTime?
             };
-            users.Add(role);
+            users.Add(user);
         }
-
         return users;
     }
 }

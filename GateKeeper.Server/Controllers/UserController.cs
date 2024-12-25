@@ -106,15 +106,30 @@ namespace GateKeeper.Server.Controllers
             try
             {
                 int userId = 0;
-                // Retrieve the user's email from JWT claims
-                if (!int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out userId) || userId == 0)
-                {
-                    return Unauthorized("Invalid token");
-                }
-
                 List<User?> users = await _userService.GetUsers();
 
                 return Ok(users);
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = string.Format(DialogLogin.ProfileLoadError, ex.Message) ?? "";
+                _logger.LogError(ex, errorMessage);
+                return StatusCode(500, new { error = errorMessage });
+            }
+        }
+
+        /// <summary>
+        /// API endpoint to retrieve list of users.
+        /// </summary>
+        /// <returns>List of users</returns>
+        [HttpGet("user/{userId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetUsers(int userId)
+        {
+            try
+            {
+                User? user = await _userService.GetUser(userId);
+                return Ok(user);
             }
             catch (Exception ex)
             {

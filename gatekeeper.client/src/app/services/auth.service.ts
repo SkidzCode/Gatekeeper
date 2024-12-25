@@ -16,6 +16,7 @@ interface User {
   email: string;
   username: string;
   phone: string;
+  roles: string[];
 }
 
 interface AuthResponse {

@@ -31,6 +31,8 @@ import {MatSelectModule} from '@angular/material/select';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialogContainer, MatDialogModule } from '@angular/material/dialog'
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatSortModule } from '@angular/material/sort';
 
 import { ForgotPasswordComponent } from './user/passwords/forgot-password/forgot-password.component';
 import { ResourcesEditorComponent } from './resources/resources-editor/resources-editor.component';
@@ -38,6 +40,8 @@ import { ResetPasswordComponent } from './user/passwords/reset-password/reset-pa
 import { UserProfileComponent } from './user/user-profile/user-profile.component';
 import { UserRegisterComponent } from './user/user-register/user-register.component';
 import { UserVerifyComponent } from './user/user-verify/user-verify.component';
+import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
+import { AdminLayoutComponent } from './layout/admin-layout/admin-layout.component';
 @NgModule({
   declarations: [
     AppComponent,
@@ -47,7 +51,9 @@ import { UserVerifyComponent } from './user/user-verify/user-verify.component';
     UserRegisterComponent,
     ResetPasswordComponent,
     UserProfileComponent,
-    UserVerifyComponent
+    UserVerifyComponent,
+    MainLayoutComponent,
+    AdminLayoutComponent
   ],
   imports: [
     BrowserModule,
@@ -72,7 +78,9 @@ import { UserVerifyComponent } from './user/user-verify/user-verify.component';
     MatSnackBarModule,
     MatDividerModule,
     MatDialogContainer,
-    MatDialogModule 
+    MatDialogModule,
+    MatPaginatorModule,
+    MatSortModule
     
   ],
   providers: [

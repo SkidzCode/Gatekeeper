@@ -40,7 +40,7 @@ export class UserService {
 
   getUserById(id: number): Observable<User> {
     // On .NET side, you might have an endpoint like: GET /api/User/users/{id}
-    return this.http.get<User>(`${this.baseUrl}/users/${id}`).pipe(
+    return this.http.get<User>(`${this.baseUrl}/user/${id}`).pipe(
       catchError(this.handleError)
     );
   }

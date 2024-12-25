@@ -333,7 +333,8 @@ namespace GateKeeper.Server.Services
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_configuration["JwtConfig:Secret"]);
 
-            var roles = await _userService.GetRolesAsync(user.Id); // Assume `user.Roles` is a list of roles or groups like ["Admin", "Manager"]
+            if (user.Roles.Count == 0)
+                user.Roles = await _userService.GetRolesAsync(user.Id); // Assume `user.Roles` is a list of roles or groups like ["Admin", "Manager"]
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -342,10 +343,8 @@ namespace GateKeeper.Server.Services
             };
 
             // Add roles as separate claims
-            foreach (var role in roles)
-            {
+            foreach (var role in user.Roles)
                 claims.Add(new Claim(ClaimTypes.Role, role));
-            }
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
