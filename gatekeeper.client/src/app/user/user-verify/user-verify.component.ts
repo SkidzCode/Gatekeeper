@@ -10,7 +10,7 @@ import { map, catchError, debounceTime, distinctUntilChanged, switchMap } from '
   standalone: false,
   
   templateUrl: './user-verify.component.html',
-  styleUrl: './user-verify.component.css'
+  styleUrl: './user-verify.component.scss'
 })
 export class UserVerifyComponent implements OnInit {
   token: string = '';

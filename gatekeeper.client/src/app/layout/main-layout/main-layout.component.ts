@@ -10,7 +10,7 @@ import { Router } from '@angular/router';
   standalone: false,
   
   templateUrl: './main-layout.component.html',
-  styleUrl: './main-layout.component.css'
+  styleUrl: './main-layout.component.scss'
 })
 export class MainLayoutComponent {
   private breakpointObserver = inject(BreakpointObserver);

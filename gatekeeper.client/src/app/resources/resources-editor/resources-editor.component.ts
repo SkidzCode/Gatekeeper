@@ -6,7 +6,7 @@ import { ResourceLoaderService } from '../../services/resource-loader-service.se
 @Component({
   selector: 'app-resources-editor',
   templateUrl: './resources-editor.component.html',
-  styleUrls: ['./resources-editor.component.css'],
+  styleUrls: ['./resources-editor.component.scss'],
   standalone: false,
 })
 export class ResourcesEditorComponent implements OnInit {

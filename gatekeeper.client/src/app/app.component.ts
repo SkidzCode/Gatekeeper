@@ -4,7 +4,7 @@ import { Component, inject } from '@angular/core';
   selector: 'app-root',
   templateUrl: './app.component.html',
   standalone: false,
-  styleUrl: './app.component.css'
+  styleUrl: './app.component.scss'
 })
 
 export class AppComponent {
