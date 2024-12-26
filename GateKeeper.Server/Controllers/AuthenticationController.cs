@@ -105,15 +105,7 @@ namespace GateKeeper.Server.Controllers
                 {
                     accessToken,
                     refreshToken,
-                    user = new
-                    {
-                        user.Id,
-                        user.FirstName,
-                        user.LastName,
-                        user.Email,
-                        user.Username,
-                        user.Phone
-                    }
+                    user
                 });
             }
             catch (Exception ex)

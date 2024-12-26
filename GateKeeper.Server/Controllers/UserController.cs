@@ -22,6 +22,7 @@ namespace GateKeeper.Server.Controllers
         private readonly IDBHelper _dbHelper;
         // Service for handling JSON Web Token (JWT) operations
         private readonly IUserService _userService;
+        private readonly IRoleService _roleService;
         private readonly ILogger<UserController> _logger;
 
         /// <summary>
@@ -29,11 +30,17 @@ namespace GateKeeper.Server.Controllers
         /// </summary>
         /// <param name="configuration">Application configuration dependency.</param>
         /// <param name="jwtService">JWT service dependency.</param>
-        public UserController(IConfiguration configuration, IDBHelper dbHelper, IUserService userService, ILogger<UserController> logger)
+        public UserController(
+            IConfiguration configuration, 
+            IDBHelper dbHelper, 
+            IUserService userService, 
+            ILogger<UserController> logger,
+            IRoleService roleService)
         {
             _userService = userService;
             _dbHelper = dbHelper;
             _logger = logger;
+            _roleService = roleService;
         }
 
         /// <summary>
@@ -130,6 +137,28 @@ namespace GateKeeper.Server.Controllers
             {
                 User? user = await _userService.GetUser(userId);
                 return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = string.Format(DialogLogin.ProfileLoadError, ex.Message) ?? "";
+                _logger.LogError(ex, errorMessage);
+                return StatusCode(500, new { error = errorMessage });
+            }
+        }
+
+        /// <summary>
+        /// API endpoint to retrieve list of users.
+        /// </summary>
+        /// <returns>List of users</returns>
+        [HttpGet("user/edit/{userId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetUsersEdit(int userId)
+        {
+            try
+            {
+                User? user = await _userService.GetUser(userId);
+                List<Role> roles = await _roleService.GetAllRoles();
+                return Ok(new { user, roles });
             }
             catch (Exception ex)
             {

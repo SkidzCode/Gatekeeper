@@ -22,6 +22,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSingleton<IDBHelper, DBHelper>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IResourceService, ResourceService>();
 
 builder.Services.AddScoped<IVerifyTokenService, VerifyTokenService>();

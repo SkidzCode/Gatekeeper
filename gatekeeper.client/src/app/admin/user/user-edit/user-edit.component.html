@@ -1,90 +1,93 @@
-<h2>Edit User</h2>
 
-<form (ngSubmit)="saveUser()" class="user-form">
-  <!-- NAME FIELDS -->
-  <div class="form-row">
-    <mat-form-field class="form-field" appearance="fill">
-      <mat-label>First Name</mat-label>
-      <input matInput
-             name="firstName"
-             [(ngModel)]="user.firstName"
-             required />
-    </mat-form-field>
+  <mat-card class="user-profile-card">
+    <div class="profile-header">
+      <mat-card-title style="margin-left:16px;">Admin user list</mat-card-title>
+      <mat-card-subtitle style="margin-left: 16px;">Edit User</mat-card-subtitle>
+    </div>
 
-    <mat-form-field class="form-field" appearance="fill">
-      <mat-label>Last Name</mat-label>
-      <input matInput
-             name="lastName"
-             [(ngModel)]="user.lastName"
-             required />
-    </mat-form-field>
-  </div>
+    <mat-divider></mat-divider>
 
-  <!-- USERNAME -->
-  <mat-form-field class="form-field" appearance="fill">
-    <mat-label>Username</mat-label>
-    <input matInput
-           name="username"
-           [(ngModel)]="user.username"
-           required />
-  </mat-form-field>
+    <mat-card-content>
+      <form (ngSubmit)="saveUser()" class="user-form">
 
-  <!-- EMAIL -->
-  <mat-form-field class="form-field" appearance="fill">
-    <mat-label>Email</mat-label>
-    <input matInput
-           name="email"
-           [(ngModel)]="user.email"
-           required />
-  </mat-form-field>
 
-  <!-- PHONE -->
-  <mat-form-field class="form-field" appearance="fill">
-    <mat-label>Phone</mat-label>
-    <input matInput
-           name="phone"
-           [(ngModel)]="user.phone" />
-  </mat-form-field>
+        <!-- NAME FIELDS -->
+        <div class="form-row">
+          <mat-form-field class="form-field" appearance="fill">
+            <mat-label>First Name</mat-label>
+            <input matInput
+                   name="firstName"
+                   [(ngModel)]="user.firstName"
+                   required />
+          </mat-form-field>
 
-  <!-- ACTION BUTTONS -->
-  <div class="form-buttons">
-    <button mat-raised-button color="primary" type="submit">
-      Save
-    </button>
-    <button mat-raised-button color="accent" type="button" (click)="cancel()">
-      Cancel
-    </button>
-  </div>
-</form>
+          <mat-form-field class="form-field" appearance="fill">
+            <mat-label>Last Name</mat-label>
+            <input matInput
+                   name="lastName"
+                   [(ngModel)]="user.lastName"
+                   required />
+          </mat-form-field>
+        </div>
 
-<style>
-  .user-form {
-    
-    padding: 0 2rem; /* Add padding to prevent fields from hitting the edges */
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
+        <!-- USERNAME -->
+        <mat-form-field class="form-field" appearance="fill">
+          <mat-label>Username</mat-label>
+          <input matInput
+                 name="username"
+                 [(ngModel)]="user.username"
+                 required />
+        </mat-form-field>
 
-  .form-row {
-    display: flex;
-    gap: 1rem;
-  }
+        <!-- EMAIL -->
+        <mat-form-field class="form-field" appearance="fill">
+          <mat-label>Email</mat-label>
+          <input matInput
+                 name="email"
+                 [(ngModel)]="user.email"
+                 required />
+        </mat-form-field>
 
-  .form-field {
-    flex: 1;
-  }
+        <!-- PHONE -->
+        <mat-form-field class="form-field" appearance="fill">
+          <mat-label>Phone</mat-label>
+          <input matInput
+                 name="phone"
+                 [(ngModel)]="user.phone" />
+        </mat-form-field>
 
-  .form-buttons {
-    display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-  }
+        <!-- ROLES -->
+        <mat-form-field class="form-field" appearance="fill">
+          <mat-label>Roles</mat-label>
+          <mat-select multiple
+                      [(ngModel)]="user.roles"
+                      name="roles">
+            <mat-option *ngFor="let role of userRoles"
+                        [value]="role.roleName">
+              {{ role.roleName }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
 
-  /* Responsive Design */
-  @media (max-width: 600px) {
-    .form-row {
-      flex-direction: column;
-    }
-  }
-</style>
+        <!-- IS ACTIVE CHECKBOX -->
+        <div class="form-row">
+          <mat-checkbox [(ngModel)]="user.isActive"
+                        name="isActive">
+            Active
+          </mat-checkbox>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div class="form-buttons">
+
+        </div>
+        <button mat-raised-button color="primary" type="submit">
+          Save
+        </button>
+        <button mat-raised-button color="accent" type="button" (click)="cancel()">
+          Cancel
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+

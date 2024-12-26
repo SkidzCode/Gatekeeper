@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { UserService, User } from '../../../services/user.service';
+import { UserService } from '../../../services/user.service';
+import { User } from '../../../models/user.model';
+import { Role } from '../../../models/role.model';
 
 @Component({
   selector: 'app-user-edit',
@@ -17,7 +19,12 @@ export class UserEditComponent implements OnInit {
     email: '',
     username: '',
     phone: '',
+    roles: [],
+    isActive: false
   };
+
+  // This will hold all possible roles from the backend
+  userRoles: Role[] = []; // e.g. [{ id: 1, name: 'ADMIN' }, { id: 2, name: 'USER' }]
 
   constructor(
     private route: ActivatedRoute,
@@ -34,17 +41,21 @@ export class UserEditComponent implements OnInit {
   }
 
   loadUser(id: number): void {
-    this.userService.getUserById(id).subscribe({
+    this.userService.getUserByIdEdit(id).subscribe({
       next: (data) => {
-        this.user = data;
+        // data.user is your User object
+        this.user = data.user;
+        // data.roles is your list of all possible roles
+        this.userRoles = data.roles;
       },
       error: (err) => console.error('Error loading user', err),
     });
   }
 
   saveUser(): void {
+    // user.roles has the updated list of role names
     this.userService.updateUser(this.user).subscribe({
-      next: (res) => {
+      next: () => {
         alert('User updated successfully!');
         // Navigate back to the user list
         this.router.navigate(['/admin', 'users']);

@@ -15,6 +15,7 @@ import { Router } from '@angular/router';
 export class MainLayoutComponent {
   private breakpointObserver = inject(BreakpointObserver);
   isLoggedIn = false;
+  isAdmim = false;
   username: string | null = null;
 
   opened: boolean = true;
@@ -29,6 +30,8 @@ export class MainLayoutComponent {
     this.authService.currentUser$.subscribe((user) => {
       this.isLoggedIn = !!user; // True if user is logged in
       this.username = user?.username || null; // Get username if user exists
+      this.isAdmim = user?.roles.includes('Admin') || false; // Check if user is admin
+      console.log(`User Roles: ${user?.roles}`);
     });
   }
 

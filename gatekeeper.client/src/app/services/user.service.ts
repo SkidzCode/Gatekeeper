@@ -2,15 +2,10 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError, tap } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { User } from '../models/user.model';
+import { Role } from '../models/role.model';
+import { UserEdit } from '../models/user.edit.model';
 
-export interface User {
-  id: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  username: string;
-  phone: string;
-}
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
@@ -41,6 +36,13 @@ export class UserService {
   getUserById(id: number): Observable<User> {
     // On .NET side, you might have an endpoint like: GET /api/User/users/{id}
     return this.http.get<User>(`${this.baseUrl}/user/${id}`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getUserByIdEdit(id: number): Observable<UserEdit> {
+    // On .NET side, you might have an endpoint like: GET /api/User/users/{id}
+    return this.http.get<UserEdit>(`${this.baseUrl}/user/edit/${id}`).pipe(
       catchError(this.handleError)
     );
   }

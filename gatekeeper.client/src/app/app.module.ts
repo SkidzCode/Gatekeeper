@@ -33,6 +33,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatDialogContainer, MatDialogModule } from '@angular/material/dialog'
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatSortModule } from '@angular/material/sort';
+import { MatOptionModule } from '@angular/material/core';
 
 import { ForgotPasswordComponent } from './user/passwords/forgot-password/forgot-password.component';
 import { ResourcesEditorComponent } from './resources/resources-editor/resources-editor.component';
@@ -80,7 +81,8 @@ import { AdminLayoutComponent } from './layout/admin-layout/admin-layout.compone
     MatDialogContainer,
     MatDialogModule,
     MatPaginatorModule,
-    MatSortModule
+    MatSortModule,
+    MatOptionModule
     
   ],
   providers: [

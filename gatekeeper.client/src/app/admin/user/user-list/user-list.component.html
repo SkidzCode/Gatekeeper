@@ -1,55 +1,70 @@
-<h2>All Users</h2>
+<mat-card class="user-profile-card">
+  <div class="profile-header">
+    <mat-card-title style="margin-left:16px;">Admin user list</mat-card-title>
+    <mat-card-subtitle style="margin-left: 16px;">All Users</mat-card-subtitle>
+  </div>
 
-<!-- Example filter input to demonstrate searching -->
-<mat-form-field appearance="outline" style="width: 100%;">
-  <mat-label>Filter</mat-label>
-  <input matInput
-         (keyup)="applyFilter($event)"
-         placeholder="Search by name, email..." />
-</mat-form-field>
+  <mat-divider></mat-divider>
 
-<!-- Table with built-in sort and paginator -->
-<table mat-table
-       [dataSource]="dataSource"
-       matSort
-       class="mat-elevation-z8"
-       style="width: 100%;">
+  <mat-card-content>
+    <!-- Example filter input to demonstrate searching -->
+    <mat-form-field appearance="outline" style="width: 100%;">
+      <mat-label>Filter</mat-label>
+      <input matInput
+             (keyup)="applyFilter($event)"
+             placeholder="Search by name, email..." />
+    </mat-form-field>
 
-  <!-- ID Column -->
-  <ng-container matColumnDef="id">
-    <th mat-header-cell *matHeaderCellDef mat-sort-header>ID</th>
-    <td mat-cell *matCellDef="let user">{{ user.id }}</td>
-  </ng-container>
+    <!-- Table with built-in sort and paginator -->
+    <table mat-table
+           [dataSource]="dataSource"
+           matSort
+           class="mat-elevation-z8"
+           style="width: 100%;">
 
-  <!-- Username Column -->
-  <ng-container matColumnDef="username">
-    <th mat-header-cell *matHeaderCellDef mat-sort-header>Username</th>
-    <td mat-cell *matCellDef="let user">{{ user.username }}</td>
-  </ng-container>
+      <!-- ID Column -->
+      <ng-container matColumnDef="id">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>ID</th>
+        <td mat-cell *matCellDef="let user">{{ user.id }}</td>
+      </ng-container>
 
-  <!-- Email Column -->
-  <ng-container matColumnDef="email">
-    <th mat-header-cell *matHeaderCellDef mat-sort-header>Email</th>
-    <td mat-cell *matCellDef="let user">{{ user.email }}</td>
-  </ng-container>
+      <!-- Username Column -->
+      <ng-container matColumnDef="username">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Username</th>
+        <td mat-cell *matCellDef="let user">{{ user.username }}</td>
+      </ng-container>
 
-  <!-- Actions Column -->
-  <ng-container matColumnDef="actions">
-    <th mat-header-cell *matHeaderCellDef>Actions</th>
-    <td mat-cell *matCellDef="let user">
-      <button mat-raised-button color="primary" (click)="editUser(user)">
-        Edit
-      </button>
-    </td>
-  </ng-container>
+      <!-- Email Column -->
+      <ng-container matColumnDef="email">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Email</th>
+        <td mat-cell *matCellDef="let user">{{ user.email }}</td>
+      </ng-container>
 
-  <!-- Header & Row Declarations -->
-  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-  <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-</table>
+      <!-- Actions Column -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let user">
+          <button mat-raised-button color="primary" (click)="editUser(user)">
+            Edit
+          </button>
+        </td>
+      </ng-container>
 
-<!-- Paginator -->
-<mat-paginator [pageSize]="5"
-               [pageSizeOptions]="[5, 10, 25]"
-               showFirstLastButtons>
-</mat-paginator>
+      <!-- Header & Row Declarations -->
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+
+   
+  </mat-card-content>
+  <mat-card-actions align="end">
+    <!-- Paginator -->
+    <mat-paginator [pageSize]="5"
+                   [pageSizeOptions]="[5, 10, 25]"
+                   showFirstLastButtons>
+    </mat-paginator>
+  </mat-card-actions>
+</mat-card>
+
+
+   
