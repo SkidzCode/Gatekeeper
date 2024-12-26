@@ -33,6 +33,7 @@ namespace GateKeeper.Server.Controllers
         /// </summary>
         /// <returns>A list of roles.</returns>
         [HttpGet]
+        [Authorize]
         public async Task<IActionResult> GetAllRoles()
         {
             try
@@ -55,6 +56,7 @@ namespace GateKeeper.Server.Controllers
         /// <param name="id">The unique identifier of the role.</param>
         /// <returns>The requested role or 404 if not found.</returns>
         [HttpGet("{id:int}")]
+        [Authorize]
         public async Task<IActionResult> GetRoleById(int id)
         {
             try
@@ -80,6 +82,7 @@ namespace GateKeeper.Server.Controllers
         /// <param name="roleName">The name of the role.</param>
         /// <returns>The requested role or 404 if not found.</returns>
         [HttpGet("by-name/{roleName}")]
+        [Authorize]
         public async Task<IActionResult> GetRoleByName(string roleName)
         {
             try
@@ -105,6 +108,7 @@ namespace GateKeeper.Server.Controllers
         /// <param name="role">A Role object containing the name of the new role.</param>
         /// <returns>The newly created role.</returns>
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddRole([FromBody] Role role)
         {
             if (!ModelState.IsValid)
@@ -132,6 +136,7 @@ namespace GateKeeper.Server.Controllers
         /// <param name="role">The new data for the role (role name, etc.).</param>
         /// <returns>The updated role.</returns>
         [HttpPut("{id:int}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateRole(int id, [FromBody] Role role)
         {
             if (!ModelState.IsValid)

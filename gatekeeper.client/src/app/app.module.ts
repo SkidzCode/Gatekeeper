@@ -41,8 +41,9 @@ import { ResetPasswordComponent } from './user/passwords/reset-password/reset-pa
 import { UserProfileComponent } from './user/user-profile/user-profile.component';
 import { UserRegisterComponent } from './user/user-register/user-register.component';
 import { UserVerifyComponent } from './user/user-verify/user-verify.component';
-import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
-import { AdminLayoutComponent } from './layout/admin-layout/admin-layout.component';
+import { MainLayoutComponent } from './site/layout/main-layout/main-layout.component';
+import { AdminLayoutComponent } from './site/layout/admin-layout/admin-layout.component';
+import { DisabledComponent } from './site/disabled/disabled.component';
 @NgModule({
   declarations: [
     AppComponent,
@@ -54,7 +55,8 @@ import { AdminLayoutComponent } from './layout/admin-layout/admin-layout.compone
     UserProfileComponent,
     UserVerifyComponent,
     MainLayoutComponent,
-    AdminLayoutComponent
+    AdminLayoutComponent,
+    DisabledComponent
   ],
   imports: [
     BrowserModule,

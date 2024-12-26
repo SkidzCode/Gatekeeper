@@ -1,0 +1,11 @@
+DROP PROCEDURE IF EXISTS GetSettingById;
+DELIMITER //
+
+CREATE PROCEDURE GetSettingById(IN p_Id INT)
+BEGIN
+    SELECT *
+    FROM Settings
+    WHERE Id = p_Id;
+END //
+
+DELIMITER ;

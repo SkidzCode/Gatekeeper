@@ -13,7 +13,7 @@ import { Role } from '../models/role.model'; // Adjust the path to your Role mod
 })
 export class RoleService {
   // Your .NET Core Web API URL. Adjust to your environment or server endpoint.
-  private baseUrl = 'https://your-api-host.com/api/Role';
+  private baseUrl = '/api/Role';
 
   constructor(private http: HttpClient) { }
 
