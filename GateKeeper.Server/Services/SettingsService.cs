@@ -28,11 +28,12 @@ namespace GateKeeper.Server.Services
         /// <summary>
         /// Retrieves all settings via the GetAllSettings stored procedure.
         /// </summary>
+        /// <param name="userId">Users Id</param>
         /// <returns>List of Setting objects.</returns>
-        public async Task<List<Setting>> GetAllSettingsAsync()
+        public async Task<List<Setting>> GetAllSettingsAsync(int? userId = null)
         {
-            var settings = new List<Setting>();
 
+            var settings = new List<Setting>();
             try
             {
                 await using var connection = await _dbHelper.GetOpenConnectionAsync();
@@ -40,6 +41,9 @@ namespace GateKeeper.Server.Services
                 {
                     CommandType = CommandType.StoredProcedure
                 };
+                
+                cmd.Parameters.Add(new MySqlParameter("@p_UserId", MySqlDbType.Int32)).Value = 
+                    (userId == null) ? DBNull.Value : userId;
 
                 await using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
@@ -59,7 +63,7 @@ namespace GateKeeper.Server.Services
         /// <summary>
         /// Retrieves a specific setting by its Id via the GetSettingById stored procedure.
         /// </summary>
-        /// <param name="id">Unique Id of the setting.</param>
+        /// <param name="id">Unique ID of the setting.</param>
         /// <returns>Setting object or null if not found.</returns>
         public async Task<Setting?> GetSettingByIdAsync(int id)
         {
@@ -108,6 +112,7 @@ namespace GateKeeper.Server.Services
                 cmd.Parameters.Add(new MySqlParameter("@p_ParentId", MySqlDbType.Int32)).Value = (object?)setting.ParentId ?? DBNull.Value;
                 cmd.Parameters.Add(new MySqlParameter("@p_Name", MySqlDbType.VarChar, 100)).Value = setting.Name;
                 cmd.Parameters.Add(new MySqlParameter("@p_Category", MySqlDbType.VarChar, 50)).Value = (object?)setting.Category ?? DBNull.Value;
+                cmd.Parameters.Add(new MySqlParameter("@p_UserId", MySqlDbType.Int32)).Value = (object?)setting.UserId ?? DBNull.Value;
                 cmd.Parameters.Add(new MySqlParameter("@p_SettingValueType", MySqlDbType.Enum)).Value = setting.SettingValueType;
                 cmd.Parameters.Add(new MySqlParameter("@p_DefaultSettingValue", MySqlDbType.Text)).Value = setting.DefaultSettingValue;
                 cmd.Parameters.Add(new MySqlParameter("@p_SettingValue", MySqlDbType.Text)).Value = setting.SettingValue;
@@ -174,7 +179,7 @@ namespace GateKeeper.Server.Services
         /// <summary>
         /// Deletes a setting via the DeleteSetting stored procedure.
         /// </summary>
-        /// <param name="id">Unique Id of the setting to delete.</param>
+        /// <param name="id">Unique ID of the setting to delete.</param>
         /// <returns>True if deletion was successful; otherwise, false.</returns>
         public async Task<bool> DeleteSettingAsync(int id)
         {
@@ -203,9 +208,10 @@ namespace GateKeeper.Server.Services
         /// <summary>
         /// Retrieves settings by category via the GetSettingsByCategory stored procedure.
         /// </summary>
+        /// <param name="userId"></param>
         /// <param name="category">Category of the settings to retrieve.</param>
         /// <returns>List of Setting objects within the specified category.</returns>
-        public async Task<List<Setting>> GetSettingsByCategoryAsync(string category)
+        public async Task<List<Setting>> GetSettingsByCategoryAsync(int userId, string category)
         {
             var settings = new List<Setting>();
 
@@ -217,6 +223,7 @@ namespace GateKeeper.Server.Services
                     CommandType = CommandType.StoredProcedure
                 };
 
+                cmd.Parameters.Add(new MySqlParameter("@p_UserId", MySqlDbType.Int32)).Value = userId;
                 cmd.Parameters.Add(new MySqlParameter("@p_Category", MySqlDbType.VarChar, 50)).Value = category;
 
                 await using var reader = await cmd.ExecuteReaderAsync();
@@ -279,21 +286,27 @@ namespace GateKeeper.Server.Services
         /// </summary>
         /// <param name="setting">Setting object containing necessary fields.</param>
         /// <returns>The inserted or updated Setting object, or null if operation failed.</returns>
-        public async Task<Setting?> AddOrUpdateSettingAsync(Setting setting)
+        public async Task<Setting?> AddOrUpdateSettingAsync(int userId, Setting setting)
         {
             Setting? resultSetting = null;
 
             try
             {
+                int? settingId = setting.Id;
+                if (setting.Id == 0)
+                    settingId = null;
+
                 await using var connection = await _dbHelper.GetOpenConnectionAsync();
                 await using var cmd = new MySqlCommand("AddOrUpdateSetting", connection)
                 {
                     CommandType = CommandType.StoredProcedure
                 };
 
+                cmd.Parameters.Add(new MySqlParameter("@p_Id", MySqlDbType.Int32)).Value = (object?)settingId ?? DBNull.Value;
                 cmd.Parameters.Add(new MySqlParameter("@p_ParentId", MySqlDbType.Int32)).Value = (object?)setting.ParentId ?? DBNull.Value;
                 cmd.Parameters.Add(new MySqlParameter("@p_Name", MySqlDbType.VarChar, 100)).Value = setting.Name;
                 cmd.Parameters.Add(new MySqlParameter("@p_Category", MySqlDbType.VarChar, 50)).Value = (object?)setting.Category ?? DBNull.Value;
+                cmd.Parameters.Add(new MySqlParameter("@p_UserId", MySqlDbType.Int32)).Value = userId;
                 cmd.Parameters.Add(new MySqlParameter("@p_SettingValueType", MySqlDbType.Enum)).Value = setting.SettingValueType;
                 cmd.Parameters.Add(new MySqlParameter("@p_DefaultSettingValue", MySqlDbType.Text)).Value = setting.DefaultSettingValue;
                 cmd.Parameters.Add(new MySqlParameter("@p_SettingValue", MySqlDbType.Text)).Value = setting.SettingValue;
@@ -334,7 +347,8 @@ namespace GateKeeper.Server.Services
                 CreatedBy = reader.GetInt32("CreatedBy"),
                 UpdatedBy = reader.GetInt32("UpdatedBy"),
                 CreatedAt = reader.GetDateTime("CreatedAt"),
-                UpdatedAt = reader.GetDateTime("UpdatedAt")
+                UpdatedAt = reader.GetDateTime("UpdatedAt"),
+                UserId = reader.IsDBNull(reader.GetOrdinal("userId")) ? null : reader.GetInt32("userId")
             };
         }
     }

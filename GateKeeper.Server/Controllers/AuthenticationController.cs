@@ -96,7 +96,7 @@ namespace GateKeeper.Server.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
             try
             {
-                var (isAuthenticated, accessToken, refreshToken, user) = await _authService.LoginAsync(loginRequest);
+                var (isAuthenticated, accessToken, refreshToken, user, settings) = await _authService.LoginAsync(loginRequest);
 
                 if (!isAuthenticated || user == null)
                     return Unauthorized(new { error = DialogLogin.LoginInvalid });
@@ -105,7 +105,8 @@ namespace GateKeeper.Server.Controllers
                 {
                     accessToken,
                     refreshToken,
-                    user
+                    user,
+                    settings
                 });
             }
             catch (Exception ex)
@@ -128,7 +129,7 @@ namespace GateKeeper.Server.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
             try
             {
-                var (isSuccessful, newAccessToken, newRefreshToken, user) =
+                var (isSuccessful, newAccessToken, newRefreshToken, newUser, newSettings) =
                     await _authService.RefreshTokensAsync(refreshRequest.RefreshToken);
 
                 if (!isSuccessful)
@@ -138,7 +139,8 @@ namespace GateKeeper.Server.Controllers
                 {
                     accessToken = newAccessToken,
                     refreshToken = newRefreshToken,
-                    user = user
+                    user = newUser,
+                    settings = newSettings
                 });
             }
             catch (Exception ex)

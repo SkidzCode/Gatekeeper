@@ -3,6 +3,7 @@
 export interface Setting {
   id: number;
   parentId?: number;
+  userId?: number;
   name: string;
   category?: string;
   settingValueType: 'string' | 'integer' | 'boolean' | 'float' | 'json';

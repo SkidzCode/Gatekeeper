@@ -24,7 +24,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IResourceService, ResourceService>();
-
+builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<IVerifyTokenService, VerifyTokenService>();
 builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService>();
 

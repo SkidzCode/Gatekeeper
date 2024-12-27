@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using GateKeeper.Server.Models.Account;
+using GateKeeper.Server.Models.Site;
 
 namespace GateKeeper.Server.Interface
 {
@@ -13,7 +14,7 @@ namespace GateKeeper.Server.Interface
         /// </summary>
         /// <param name="userLogin">The user's login credentials.</param>
         /// <returns>A tuple containing success status, access token, refresh token, and user details.</returns>
-        Task<(bool isAuthenticated, string accessToken, string refreshToken, User? user)> LoginAsync(UserLoginRequest userLogin);
+        Task<(bool isAuthenticated, string accessToken, string refreshToken, User? user, List<Setting> settings)> LoginAsync(UserLoginRequest userLogin);
 
         /// <summary>
         /// Logs out a user by revoking specific or all active tokens.
@@ -42,7 +43,7 @@ namespace GateKeeper.Server.Interface
         /// </summary>
         /// <param name="refreshToken">The refresh token to validate and use for generating new tokens.</param>
         /// <returns>A tuple containing success status, new access token, and new refresh token.</returns>
-        Task<(bool isSuccessful, string accessToken, string refreshToken, User user)> RefreshTokensAsync(string refreshToken);
+        Task<(bool isSuccessful, string accessToken, string refreshToken, User user, List<Setting> settings)> RefreshTokensAsync(string refreshToken);
 
         /// <summary>
         /// Initiates a password reset process by sending a reset link or security challenge.

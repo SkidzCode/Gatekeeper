@@ -1,0 +1,11 @@
+DROP PROCEDURE IF EXISTS GetAllSettings;
+DELIMITER //
+
+CREATE PROCEDURE GetAllSettings(IN p_UserId INT)
+BEGIN
+    SELECT *
+    FROM Settings
+	WHERE UserId = p_UserId OR UserId IS NULL;
+END //
+
+DELIMITER ;

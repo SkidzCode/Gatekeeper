@@ -2,6 +2,7 @@
 using GateKeeper.Server.Interface;
 using Microsoft.AspNetCore.Authorization;
 using GateKeeper.Server.Models.Site;
+using System.Security.Claims;
 
 namespace GateKeeper.Server.Controllers
 {
@@ -36,8 +37,23 @@ namespace GateKeeper.Server.Controllers
         {
             try
             {
-                var settings = await _settingsService.GetAllSettingsAsync();
-                return Ok(settings);
+                var userId = GetUserIdFromClaims();
+                var settings = await _settingsService.GetAllSettingsAsync(userId);
+                var userSettings = settings
+                    .GroupBy(s => new { s.Name, s.Category })
+                    .SelectMany(group =>
+                    {
+                        // If any setting in the group has a UserId, exclude the ones without a UserId
+                        if (group.Any(s => s.UserId.HasValue))
+                        {
+                            return group.Where(s => s.UserId.HasValue);
+                        }
+
+                        // Otherwise, include all
+                        return group;
+                    })
+                    .ToList();
+                return Ok(userSettings);
             }
             catch (Exception ex)
             {
@@ -78,6 +94,37 @@ namespace GateKeeper.Server.Controllers
         /// </summary>
         /// <param name="setting">A Setting object containing the details of the new setting.</param>
         /// <returns>The newly created setting.</returns>
+        [HttpPost("AddUserSetting")]
+        [Authorize]
+        public async Task<IActionResult> AddUserSetting([FromBody] Setting setting)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var userId = GetUserIdFromClaims();
+                setting.UserId = userId;
+                setting.UpdatedBy = userId;
+                setting.CreatedBy = userId;
+                var createdSetting = await _settingsService.AddSettingAsync(setting);
+                return CreatedAtAction(nameof(GetSettingById), new { id = createdSetting.Id }, new { message = "Setting created successfully.", setting = createdSetting });
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = $"Error creating new setting: {ex.Message}";
+                _logger.LogError(ex, errorMessage);
+                return StatusCode(500, new { error = errorMessage });
+            }
+        }
+
+        /// <summary>
+        /// Creates a new setting.
+        /// </summary>
+        /// <param name="setting">A Setting object containing the details of the new setting.</param>
+        /// <returns>The newly created setting.</returns>
         [HttpPost]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddSetting([FromBody] Setting setting)
@@ -89,6 +136,10 @@ namespace GateKeeper.Server.Controllers
 
             try
             {
+                var userId = GetUserIdFromClaims();
+                setting.UserId = null;
+                setting.UpdatedBy = userId;
+                setting.CreatedBy = userId;
                 var createdSetting = await _settingsService.AddSettingAsync(setting);
                 return CreatedAtAction(nameof(GetSettingById), new { id = createdSetting.Id }, new { message = "Setting created successfully.", setting = createdSetting });
             }
@@ -122,6 +173,8 @@ namespace GateKeeper.Server.Controllers
 
             try
             {
+                var userId = GetUserIdFromClaims();
+                setting.UpdatedBy = userId;
                 var updatedSetting = await _settingsService.UpdateSettingAsync(setting);
                 if (updatedSetting == null)
                 {
@@ -176,7 +229,8 @@ namespace GateKeeper.Server.Controllers
         {
             try
             {
-                var settings = await _settingsService.GetSettingsByCategoryAsync(category);
+                var userId = GetUserIdFromClaims();
+                var settings = await _settingsService.GetSettingsByCategoryAsync(userId, category);
                 return Ok(settings);
             }
             catch (Exception ex)
@@ -218,7 +272,7 @@ namespace GateKeeper.Server.Controllers
         /// <param name="setting">A Setting object containing the details of the setting to add or update.</param>
         /// <returns>The added or updated setting.</returns>
         [HttpPost("AddOrUpdate")]
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         public async Task<IActionResult> AddOrUpdateSetting([FromBody] Setting setting)
         {
             if (!ModelState.IsValid)
@@ -228,7 +282,11 @@ namespace GateKeeper.Server.Controllers
 
             try
             {
-                var resultSetting = await _settingsService.AddOrUpdateSettingAsync(setting);
+                var userId = GetUserIdFromClaims();
+                setting.UpdatedBy = userId;
+                if (setting.Id == 0) setting.CreatedBy = userId;
+
+                var resultSetting = await _settingsService.AddOrUpdateSettingAsync(userId, setting);
                 if (resultSetting == null)
                 {
                     return BadRequest(new { message = "AddOrUpdate operation failed." });
@@ -243,5 +301,20 @@ namespace GateKeeper.Server.Controllers
                 return StatusCode(500, new { error = errorMessage });
             }
         }
+
+        #region private Functions
+
+        private int GetUserIdFromClaims()
+        {
+            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        }
+
+        private IActionResult HandleInternalError(Exception ex, string errorMessageTemplate)
+        {
+            var errorMessage = string.Format(errorMessageTemplate, ex.Message);
+            _logger.LogError(ex, errorMessage);
+            return StatusCode(500, new { error = errorMessage });
+        }
+        #endregion
     }
 }

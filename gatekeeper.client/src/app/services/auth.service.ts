@@ -1,7 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError, BehaviorSubject, map, of } from 'rxjs';
-import { catchError, tap,  } from 'rxjs/operators';
+import { catchError, tap, } from 'rxjs/operators';
+import { User } from '../models/user.model';
+import { Setting } from '../models/setting.model';
+
 
 // Existing Interface
 interface LoginRequest {
@@ -9,20 +12,11 @@ interface LoginRequest {
   password: string;
 }
 
-interface User {
-  id: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  username: string;
-  phone: string;
-  roles: string[];
-}
-
 interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   user: User;
+  settings: Setting[];
 }
 
 interface RefreshRequest {
@@ -94,6 +88,10 @@ export class AuthService {
   private currentUserSubject = new BehaviorSubject<User | null>(this.getUser());
   public currentUser$ = this.currentUserSubject.asObservable();
 
+  // Current Setting Subject (Optional)
+  private currentSettingsSubject = new BehaviorSubject<Setting[] | null>(this.getSettings());
+  public currentSettings$ = this.currentSettingsSubject.asObservable();
+
   // Access Token Subject
   private currentAccessTokenSubject = new BehaviorSubject<string | null>(this.getAccessToken());
   public currentAccessToken$ = this.currentAccessTokenSubject.asObservable();
@@ -108,6 +106,7 @@ export class AuthService {
       tap((res: AuthResponse) => {
         this.setTokens(res.accessToken, res.refreshToken);
         this.setUser(res.user);
+        this.setSettings(res.settings);
       }),
       catchError(this.handleError)
     );
@@ -124,6 +123,7 @@ export class AuthService {
       tap((res: AuthResponse) => {
         this.setTokens(res.accessToken, res.refreshToken);
         this.setUser(res.user);
+        this.setSettings(res.settings);
       }),
       catchError(this.handleError)
     );
@@ -278,8 +278,19 @@ export class AuthService {
     this.currentUserSubject.next(user);
   }
 
+  // User Management (Optional)
+  public setSettings(setting: Setting[]): void {
+    localStorage.setItem('currentSettings', JSON.stringify(setting));
+    this.currentSettingsSubject.next(setting);
+  }
+
   public getUser(): User | null {
     const userJson = localStorage.getItem('currentUser');
+    return userJson ? JSON.parse(userJson) : null;
+  }
+
+  public getSettings(): Setting[] | null {
+    const userJson = localStorage.getItem('currentSettings');
     return userJson ? JSON.parse(userJson) : null;
   }
 

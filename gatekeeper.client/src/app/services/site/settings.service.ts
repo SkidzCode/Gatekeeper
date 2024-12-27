@@ -100,7 +100,7 @@ export class SettingsService {
    * @param setting A Setting object containing the details of the setting to add or update.
    * @returns An observable containing the server's response with the added or updated setting.
    */
-  addOrUpdateSetting(setting: Omit<Setting, 'id' | 'createdAt' | 'updatedAt'>): Observable<{ message: string; setting: Setting }> {
+  addOrUpdateSetting(setting: Omit<Setting, 'createdAt' | 'updatedAt'>): Observable<{ message: string; setting: Setting }> {
     const url = `${this.baseUrl}/AddOrUpdate`;
     return this.http.post<{ message: string; setting: Setting }>(url, setting);
   }

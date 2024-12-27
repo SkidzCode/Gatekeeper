@@ -1,0 +1,93 @@
+<mat-card class="user-settings-card">
+  <mat-card-title>User Settings</mat-card-title>
+  <mat-card-subtitle *ngIf="loading">Loading...</mat-card-subtitle>
+  <mat-card-subtitle *ngIf="errorMessage" class="error-text">
+    {{ errorMessage }}
+  </mat-card-subtitle>
+
+  <mat-card-content *ngIf="!loading && settingsArray?.length">
+    <form [formGroup]="settingsForm" (ngSubmit)="onSubmit()">
+      <!-- Wrapper that defines which form array we're controlling -->
+      <div formArrayName="settings">
+        <table mat-table [dataSource]="settingsArray" class="mat-elevation-z8">
+
+          <!-- Setting Name Column -->
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef>Setting Name</th>
+            <td mat-cell *matCellDef="let setting">
+              {{ setting.name }}
+            </td>
+          </ng-container>
+
+          <!-- Value Column -->
+          <ng-container matColumnDef="value">
+            <th mat-header-cell *matHeaderCellDef>Value</th>
+            <td mat-cell *matCellDef="let setting; let i = index">
+              <ng-container [ngSwitch]="setting.settingValueType">
+
+                <!-- Boolean (true/false) -->
+                <ng-container *ngSwitchCase="'boolean'">
+                  <mat-radio-group [formControlName]="i">
+                    <mat-radio-button [value]="true">True</mat-radio-button>
+                    <mat-radio-button [value]="false">False</mat-radio-button>
+                  </mat-radio-group>
+                </ng-container>
+
+                <!-- Integer -->
+                <ng-container *ngSwitchCase="'integer'">
+                  <mat-form-field appearance="fill">
+                    <mat-label>Setting Value</mat-label>
+                    <input matInput type="number" step="1" [formControlName]="i" />
+                  </mat-form-field>
+                </ng-container>
+
+                <!-- Float -->
+                <ng-container *ngSwitchCase="'float'">
+                  <mat-form-field appearance="fill">
+                    <mat-label>Setting Value</mat-label>
+                    <input matInput type="number" step="any" [formControlName]="i" />
+                  </mat-form-field>
+                </ng-container>
+
+                <!-- JSON (treated as text) -->
+                <ng-container *ngSwitchCase="'json'">
+                  <mat-form-field appearance="fill" style="width: 100%;">
+                    <mat-label>Setting Value (JSON)</mat-label>
+                    <textarea matInput
+                              rows="3"
+                              [formControlName]="i"></textarea>
+                  </mat-form-field>
+                </ng-container>
+
+                <!-- Default case: string -->
+                <ng-container *ngSwitchDefault>
+                  <mat-form-field appearance="fill">
+                    <mat-label>Setting Value</mat-label>
+                    <input matInput [formControlName]="i" />
+                  </mat-form-field>
+                </ng-container>
+
+              </ng-container>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="['name', 'value']"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['name', 'value']"></tr>
+        </table>
+      </div>
+
+      <div class="action-buttons">
+        <button mat-raised-button color="primary" type="submit" [disabled]="loading">
+          Save Changes
+        </button>
+        <button mat-raised-button color="warn" type="button" (click)="onCancel()" [disabled]="loading">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </mat-card-content>
+
+  <mat-card-content *ngIf="!loading && (!settingsArray || settingsArray.length === 0)">
+    <p>No settings available.</p>
+  </mat-card-content>
+</mat-card>

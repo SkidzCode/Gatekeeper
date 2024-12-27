@@ -16,6 +16,7 @@ import { UserProfileComponent } from './user/user-profile/user-profile.component
 import { UserRegisterComponent } from './user/user-register/user-register.component';
 import { UserVerifyComponent } from './user/user-verify/user-verify.component';
 import { ResourcesEditorComponent } from './resources/resources-editor/resources-editor.component';
+import { UserSettingsComponent } from './user/user-settings/user-settings.component'
 
 // Guards
 import { AuthGuard } from './services/guard/auth-guard.service';
@@ -33,6 +34,7 @@ const routes: Routes = [
       { path: 'forgot', component: ForgotPasswordComponent, canActivate: [DisabledGuardService] },
       { path: 'resources', component: ResourcesEditorComponent, canActivate: [DisabledGuardService, AuthGuard] },
       { path: 'user/profile', component: UserProfileComponent, canActivate: [DisabledGuardService, AuthGuard] },
+      { path: 'user/settings', component: UserSettingsComponent, canActivate: [DisabledGuardService, AuthGuard] },
       { path: 'reset', component: ResetPasswordComponent, canActivate: [DisabledGuardService] },
       { path: 'register', component: UserRegisterComponent, canActivate: [DisabledGuardService] },
       { path: 'verify', component: UserVerifyComponent, canActivate: [DisabledGuardService] }

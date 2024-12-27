@@ -19,6 +19,7 @@ using System.Net;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Identity.Data;
 using RegisterRequest = GateKeeper.Server.Models.Account.RegisterRequest;
+using GateKeeper.Server.Models.Site;
 
 namespace GateKeeper.Server.Services
 {
@@ -33,6 +34,7 @@ namespace GateKeeper.Server.Services
         private readonly IEmailService _emailService;
         private readonly IVerifyTokenService _verificationService;
         private readonly IUserService _userService;
+        private readonly ISettingsService _settingsService;
 
         /// <summary>
         /// Constructor for UserAuthenticationService.
@@ -40,7 +42,7 @@ namespace GateKeeper.Server.Services
         /// <param name="configuration">Application configuration dependency.</param>
         /// <param name="dbHelper">Database helper for DB operations.</param>
         /// <param name="logger">Logger for logging information and errors.</param>
-        public UserAuthenticationService(IUserService userService, IVerifyTokenService verificationService, IConfiguration configuration, IDBHelper dbHelper, ILogger<UserAuthenticationService> logger, IEmailService emailService)
+        public UserAuthenticationService(IUserService userService, IVerifyTokenService verificationService, IConfiguration configuration, IDBHelper dbHelper, ILogger<UserAuthenticationService> logger, IEmailService emailService, ISettingsService settingsService)
         {
             _configuration = configuration;
             _dbHelper = dbHelper;
@@ -48,6 +50,7 @@ namespace GateKeeper.Server.Services
             _emailService = emailService;
             _verificationService = verificationService;
             _userService = userService;
+            _settingsService = settingsService;
         }
 
         /// <inheritdoc />
@@ -101,30 +104,51 @@ namespace GateKeeper.Server.Services
         }
 
         /// <inheritdoc />
-        public async Task<(bool isAuthenticated, string accessToken, string refreshToken, User? user)> LoginAsync(UserLoginRequest userLogin)
+        public async Task<(bool isAuthenticated, string accessToken, string refreshToken, User? user, List<Setting> settings)> LoginAsync(UserLoginRequest userLogin)
         {
             try
             {
+                
                 User user = await _userService.GetUser(userLogin.Identifier);
+                
+                int? userId = user?.Id ?? null;
+                List<Setting> theSettings = await _settingsService.GetAllSettingsAsync(userId);
+                List<Setting> settings = theSettings.Where(s => s.UserId == null).ToList();
+                List<Setting> userSettings = theSettings
+                    .GroupBy(s => new { s.Name, s.Category })
+                    .SelectMany(group =>
+                    {
+                        // If any setting in the group has a UserId, exclude the ones without a UserId
+                        if (group.Any(s => s.UserId.HasValue))
+                        {
+                            return group.Where(s => s.UserId.HasValue);
+                        }
+
+                        // Otherwise, include all
+                        return group;
+                    })
+                    .ToList();
+
+
 
                 if (user == null || string.IsNullOrEmpty(user.Salt) || string.IsNullOrEmpty(user.Password))
-                    return (false, "", "", null);
+                    return (false, "", "", null, settings);
 
                 var hashedPassword = PasswordHelper.HashPassword(userLogin.Password, user.Salt);
 
                 if (hashedPassword != user.Password)
-                    return (false, string.Empty, string.Empty, null);
+                    return (false, string.Empty, string.Empty, null, settings);
 
                 // Generate tokens
                 var accessToken = await GenerateJwtToken(user);
                 string refreshToken = await _verificationService.GenerateTokenAsync(user.Id, "Refresh");
 
-                return (true, accessToken, refreshToken, user);
+                return (true, accessToken, refreshToken, user, userSettings);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during login.");
-                return (false, string.Empty, string.Empty, null);
+                return (false, string.Empty, string.Empty, null, null);
             }
         }
 
@@ -179,7 +203,7 @@ namespace GateKeeper.Server.Services
         }
 
         /// <inheritdoc />
-        public async Task<(bool isSuccessful, string accessToken, string refreshToken, User? user)> RefreshTokensAsync(string refreshToken)
+        public async Task<(bool isSuccessful, string accessToken, string refreshToken, User? user, List<Setting> settings)> RefreshTokensAsync(string refreshToken)
         {
             try
             {
@@ -188,10 +212,27 @@ namespace GateKeeper.Server.Services
                     TokenType = "Refresh",
                     VerificationCode = refreshToken
                 });
-                
+
+                int? userId = user?.Id ?? null;
+                List<Setting> theSettings = await _settingsService.GetAllSettingsAsync(userId);
+                List<Setting> settings = theSettings.Where(s => s.UserId == null).ToList();
+                List<Setting> userSettings = theSettings
+                    .GroupBy(s => new { s.Name, s.Category })
+                    .SelectMany(group =>
+                    {
+                        // If any setting in the group has a UserId, exclude the ones without a UserId
+                        if (group.Any(s => s.UserId.HasValue))
+                        {
+                            return group.Where(s => s.UserId.HasValue);
+                        }
+
+                        // Otherwise, include all
+                        return group;
+                    })
+                    .ToList();
 
                 if (!authenticated || user == null || verifyType != "Refresh")
-                    return (false, string.Empty, string.Empty, null);
+                    return (false, string.Empty, string.Empty, null, settings);
 
                 // Generate new tokens
                 var newAccessToken = await GenerateJwtToken(user);
@@ -199,12 +240,12 @@ namespace GateKeeper.Server.Services
 
                 await _verificationService.RevokeTokensAsync(user.Id, "Refresh", refreshToken);
                 
-                return (true, newAccessToken, newRefreshToken, user);
+                return (true, newAccessToken, newRefreshToken, user, userSettings);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error refreshing tokens.");
-                return (false, string.Empty, string.Empty, null);
+                return (false, string.Empty, string.Empty, null, new List<Setting>());
             }
         }
 

@@ -34,6 +34,7 @@ import { MatDialogContainer, MatDialogModule } from '@angular/material/dialog'
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatSortModule } from '@angular/material/sort';
 import { MatOptionModule } from '@angular/material/core';
+import { MatRadioModule } from '@angular/material/radio';
 
 import { ForgotPasswordComponent } from './user/passwords/forgot-password/forgot-password.component';
 import { ResourcesEditorComponent } from './resources/resources-editor/resources-editor.component';
@@ -44,6 +45,7 @@ import { UserVerifyComponent } from './user/user-verify/user-verify.component';
 import { MainLayoutComponent } from './site/layout/main-layout/main-layout.component';
 import { AdminLayoutComponent } from './site/layout/admin-layout/admin-layout.component';
 import { DisabledComponent } from './site/disabled/disabled.component';
+import { UserSettingsComponent } from './user/user-settings/user-settings.component';
 @NgModule({
   declarations: [
     AppComponent,
@@ -56,7 +58,8 @@ import { DisabledComponent } from './site/disabled/disabled.component';
     UserVerifyComponent,
     MainLayoutComponent,
     AdminLayoutComponent,
-    DisabledComponent
+    DisabledComponent,
+    UserSettingsComponent
   ],
   imports: [
     BrowserModule,
@@ -84,7 +87,8 @@ import { DisabledComponent } from './site/disabled/disabled.component';
     MatDialogModule,
     MatPaginatorModule,
     MatSortModule,
-    MatOptionModule
+    MatOptionModule,
+    MatRadioModule
     
   ],
   providers: [

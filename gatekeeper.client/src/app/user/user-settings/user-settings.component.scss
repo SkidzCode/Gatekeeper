@@ -1,0 +1,19 @@
+.user-settings-card {
+  margin: 1rem;
+  padding: 1rem;
+
+  .error-text {
+    color: red;
+  }
+
+  table {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  .action-buttons {
+    margin-top: 1rem;
+    display: flex;
+    gap: 1rem;
+  }
+}
