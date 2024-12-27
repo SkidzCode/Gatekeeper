@@ -2,9 +2,9 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError, tap } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { User } from '../models/user.model';
-import { Role } from '../models/role.model';
-import { UserEdit } from '../models/user.edit.model';
+import { User } from '../../models/user.model';
+import { Role } from '../../models/role.model';
+import { UserEdit } from '../../models/user.edit.model';
 
 
 @Injectable({ providedIn: 'root' })

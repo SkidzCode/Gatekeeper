@@ -16,8 +16,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 
-import { AuthService } from './services/auth.service'; // Ensure the path is correct
-import { AuthInterceptor } from './services/auth.interceptor.service';
+import { AuthService } from './services/user/auth.service'; // Ensure the path is correct
+import { AuthInterceptor } from './services/user/auth.interceptor.service';
 import { MatGridListModule } from '@angular/material/grid-list';
 import { MatCardModule } from '@angular/material/card';
 import { MatMenuModule } from '@angular/material/menu';
