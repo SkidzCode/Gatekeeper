@@ -111,11 +111,7 @@ namespace GateKeeper.Server.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddRole([FromBody] Role role)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
+            if (!ModelState.IsValid) return BadRequest(ModelState);
             try
             {
                 var createdRole = await _roleService.AddRole(role);
@@ -139,11 +135,7 @@ namespace GateKeeper.Server.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateRole(int id, [FromBody] Role role)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
+            if (!ModelState.IsValid) return BadRequest(ModelState);
             try
             {
                 // Ensure the role object's Id matches the route

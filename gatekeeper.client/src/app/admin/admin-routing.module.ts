@@ -8,6 +8,7 @@ import { AdminLayoutComponent } from '../site/layout/admin-layout/admin-layout.c
 import { UserListComponent } from './user/user-list/user-list.component';
 import { UserEditComponent } from './user/user-edit/user-edit.component';
 import { UserLoginComponent } from '../user/user-login/user-login.component';
+import { NotificationComponent } from './notification/notification/notification.component';
 
 // Guard
 import { AdminGuard } from '../services/guard/admin-guard.service';
@@ -19,6 +20,7 @@ const routes: Routes = [
     children: [
       { path: 'users', component: UserListComponent, canActivate: [AdminGuard] },
       { path: 'users/edit/:id', component: UserEditComponent, canActivate: [AdminGuard] },
+      { path: 'notifications', component: NotificationComponent, canActivate: [AdminGuard] },
       { path: 'login', component: UserLoginComponent }
       // ... more admin routes here
     ],

@@ -29,6 +29,8 @@ builder.Services.AddScoped<IResourceService, ResourceService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<IVerifyTokenService, VerifyTokenService>();
 builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService>();
+builder.Services.AddScoped<INotificationTemplateService, NotificationTemplateService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 #region Swagger
 builder.Services.AddSwaggerGen(options =>
