@@ -32,20 +32,13 @@ namespace GateKeeper.Server.Services
         /// <returns>List of Setting objects.</returns>
         public async Task<List<Setting>> GetAllSettingsAsync(int? userId = null)
         {
-
             var settings = new List<Setting>();
             try
             {
-                await using var connection = await _dbHelper.GetOpenConnectionAsync();
-                await using var cmd = new MySqlCommand("GetAllSettings", connection)
-                {
-                    CommandType = CommandType.StoredProcedure
-                };
-                
-                cmd.Parameters.Add(new MySqlParameter("@p_UserId", MySqlDbType.Int32)).Value = 
-                    (userId == null) ? DBNull.Value : userId;
+                await using var connection = await _dbHelper.GetWrapperAsync();
+                await using var reader = await connection.ExecuteReaderAsync("GetAllSettings", CommandType.StoredProcedure,
+                    new MySqlParameter("@p_UserId", MySqlDbType.Int32) { Value = userId ?? (object)DBNull.Value });
 
-                await using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
                     settings.Add(MapReaderToSetting(reader));
@@ -71,15 +64,10 @@ namespace GateKeeper.Server.Services
 
             try
             {
-                await using var connection = await _dbHelper.GetOpenConnectionAsync();
-                await using var cmd = new MySqlCommand("GetSettingById", connection)
-                {
-                    CommandType = CommandType.StoredProcedure
-                };
+                await using var connection = await _dbHelper.GetWrapperAsync();
+                await using var reader = await connection.ExecuteReaderAsync("GetSettingById", CommandType.StoredProcedure,
+                    new MySqlParameter("@p_Id", MySqlDbType.Int32) { Value = id });
 
-                cmd.Parameters.Add(new MySqlParameter("@p_Id", MySqlDbType.Int32)).Value = id;
-
-                await using var reader = await cmd.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
                 {
                     setting = MapReaderToSetting(reader);
@@ -103,27 +91,22 @@ namespace GateKeeper.Server.Services
         {
             try
             {
-                await using var connection = await _dbHelper.GetOpenConnectionAsync();
-                await using var cmd = new MySqlCommand("AddSetting", connection)
+                await using var connection = await _dbHelper.GetWrapperAsync();
+                await using var reader = await connection.ExecuteReaderAsync("AddSetting", CommandType.StoredProcedure,
+                    new MySqlParameter("@p_ParentId", MySqlDbType.Int32) { Value = (object?)setting.ParentId ?? DBNull.Value },
+                    new MySqlParameter("@p_Name", MySqlDbType.VarChar, 100) { Value = setting.Name },
+                    new MySqlParameter("@p_Category", MySqlDbType.VarChar, 50) { Value = (object?)setting.Category ?? DBNull.Value },
+                    new MySqlParameter("@p_UserId", MySqlDbType.Int32) { Value = (object?)setting.UserId ?? DBNull.Value },
+                    new MySqlParameter("@p_SettingValueType", MySqlDbType.Enum) { Value = setting.SettingValueType },
+                    new MySqlParameter("@p_DefaultSettingValue", MySqlDbType.Text) { Value = setting.DefaultSettingValue },
+                    new MySqlParameter("@p_SettingValue", MySqlDbType.Text) { Value = setting.SettingValue },
+                    new MySqlParameter("@p_CreatedBy", MySqlDbType.Int32) { Value = setting.CreatedBy },
+                    new MySqlParameter("@p_UpdatedBy", MySqlDbType.Int32) { Value = setting.UpdatedBy });
+
+                if (await reader.ReadAsync())
                 {
-                    CommandType = CommandType.StoredProcedure
-                };
-
-                cmd.Parameters.Add(new MySqlParameter("@p_ParentId", MySqlDbType.Int32)).Value = (object?)setting.ParentId ?? DBNull.Value;
-                cmd.Parameters.Add(new MySqlParameter("@p_Name", MySqlDbType.VarChar, 100)).Value = setting.Name;
-                cmd.Parameters.Add(new MySqlParameter("@p_Category", MySqlDbType.VarChar, 50)).Value = (object?)setting.Category ?? DBNull.Value;
-                cmd.Parameters.Add(new MySqlParameter("@p_UserId", MySqlDbType.Int32)).Value = (object?)setting.UserId ?? DBNull.Value;
-                cmd.Parameters.Add(new MySqlParameter("@p_SettingValueType", MySqlDbType.Enum)).Value = setting.SettingValueType;
-                cmd.Parameters.Add(new MySqlParameter("@p_DefaultSettingValue", MySqlDbType.Text)).Value = setting.DefaultSettingValue;
-                cmd.Parameters.Add(new MySqlParameter("@p_SettingValue", MySqlDbType.Text)).Value = setting.SettingValue;
-                cmd.Parameters.Add(new MySqlParameter("@p_CreatedBy", MySqlDbType.Int32)).Value = setting.CreatedBy;
-                cmd.Parameters.Add(new MySqlParameter("@p_UpdatedBy", MySqlDbType.Int32)).Value = setting.UpdatedBy;
-
-                // Execute the stored procedure
-                await cmd.ExecuteNonQueryAsync();
-
-                // Retrieve the newly inserted Id
-                setting.Id = (int)cmd.LastInsertedId;
+                    setting.Id = reader.GetInt32("NewSettingId");
+                }
 
                 return setting;
             }
@@ -134,6 +117,8 @@ namespace GateKeeper.Server.Services
             }
         }
 
+
+
         /// <summary>
         /// Updates an existing setting via the UpdateSetting stored procedure.
         /// </summary>
@@ -143,27 +128,19 @@ namespace GateKeeper.Server.Services
         {
             try
             {
-                await using var connection = await _dbHelper.GetOpenConnectionAsync();
-                await using var cmd = new MySqlCommand("UpdateSetting", connection)
-                {
-                    CommandType = CommandType.StoredProcedure
-                };
-
-                cmd.Parameters.Add(new MySqlParameter("@p_Id", MySqlDbType.Int32)).Value = setting.Id;
-                cmd.Parameters.Add(new MySqlParameter("@p_ParentId", MySqlDbType.Int32)).Value = (object?)setting.ParentId ?? DBNull.Value;
-                cmd.Parameters.Add(new MySqlParameter("@p_Name", MySqlDbType.VarChar, 100)).Value = setting.Name;
-                cmd.Parameters.Add(new MySqlParameter("@p_Category", MySqlDbType.VarChar, 50)).Value = (object?)setting.Category ?? DBNull.Value;
-                cmd.Parameters.Add(new MySqlParameter("@p_SettingValueType", MySqlDbType.Enum)).Value = setting.SettingValueType;
-                cmd.Parameters.Add(new MySqlParameter("@p_DefaultSettingValue", MySqlDbType.Text)).Value = setting.DefaultSettingValue;
-                cmd.Parameters.Add(new MySqlParameter("@p_SettingValue", MySqlDbType.Text)).Value = setting.SettingValue;
-                cmd.Parameters.Add(new MySqlParameter("@p_UpdatedBy", MySqlDbType.Int32)).Value = setting.UpdatedBy;
-
-                // Execute the stored procedure
-                int rowsAffected = await cmd.ExecuteNonQueryAsync();
+                await using var connection = await _dbHelper.GetWrapperAsync();
+                int rowsAffected = await connection.ExecuteNonQueryAsync("UpdateSetting", CommandType.StoredProcedure,
+                    new MySqlParameter("@p_Id", MySqlDbType.Int32) { Value = setting.Id },
+                    new MySqlParameter("@p_ParentId", MySqlDbType.Int32) { Value = (object?)setting.ParentId ?? DBNull.Value },
+                    new MySqlParameter("@p_Name", MySqlDbType.VarChar, 100) { Value = setting.Name },
+                    new MySqlParameter("@p_Category", MySqlDbType.VarChar, 50) { Value = (object?)setting.Category ?? DBNull.Value },
+                    new MySqlParameter("@p_SettingValueType", MySqlDbType.Enum) { Value = setting.SettingValueType },
+                    new MySqlParameter("@p_DefaultSettingValue", MySqlDbType.Text) { Value = setting.DefaultSettingValue },
+                    new MySqlParameter("@p_SettingValue", MySqlDbType.Text) { Value = setting.SettingValue },
+                    new MySqlParameter("@p_UpdatedBy", MySqlDbType.Int32) { Value = setting.UpdatedBy });
 
                 if (rowsAffected > 0)
                 {
-                    // Optionally, retrieve the updated setting
                     return await GetSettingByIdAsync(setting.Id);
                 }
 
@@ -185,16 +162,9 @@ namespace GateKeeper.Server.Services
         {
             try
             {
-                await using var connection = await _dbHelper.GetOpenConnectionAsync();
-                await using var cmd = new MySqlCommand("DeleteSetting", connection)
-                {
-                    CommandType = CommandType.StoredProcedure
-                };
-
-                cmd.Parameters.Add(new MySqlParameter("@p_Id", MySqlDbType.Int32)).Value = id;
-
-                // Execute the stored procedure
-                int rowsAffected = await cmd.ExecuteNonQueryAsync();
+                await using var connection = await _dbHelper.GetWrapperAsync();
+                int rowsAffected = await connection.ExecuteNonQueryAsync("DeleteSetting", CommandType.StoredProcedure,
+                    new MySqlParameter("@p_Id", MySqlDbType.Int32) { Value = id });
 
                 return rowsAffected > 0;
             }
@@ -217,16 +187,11 @@ namespace GateKeeper.Server.Services
 
             try
             {
-                await using var connection = await _dbHelper.GetOpenConnectionAsync();
-                await using var cmd = new MySqlCommand("GetSettingsByCategory", connection)
-                {
-                    CommandType = CommandType.StoredProcedure
-                };
+                await using var connection = await _dbHelper.GetWrapperAsync();
+                await using var reader = await connection.ExecuteReaderAsync("GetSettingsByCategory", CommandType.StoredProcedure,
+                    new MySqlParameter("@p_UserId", MySqlDbType.Int32) { Value = userId },
+                    new MySqlParameter("@p_Category", MySqlDbType.VarChar, 50) { Value = category });
 
-                cmd.Parameters.Add(new MySqlParameter("@p_UserId", MySqlDbType.Int32)).Value = userId;
-                cmd.Parameters.Add(new MySqlParameter("@p_Category", MySqlDbType.VarChar, 50)).Value = category;
-
-                await using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
                     settings.Add(MapReaderToSetting(reader));
@@ -255,18 +220,13 @@ namespace GateKeeper.Server.Services
 
             try
             {
-                await using var connection = await _dbHelper.GetOpenConnectionAsync();
-                await using var cmd = new MySqlCommand("SearchSettings", connection)
-                {
-                    CommandType = CommandType.StoredProcedure
-                };
+                await using var connection = await _dbHelper.GetWrapperAsync();
+                await using var reader = await connection.ExecuteReaderAsync("SearchSettings", CommandType.StoredProcedure,
+                    new MySqlParameter("@p_Name", MySqlDbType.VarChar, 100) { Value = (object?)name ?? DBNull.Value },
+                    new MySqlParameter("@p_Category", MySqlDbType.VarChar, 50) { Value = (object?)category ?? DBNull.Value },
+                    new MySqlParameter("@p_Limit", MySqlDbType.Int32) { Value = limit },
+                    new MySqlParameter("@p_Offset", MySqlDbType.Int32) { Value = offset });
 
-                cmd.Parameters.Add(new MySqlParameter("@p_Name", MySqlDbType.VarChar, 100)).Value = (object?)name ?? DBNull.Value;
-                cmd.Parameters.Add(new MySqlParameter("@p_Category", MySqlDbType.VarChar, 50)).Value = (object?)category ?? DBNull.Value;
-                cmd.Parameters.Add(new MySqlParameter("@p_Limit", MySqlDbType.Int32)).Value = limit;
-                cmd.Parameters.Add(new MySqlParameter("@p_Offset", MySqlDbType.Int32)).Value = offset;
-
-                await using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
                 {
                     settings.Add(MapReaderToSetting(reader));
@@ -296,24 +256,19 @@ namespace GateKeeper.Server.Services
                 if (setting.Id == 0)
                     settingId = null;
 
-                await using var connection = await _dbHelper.GetOpenConnectionAsync();
-                await using var cmd = new MySqlCommand("AddOrUpdateSetting", connection)
-                {
-                    CommandType = CommandType.StoredProcedure
-                };
+                await using var connection = await _dbHelper.GetWrapperAsync();
+                await using var reader = await connection.ExecuteReaderAsync("AddOrUpdateSetting", CommandType.StoredProcedure,
+                    new MySqlParameter("@p_Id", MySqlDbType.Int32) { Value = (object?)settingId ?? DBNull.Value },
+                    new MySqlParameter("@p_ParentId", MySqlDbType.Int32) { Value = (object?)setting.ParentId ?? DBNull.Value },
+                    new MySqlParameter("@p_Name", MySqlDbType.VarChar, 100) { Value = setting.Name },
+                    new MySqlParameter("@p_Category", MySqlDbType.VarChar, 50) { Value = (object?)setting.Category ?? DBNull.Value },
+                    new MySqlParameter("@p_UserId", MySqlDbType.Int32) { Value = userId },
+                    new MySqlParameter("@p_SettingValueType", MySqlDbType.Enum) { Value = setting.SettingValueType },
+                    new MySqlParameter("@p_DefaultSettingValue", MySqlDbType.Text) { Value = setting.DefaultSettingValue },
+                    new MySqlParameter("@p_SettingValue", MySqlDbType.Text) { Value = setting.SettingValue },
+                    new MySqlParameter("@p_CreatedBy", MySqlDbType.Int32) { Value = setting.CreatedBy },
+                    new MySqlParameter("@p_UpdatedBy", MySqlDbType.Int32) { Value = setting.UpdatedBy });
 
-                cmd.Parameters.Add(new MySqlParameter("@p_Id", MySqlDbType.Int32)).Value = (object?)settingId ?? DBNull.Value;
-                cmd.Parameters.Add(new MySqlParameter("@p_ParentId", MySqlDbType.Int32)).Value = (object?)setting.ParentId ?? DBNull.Value;
-                cmd.Parameters.Add(new MySqlParameter("@p_Name", MySqlDbType.VarChar, 100)).Value = setting.Name;
-                cmd.Parameters.Add(new MySqlParameter("@p_Category", MySqlDbType.VarChar, 50)).Value = (object?)setting.Category ?? DBNull.Value;
-                cmd.Parameters.Add(new MySqlParameter("@p_UserId", MySqlDbType.Int32)).Value = userId;
-                cmd.Parameters.Add(new MySqlParameter("@p_SettingValueType", MySqlDbType.Enum)).Value = setting.SettingValueType;
-                cmd.Parameters.Add(new MySqlParameter("@p_DefaultSettingValue", MySqlDbType.Text)).Value = setting.DefaultSettingValue;
-                cmd.Parameters.Add(new MySqlParameter("@p_SettingValue", MySqlDbType.Text)).Value = setting.SettingValue;
-                cmd.Parameters.Add(new MySqlParameter("@p_CreatedBy", MySqlDbType.Int32)).Value = setting.CreatedBy;
-                cmd.Parameters.Add(new MySqlParameter("@p_UpdatedBy", MySqlDbType.Int32)).Value = setting.UpdatedBy;
-
-                await using var reader = await cmd.ExecuteReaderAsync();
                 if (await reader.ReadAsync())
                 {
                     resultSetting = MapReaderToSetting(reader);
@@ -333,7 +288,7 @@ namespace GateKeeper.Server.Services
         /// </summary>
         /// <param name="reader">Data reader containing the setting data.</param>
         /// <returns>Mapped Setting object.</returns>
-        private Setting MapReaderToSetting(MySqlDataReader reader)
+        private Setting MapReaderToSetting(IMySqlDataReaderWrapper reader)
         {
             return new Setting
             {
@@ -348,7 +303,7 @@ namespace GateKeeper.Server.Services
                 UpdatedBy = reader.GetInt32("UpdatedBy"),
                 CreatedAt = reader.GetDateTime("CreatedAt"),
                 UpdatedAt = reader.GetDateTime("UpdatedAt"),
-                UserId = reader.IsDBNull(reader.GetOrdinal("userId")) ? null : reader.GetInt32("userId")
+                UserId = reader.IsDBNull(reader.GetOrdinal("UserId")) ? null : reader.GetInt32("UserId")
             };
         }
     }

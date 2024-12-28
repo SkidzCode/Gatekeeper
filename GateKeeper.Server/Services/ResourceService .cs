@@ -1,15 +1,23 @@
 ﻿using System.Xml.Linq;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Resources;
+using Microsoft.Extensions.Logging;
+using MySqlConnector;
+using System.Data;
+using System.Threading.Tasks;
 
 namespace GateKeeper.Server.Services
 {
     public class ResourceService : IResourceService
     {
+        private readonly IDBHelper _dbHelper;
+        private readonly ILogger<ResourceService> _logger;
         private readonly string _resourceDirectory;
 
-        public ResourceService()
+        public ResourceService(IDBHelper dbHelper, ILogger<ResourceService> logger)
         {
+            _dbHelper = dbHelper;
+            _logger = logger;
             _resourceDirectory = "C:/Users/Skidz/source/repos/GateKeeper/GateKeeper.Server/Resources";
         }
 

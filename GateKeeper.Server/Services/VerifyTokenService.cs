@@ -57,16 +57,10 @@ namespace GateKeeper.Server.Services
 
             try
             {
+                await using var connection = await _dbHelper.GetWrapperAsync();
+                await using var reader = await connection.ExecuteReaderAsync("ValidateUser", CommandType.StoredProcedure,
+                    new MySqlParameter("@p_Id", MySqlDbType.VarChar, 36) { Value = tokenId });
 
-
-                await using var connection = await _dbHelper.GetOpenConnectionAsync();
-                await using var cmd = new MySqlCommand("ValidateUser", connection)
-                {
-                    CommandType = CommandType.StoredProcedure
-                };
-                cmd.Parameters.AddWithValue("@p_Id", tokenId);
-
-                await using var reader = await cmd.ExecuteReaderAsync();
                 if (!await reader.ReadAsync() || Convert.ToBoolean(reader["Revoked"]))
                     return (false, null, validationType);
 
@@ -88,7 +82,6 @@ namespace GateKeeper.Server.Services
                     Username = reader["Username"].ToString() ?? string.Empty
                 };
 
-                
                 if (storedHashedToken != hashedProvidedToken ||
                     alreadyComplete ||
                     verifyRequest.TokenType != validationType)
@@ -103,8 +96,6 @@ namespace GateKeeper.Server.Services
             return (!string.IsNullOrEmpty(user?.Username), user, validationType);
         }
 
-
-
         /// <summary>
         /// Generates and Stores the refresh token in the database.
         /// </summary>
@@ -115,25 +106,20 @@ namespace GateKeeper.Server.Services
         public async Task<string> GenerateTokenAsync(int userId, string verifyType)
         {
             var verifyToken = GenerateVerifyToken();
-            MySqlConnection connection = await _dbHelper.GetOpenConnectionAsync();
+            await using var connection = await _dbHelper.GetWrapperAsync();
             // Generate Refresh Token
             var salt = PasswordHelper.GenerateSalt();
             var hashedVerifyToken = PasswordHelper.HashPassword(verifyToken, salt);
             var tokenId = Guid.NewGuid().ToString(); // Unique identifier for the refresh token
 
             // Store Refresh Token in DB
-            await using (var cmd = new MySqlCommand("VerificationInsert", connection))
-            {
-                cmd.CommandType = System.Data.CommandType.StoredProcedure;
-                cmd.Parameters.AddWithValue("@p_Id", tokenId);
-                cmd.Parameters.AddWithValue("@p_VerifyType", verifyType);
-                cmd.Parameters.AddWithValue("@p_UserId", userId);
-                cmd.Parameters.AddWithValue("@p_HashedToken", hashedVerifyToken);
-                cmd.Parameters.AddWithValue("@p_Salt", salt);
-                cmd.Parameters.AddWithValue("@p_ExpiryDate", DateTime.UtcNow.AddDays(7)); // 7-day expiration
-                // Add additional parameters as needed
-                await cmd.ExecuteNonQueryAsync();
-            }
+            await connection.ExecuteNonQueryAsync("VerificationInsert", CommandType.StoredProcedure,
+                new MySqlParameter("@p_Id", MySqlDbType.VarChar, 36) { Value = tokenId },
+                new MySqlParameter("@p_VerifyType", MySqlDbType.VarChar, 20) { Value = verifyType },
+                new MySqlParameter("@p_UserId", MySqlDbType.Int32) { Value = userId },
+                new MySqlParameter("@p_HashedToken", MySqlDbType.VarChar, 255) { Value = hashedVerifyToken },
+                new MySqlParameter("@p_Salt", MySqlDbType.VarChar, 255) { Value = salt },
+                new MySqlParameter("@p_ExpiryDate", MySqlDbType.DateTime) { Value = DateTime.UtcNow.AddDays(7) }); // 7-day expiration
 
             return $"{tokenId}.{verifyToken}";
         }
@@ -150,23 +136,18 @@ namespace GateKeeper.Server.Services
             if (!string.IsNullOrEmpty(token))
                 tokenId = token.Split('.')[0];
 
-            await using var connection = await _dbHelper.GetOpenConnectionAsync();
+            await using var connection = await _dbHelper.GetWrapperAsync();
 
-            await using var cmd = new MySqlCommand("RevokeVerifyToken", connection)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
-            cmd.Parameters.Add(new MySqlParameter("@p_UserId", MySqlDbType.Int32)).Value = userId;
-            cmd.Parameters.Add(new MySqlParameter("@p_TokenId", MySqlDbType.VarChar, 36)).Value = tokenId ?? (object)DBNull.Value;
-            cmd.Parameters.Add(new MySqlParameter("@p_VerifyType", MySqlDbType.VarChar, 20)).Value = verifyType;
             var rowsAffectedParam = new MySqlParameter("@p_RowsAffected", MySqlDbType.Int32)
             {
                 Direction = ParameterDirection.Output
             };
-            cmd.Parameters.Add(rowsAffectedParam);
 
-            // Execute the procedure
-            await cmd.ExecuteNonQueryAsync();
+            await connection.ExecuteNonQueryAsync("RevokeVerifyToken", CommandType.StoredProcedure,
+                new MySqlParameter("@p_UserId", MySqlDbType.Int32) { Value = userId },
+                new MySqlParameter("@p_TokenId", MySqlDbType.VarChar, 36) { Value = tokenId ?? (object)DBNull.Value },
+                new MySqlParameter("@p_VerifyType", MySqlDbType.VarChar, 20) { Value = verifyType },
+                rowsAffectedParam);
 
             // Get the value of the output parameter
             int rowsAffected = (int)rowsAffectedParam.Value;
@@ -174,9 +155,7 @@ namespace GateKeeper.Server.Services
             return rowsAffected;
         }
 
-
         #region Private Helper Methods
-
 
         /// <summary>
         /// Generates a secure refresh token.
@@ -189,8 +168,6 @@ namespace GateKeeper.Server.Services
             rng.GetBytes(randomBytes);
             return Convert.ToBase64String(randomBytes);
         }
-
-
 
         #endregion
     }

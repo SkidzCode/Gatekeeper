@@ -38,16 +38,10 @@ namespace GateKeeper.Server.Services
         /// <returns>The inserted Role (with any DB-generated fields, if applicable).</returns>
         public async Task<Role> AddRole(Role role)
         {
-            await using var connection = await _dbHelper.GetOpenConnectionAsync();
-            await using var cmd = new MySqlCommand("InsertRole", connection)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
+            await using var connection = await _dbHelper.GetWrapperAsync();
+            await connection.ExecuteNonQueryAsync("InsertRole", CommandType.StoredProcedure,
+                new MySqlParameter("@p_RoleName", MySqlDbType.VarChar, 50) { Value = role.RoleName });
 
-            cmd.Parameters.Add(new MySqlParameter("@p_RoleName", MySqlDbType.VarChar, 50)).Value = role.RoleName;
-
-            // Execute
-            await cmd.ExecuteNonQueryAsync();
             // If your SP sets any output parameters, retrieve them here. Example if InsertRole returns last inserted Id:
             // role.Id = Convert.ToInt32(cmd.Parameters["@last_id"].Value);
 
@@ -63,15 +57,10 @@ namespace GateKeeper.Server.Services
         {
             Role? role = null;
 
-            await using var connection = await _dbHelper.GetOpenConnectionAsync();
-            await using var cmd = new MySqlCommand("GetRoleById", connection)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
+            await using var connection = await _dbHelper.GetWrapperAsync();
+            await using var reader = await connection.ExecuteReaderAsync("GetRoleById", CommandType.StoredProcedure,
+                new MySqlParameter("@p_Id", MySqlDbType.Int32) { Value = id });
 
-            cmd.Parameters.AddWithValue("@p_Id", id);
-
-            await using var reader = await cmd.ExecuteReaderAsync();
             if (await reader.ReadAsync())
             {
                 role = new Role()
@@ -93,15 +82,10 @@ namespace GateKeeper.Server.Services
         {
             Role? role = null;
 
-            await using var connection = await _dbHelper.GetOpenConnectionAsync();
-            await using var cmd = new MySqlCommand("GetRoleByName", connection)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
+            await using var connection = await _dbHelper.GetWrapperAsync();
+            await using var reader = await connection.ExecuteReaderAsync("GetRoleByName", CommandType.StoredProcedure,
+                new MySqlParameter("@p_RoleName", MySqlDbType.VarChar, 50) { Value = roleName });
 
-            cmd.Parameters.AddWithValue("@p_RoleName", roleName);
-
-            await using var reader = await cmd.ExecuteReaderAsync();
             if (await reader.ReadAsync())
             {
                 role = new Role()
@@ -121,16 +105,10 @@ namespace GateKeeper.Server.Services
         /// <returns>The updated Role.</returns>
         public async Task<Role> UpdateRole(Role role)
         {
-            await using var connection = await _dbHelper.GetOpenConnectionAsync();
-            await using var cmd = new MySqlCommand("UpdateRole", connection)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
-
-            cmd.Parameters.AddWithValue("@p_Id", role.Id);
-            cmd.Parameters.AddWithValue("@p_RoleName", role.RoleName);
-
-            await cmd.ExecuteNonQueryAsync();
+            await using var connection = await _dbHelper.GetWrapperAsync();
+            await connection.ExecuteNonQueryAsync("UpdateRole", CommandType.StoredProcedure,
+                new MySqlParameter("@p_Id", MySqlDbType.Int32) { Value = role.Id },
+                new MySqlParameter("@p_RoleName", MySqlDbType.VarChar, 50) { Value = role.RoleName });
 
             return role;
         }
@@ -143,13 +121,9 @@ namespace GateKeeper.Server.Services
         {
             var roles = new List<Role>();
 
-            await using var connection = await _dbHelper.GetOpenConnectionAsync();
-            await using var cmd = new MySqlCommand("GetAllRoles", connection)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
+            await using var connection = await _dbHelper.GetWrapperAsync();
+            await using var reader = await connection.ExecuteReaderAsync("GetAllRoles", CommandType.StoredProcedure);
 
-            await using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
                 var role = new Role()

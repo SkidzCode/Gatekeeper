@@ -1,6 +1,7 @@
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Services;
+using GateKeeper.Server.Database;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -19,7 +20,8 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddSingleton<IDBHelper, DBHelper>();
+
+builder.Services.AddScoped<IDBHelper, DBHelper>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();

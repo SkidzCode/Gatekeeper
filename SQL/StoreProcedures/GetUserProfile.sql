@@ -16,6 +16,13 @@ BEGIN
         Phone
     FROM Users
     WHERE Id = p_UserId AND IsActive = 1;
+	
+	-- Second result set: User roles
+    SELECT r.RoleName
+    FROM UserRoles ur
+    JOIN Roles r ON ur.RoleId = r.Id
+    JOIN Users u ON ur.UserId = u.Id
+    WHERE Id = p_UserId AND u.IsActive = 1;
 END //
 DELIMITER ;
 
@@ -28,6 +35,7 @@ CREATE PROCEDURE GetUserProfileByIdentifier(
     IN p_Identifier VARCHAR(120)
 )
 BEGIN
+    -- First result set: User profile information
     SELECT Id,
         Salt,
         Password,
@@ -38,5 +46,12 @@ BEGIN
         Phone
     FROM Users
     WHERE (Username = p_Identifier OR Email = p_Identifier) AND IsActive = 1;
+
+    -- Second result set: User roles
+    SELECT r.RoleName
+    FROM UserRoles ur
+    JOIN Roles r ON ur.RoleId = r.Id
+    JOIN Users u ON ur.UserId = u.Id
+    WHERE (u.Username = p_Identifier OR u.Email = p_Identifier) AND u.IsActive = 1;
 END //
 DELIMITER ;
