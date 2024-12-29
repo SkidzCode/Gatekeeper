@@ -1,0 +1,97 @@
+<div class="notification-container mat-typography">
+
+  <!-- Section: Notification Templates List -->
+  <mat-card>
+    <mat-card-title>Notification Templates</mat-card-title>
+    <mat-card-content>
+      <div *ngIf="templates && templates.length > 0">
+        <mat-nav-list>
+          <mat-list-item *ngFor="let template of templates"
+                         (click)="selectTemplate(template)"
+                         [class.selected]="template.templateId === selectedTemplate?.templateId">
+            <div mat-line>
+              <strong>{{ template.templateName }}</strong>
+            </div>
+            <div mat-line class="template-channel">
+              Channel: {{ template.channel | uppercase }}
+            </div>
+          </mat-list-item>
+        </mat-nav-list>
+      </div>
+      <div *ngIf="!templates || templates.length === 0">
+        No templates found.
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Section: Edit Selected Template -->
+  <mat-card *ngIf="selectedTemplate">
+    <mat-card-title>Edit Template: {{ selectedTemplate.templateName }}</mat-card-title>
+    <mat-card-content>
+      <form [formGroup]="templateForm" novalidate>
+
+        <!-- Template Name -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Template Name</mat-label>
+          <input matInput formControlName="templateName" />
+          <mat-error *ngIf="hasError('templateName', 'required')">
+            Template Name is required
+          </mat-error>
+        </mat-form-field>
+
+        <!-- Channel -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Channel</mat-label>
+          <mat-select formControlName="channel" required>
+            <mat-option *ngFor="let ch of channels" [value]="ch">
+              {{ ch.toUpperCase() }}
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="hasError('channel', 'required')">
+            Channel is required
+          </mat-error>
+        </mat-form-field>
+
+        <!-- Subject -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Subject</mat-label>
+          <input matInput formControlName="subject" />
+          <mat-error *ngIf="hasError('subject', 'required')">
+            Subject is required for Email
+          </mat-error>
+        </mat-form-field>
+
+        <!-- Body -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Body (HTML)</mat-label>
+          <textarea matInput rows="5" formControlName="body"></textarea>
+          <mat-error *ngIf="hasError('body', 'required')">
+            Body is required
+          </mat-error>
+        </mat-form-field>
+
+        <!-- isActive Toggle -->
+        <!--<mat-slide-toggle formControlName="isActive">Active</mat-slide-toggle>-->
+
+      </form>
+    </mat-card-content>
+    <mat-card-actions>
+      <button mat-stroked-button color="accent" (click)="togglePreview()" [disabled]="templateForm.invalid">
+        {{ (previewMode$ | async) ? 'Hide Preview' : 'Preview' }}
+      </button>
+      <button mat-raised-button color="primary" (click)="save()" [disabled]="templateForm.invalid">
+        Save
+      </button>
+    </mat-card-actions>
+
+    <!-- Preview Section -->
+    <mat-card *ngIf="previewMode$ | async" class="preview-card">
+      <mat-card-title>Preview</mat-card-title>
+      <mat-card-content>
+        <app-template-preview-iframe [htmlContent]="getPreviewHtml()"></app-template-preview-iframe>
+      </mat-card-content>
+    </mat-card>
+
+  </mat-card>
+
+</div>

@@ -3,7 +3,7 @@
 export interface NotificationTemplate {
   templateId?: number;
   templateName: string;
-  channel: string;
+  channel: 'email' | 'sms' | 'push' | 'inapp';
   subject: string;
   body: string;
   isActive: boolean;

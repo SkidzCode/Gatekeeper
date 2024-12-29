@@ -1,0 +1,35 @@
+.notification-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  padding: 0 16px; /* Optional: Padding to avoid touching screen edges */
+}
+
+mat-card {
+  width: 100%; /* Ensure mat-card spans the full container width */
+  padding: 16px; /* Maintain consistent padding */
+}
+
+.full-width {
+  width: 100%; /* Ensure all form fields take up the full width */
+}
+
+.template-channel {
+  font-size: 0.9rem;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.selected {
+  background-color: #e0f7fa !important; /* Highlight selected items */
+}
+
+.preview-card {
+  margin-top: 16px;
+}
+
+mat-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

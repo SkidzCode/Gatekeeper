@@ -15,12 +15,16 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatListModule } from '@angular/material/list';
 import { MatNativeDateModule } from '@angular/material/core'; // <-- Import here
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatIconModule } from '@angular/material/icon';
 
 import { AdminRoutingModule } from './admin-routing.module';
 import { UserListComponent } from './user/user-list/user-list.component';
 import { UserEditComponent } from './user/user-edit/user-edit.component';
 import { NotificationComponent } from './notification/notification/notification.component';
 import { NotificationPreviewDialogComponent } from './notification/notification-preview-dialog/notification-preview-dialog.component';
+import { NotificationTemplatesComponent } from './notification/notification-templates/notification-templates.component';
+import { TemplatePreviewIframeComponent } from './notification/template-preview-iframe/template-preview-iframe.component';
 
 @NgModule({
   declarations: [
@@ -28,6 +32,8 @@ import { NotificationPreviewDialogComponent } from './notification/notification-
     UserEditComponent,
     NotificationComponent,
     NotificationPreviewDialogComponent,
+    NotificationTemplatesComponent,
+    TemplatePreviewIframeComponent,
   ],
   imports: [
     CommonModule,
@@ -47,7 +53,9 @@ import { NotificationPreviewDialogComponent } from './notification/notification-
     ReactiveFormsModule,
     MatDatepickerModule,
     MatListModule,
-    MatNativeDateModule
+    MatNativeDateModule,
+    MatToolbarModule,
+    MatIconModule
   ],
 })
 export class AdminModule { }

@@ -88,9 +88,8 @@
       <div *ngIf="loadingTemplates">Loading templates...</div>
       <mat-nav-list dense *ngIf="!loadingTemplates && filteredTemplates.length > 0">
         <mat-list-item *ngFor="let template of filteredTemplates">
-          <div mat-line><strong>{{ template.templateName }}</strong> ({{ template.channel }})</div>
-          <div mat-line>{{ template.subject }}</div>
-          <button mat-button color="primary" (click)="applyTemplate(template)">Use Template</button>
+          <div mat-line><strong>{{ template.templateName }}</strong> ({{ template.channel }}) - {{ template.subject }} <button mat-button (click)="applyTemplate(template)">Use Template</button></div>
+          
         </mat-list-item>
       </mat-nav-list>
       <div *ngIf="!loadingTemplates && filteredTemplates.length === 0">
@@ -143,5 +142,4 @@
       </table>
     </mat-card-content>
   </mat-card>
-
 </div>
