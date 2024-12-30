@@ -7,6 +7,9 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
 using System.Text;
+using Hangfire;
+using Hangfire.MySql;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +34,32 @@ builder.Services.AddScoped<IVerifyTokenService, VerifyTokenService>();
 builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService>();
 builder.Services.AddScoped<INotificationTemplateService, NotificationTemplateService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+
+#region Hangfire
+
+builder.Services.AddHangfire(config =>
+{
+    config.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UseStorage(new MySqlStorage(
+            builder.Configuration.GetConnectionString("HangfireConnection"),
+            new MySqlStorageOptions
+            {
+                QueuePollInterval = TimeSpan.FromSeconds(15), // Optional: Polling interval
+                TransactionIsolationLevel = System.Transactions.IsolationLevel.ReadCommitted, // MariaDB supports this isolation level
+                JobExpirationCheckInterval = TimeSpan.FromMinutes(5) // Optional: How often expired jobs are checked
+            }));
+});
+
+// Use this to configure both Hangfire and the server together
+builder.Services.AddHangfireServer(options =>
+{
+    options.ServerTimeout = TimeSpan.FromMinutes(1); // Automatically removes inactive servers after 1 minute
+    options.ServerName = $"HangfireServer-{Environment.MachineName}"; // Unique server name
+});
+
+#endregion
 
 #region Swagger
 builder.Services.AddSwaggerGen(options =>
@@ -94,8 +123,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 #endregion
 
-
-
 var app = builder.Build();
 
 app.UseDefaultFiles();
@@ -106,10 +133,9 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseHangfireDashboard();
 }
-
 app.UseHttpsRedirection();
-
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
