@@ -1,7 +1,3 @@
-Certainly! Below is the revised **Getting Started** guide for the **GateKeeper** project, incorporating your specific requests regarding database script execution and configuration management using "manager user secrets." This enhanced version ensures clarity and provides detailed instructions to guide new developers or contributors through the setup process effectively.
-
----
-
 # GateKeeper: Getting Started Guide
 
 Welcome to **GateKeeper**, a robust and scalable application designed to manage and secure access to your resources. This guide will walk you through the prerequisites, installation process, configuration, and other essential steps to get you up and running with GateKeeper.
@@ -18,6 +14,7 @@ Welcome to **GateKeeper**, a robust and scalable application designed to manage 
 4. [Configuration](#configuration)
     - [Using Manager User Secrets](#using-manager-user-secrets)
     - [Environment Variables](#environment-variables)
+    - [Generating AES Encrypted Keys](#generating-aes-encrypted-keys)
 5. [Running the Application](#running-the-application)
     - [Starting the Backend Server](#starting-the-backend-server)
     - [Starting the Frontend Application](#starting-the-frontend-application)
@@ -153,16 +150,15 @@ GateKeeper uses a **MariaDB 10** database to store and manage data. Follow these
    The `scripts` folder contains multiple SQL scripts necessary for setting up the database. It includes:
 
    - **Init.sql**: Sets up the API user with the minimal required permissions. **Important:** Before running this script, you need to edit it to configure the API user's credentials and permissions as per your environment.
-
-   - **Table Scripts**: Multiple scripts located in `scripts/tables` directory to create the necessary tables.
-
-   - **Stored Procedure Scripts**: Multiple scripts located in `scripts/stored_procedures` directory to create stored procedures.
-
+   - **Hangfiredb.sql**: Sets up the Hangfire database. **Important:** Update the password in this script to secure your Hangfire setup.
+   - **Table Scripts**: Multiple scripts located in the `scripts/tables` directory to create the necessary tables.
+   - **Stored Procedure Scripts**: Multiple scripts located in the `scripts/stored_procedures` directory to create stored procedures.
    - **Seed Scripts**: Located in the `scripts/seed` directory to populate the database with initial data.
 
-4. **Edit `Init.sql`**
+4. **Edit `Init.sql` and `Hangfiredb.sql`**
 
-   Open the `Init.sql` file located in the `scripts` folder and update the API user credentials and permissions to match your security requirements.
+   - **Init.sql**: Open the `Init.sql` file located in the `scripts` folder and update the API user credentials and permissions to match your security requirements.
+   - **Hangfiredb.sql**: Open the `Hangfiredb.sql` file located in the `scripts` folder and change the default password to a strong, secure password.
 
 5. **Run Init.sql**
 
@@ -172,7 +168,15 @@ GateKeeper uses a **MariaDB 10** database to store and manage data. Follow these
    mysql -u your_username -p gatekeeper_db < scripts/Init.sql
    ```
 
-6. **Run Table Scripts**
+6. **Run Hangfiredb.sql**
+
+   Execute the `Hangfiredb.sql` script to set up Hangfire:
+
+   ```bash
+   mysql -u your_username -p gatekeeper_db < scripts/Hangfiredb.sql
+   ```
+
+7. **Run Table Scripts**
 
    Execute all table creation scripts located in the `scripts/tables` directory:
 
@@ -182,7 +186,7 @@ GateKeeper uses a **MariaDB 10** database to store and manage data. Follow these
 
    *(If there are multiple table scripts, you can run them sequentially or create a script to execute all of them at once.)*
 
-7. **Execute Stored Procedures**
+8. **Execute Stored Procedures**
 
    Run the stored procedures scripts located in the `scripts/stored_procedures` directory:
 
@@ -190,7 +194,7 @@ GateKeeper uses a **MariaDB 10** database to store and manage data. Follow these
    mysql -u your_username -p gatekeeper_db < scripts/stored_procedures/create_procedures.sql
    ```
 
-8. **Seed Initial Data**
+9. **Seed Initial Data**
 
    Populate the database with initial data by running the seed scripts:
 
@@ -231,6 +235,8 @@ GateKeeper utilizes the **Manager User Secrets** feature to manage sensitive inf
    Add the necessary configuration settings using the `dotnet user-secrets` command. Replace the placeholder values with your actual configuration details.
 
    ```bash
+   dotnet user-secrets set "ConnectionStrings:HangfireConnection" "Server=100.83.44.53;Database=hangfiredb;User=hangfireuser;Password=StrongPassword123!;Allow User Variables=true;"
+   dotnet user-secrets set "Encryption:MasterKey" "alQ/xxxxxxxxxxxx+wDr/Y="
    dotnet user-secrets set "EmailSettings:SmtpHost" "server.url.or.ip"
    dotnet user-secrets set "EmailSettings:Port" "587"
    dotnet user-secrets set "EmailSettings:UserName" "your_email@example.com"
@@ -256,6 +262,9 @@ GateKeeper utilizes the **Manager User Secrets** feature to manage sensitive inf
    ```
 
    **Notes:**
+   - **New Settings Added:**
+     - **ConnectionStrings:HangfireConnection**: Connection string for Hangfire.
+     - **Encryption:MasterKey**: Master key for encryption.
    - Ensure that all sensitive information is set using user secrets and not hard-coded in `appsettings.json`.
    - The application is already configured to read these settings from user secrets, so there's no need to modify `appsettings.json` for sensitive data.
 
@@ -292,6 +301,40 @@ Sensitive information and environment-specific configurations can also be manage
 3. **Use a Configuration Provider**
 
    Ensure that your application is set up to read environment variables. In ASP.NET Core, this is typically handled automatically, but verify your `Program.cs` or `Startup.cs` to confirm.
+
+### Generating AES Encrypted Keys
+
+To enhance security, GateKeeper uses AES encryption for sensitive data. A PowerShell script, `generatekey.ps1`, has been created to assist in generating AES encrypted keys.
+
+#### Steps to Generate an AES Encrypted Key
+
+1. **Locate the `generatekey.ps1` Script**
+
+   The `generatekey.ps1` file is located in the root directory of the GateKeeper project.
+
+2. **Run the Script**
+
+   Open PowerShell with appropriate execution permissions and navigate to the root directory of the GateKeeper project. Execute the script as follows:
+
+   ```powershell
+   ./generatekey.ps1
+   ```
+
+3. **Follow the Prompts**
+
+   The script will guide you through the process of generating a new AES encrypted key. Upon completion, the script will output the encrypted key, which you should add to your user secrets.
+
+4. **Set the Encrypted Key in User Secrets**
+
+   After generating the key, add it to your user secrets:
+
+   ```bash
+   dotnet user-secrets set "Encryption:MasterKey" "your_generated_encrypted_key"
+   ```
+
+   **Notes:**
+   - Keep the `MasterKey` secure and do not expose it in version control or public repositories.
+   - Use the generated key consistently across all environments to ensure proper encryption and decryption of sensitive data.
 
 ---
 
@@ -450,6 +493,11 @@ Deploying GateKeeper to a production environment involves several considerations
    - Utilize load balancers to distribute traffic across multiple instances.
    - Implement caching strategies using Redis or similar technologies to enhance performance.
    - Monitor application performance using APM tools like New Relic or Application Insights.
+
+5. **Hangfire Integration**
+
+   - Ensure that the Hangfire database (`hangfiredb`) is properly secured and that the password is strong and kept confidential.
+   - Regularly monitor Hangfire jobs and queues to ensure they are running smoothly.
 
 ### Continuous Integration/Continuous Deployment (CI/CD)
 

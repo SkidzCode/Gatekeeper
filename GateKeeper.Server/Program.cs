@@ -24,7 +24,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
 
-builder.Services.AddScoped<IDBHelper, DBHelper>();
+builder.Services.AddSingleton<IDBHelper, DBHelper>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
@@ -46,17 +46,17 @@ builder.Services.AddHangfire(config =>
             builder.Configuration.GetConnectionString("HangfireConnection"),
             new MySqlStorageOptions
             {
-                QueuePollInterval = TimeSpan.FromSeconds(15), // Optional: Polling interval
-                TransactionIsolationLevel = System.Transactions.IsolationLevel.ReadCommitted, // MariaDB supports this isolation level
-                JobExpirationCheckInterval = TimeSpan.FromMinutes(5) // Optional: How often expired jobs are checked
+                QueuePollInterval = TimeSpan.FromSeconds(15),
+                TransactionIsolationLevel = System.Transactions.IsolationLevel.ReadCommitted,
+                JobExpirationCheckInterval = TimeSpan.FromMinutes(5)
             }));
 });
 
-// Use this to configure both Hangfire and the server together
+// Configure Hangfire server
 builder.Services.AddHangfireServer(options =>
 {
-    options.ServerTimeout = TimeSpan.FromMinutes(1); // Automatically removes inactive servers after 1 minute
-    options.ServerName = $"HangfireServer-{Environment.MachineName}"; // Unique server name
+    options.ServerTimeout = TimeSpan.FromMinutes(1);
+    options.ServerName = $"HangfireServer-{Environment.MachineName}";
 });
 
 #endregion
@@ -102,6 +102,27 @@ builder.Services.AddSwaggerGen(options =>
 #endregion
 
 #region JWT Middleware
+
+builder.Services.AddSingleton<IKeyManagementService>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var dbHelper = sp.GetRequiredService<IDBHelper>();
+    var logger = sp.GetRequiredService<ILogger<KeyManagementService>>();
+
+    // Load the base64-encoded key from user secrets: "Encryption:MasterKey"
+    var base64Key = config["Encryption:MasterKey"];
+    if (string.IsNullOrEmpty(base64Key))
+    {
+        throw new InvalidOperationException("Encryption:MasterKey not found in user secrets.");
+    }
+
+    // Convert base64 => raw bytes (32 bytes = AES-256)
+    var masterKeyBytes = Convert.FromBase64String(base64Key);
+
+    return new KeyManagementService(dbHelper, logger, masterKeyBytes);
+});
+
+
 // Add JWT authentication to middleware
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -115,10 +136,40 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["JwtConfig:Issuer"],
             ValidAudience = builder.Configuration["JwtConfig:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["JwtConfig:Secret"]))
+
+            // 1) The magic: a custom key resolver
+            IssuerSigningKeyResolver = (token, securityToken, kid, validationParameters) =>
+            {
+                // 2) Grab your service from DI. 
+                // Because we are in Program.cs, you might do a trick like:
+                var kms = builder.Services.BuildServiceProvider().GetRequiredService<IKeyManagementService>();
+
+                // 3) Retrieve the current key (or multiple keys)
+                var secureKey = kms.GetCurrentKeyAsync().Result;
+                if (secureKey == null)
+                    return Array.Empty<SecurityKey>();
+
+                // 4) Convert from SecureString => bytes => SymmetricSecurityKey
+                byte[] keyBytes;
+                var bstrPtr = System.Runtime.InteropServices.Marshal.SecureStringToBSTR(secureKey);
+                try
+                {
+                    var base64Key = System.Runtime.InteropServices.Marshal.PtrToStringBSTR(bstrPtr);
+                    keyBytes = Convert.FromBase64String(base64Key);
+                }
+                finally
+                {
+                    System.Runtime.InteropServices.Marshal.ZeroFreeBSTR(bstrPtr);
+                }
+
+                var dynamicKey = new SymmetricSecurityKey(keyBytes);
+
+                // 5) Return an array of possible keys
+                return new[] { dynamicKey };
+            }
         };
     });
+
 
 builder.Services.AddAuthorization();
 #endregion
@@ -141,5 +192,12 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.MapFallbackToFile("/index.html");
+
+// Schedule recurring job: RotateKeyAsync once every 24 hours
+RecurringJob.AddOrUpdate<IKeyManagementService>(
+    "rotate-keys-every-24hrs",
+    service => service.RotateKeyAsync(DateTime.UtcNow.AddHours(24)),
+    Cron.Daily // Runs every day at 00:00
+);
 
 app.Run();

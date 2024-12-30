@@ -18,6 +18,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SQL", "SQL", "{F7DC7C89-6BF
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tables", "Tables", "{BBF4AEB7-44AB-4127-8185-7A68EDF5C4BB}"
 	ProjectSection(SolutionItems) = preProject
+		SQL\Tables\KeySecrets.sql = SQL\Tables\KeySecrets.sql
+		SQL\Tables\notifications.sql = SQL\Tables\notifications.sql
+		SQL\Tables\notification_templates.sql = SQL\Tables\notification_templates.sql
 		SQL\Tables\Roles.sql = SQL\Tables\Roles.sql
 		SQL\Tables\Settings.sql = SQL\Tables\Settings.sql
 		SQL\Tables\User.sql = SQL\Tables\User.sql
@@ -50,6 +53,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "StoredProcedures", "StoredP
 		SQL\StoreProcedures\PasswordChange.sql = SQL\StoreProcedures\PasswordChange.sql
 		SQL\StoreProcedures\RevokeVerifyToken.sql = SQL\StoreProcedures\RevokeVerifyToken.sql
 		SQL\StoreProcedures\SearchSettings.sql = SQL\StoreProcedures\SearchSettings.sql
+		SQL\StoreProcedures\spDeactivateKey.sql = SQL\StoreProcedures\spDeactivateKey.sql
+		SQL\StoreProcedures\spGetActiveKey.sql = SQL\StoreProcedures\spGetActiveKey.sql
+		SQL\StoreProcedures\spInsertKey.sql = SQL\StoreProcedures\spInsertKey.sql
 		SQL\StoreProcedures\sp_insert_notification.sql = SQL\StoreProcedures\sp_insert_notification.sql
 		SQL\StoreProcedures\sp_list_all_notifications.sql = SQL\StoreProcedures\sp_list_all_notifications.sql
 		SQL\StoreProcedures\sp_list_notifications_by_user.sql = SQL\StoreProcedures\sp_list_notifications_by_user.sql
@@ -64,6 +70,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "StoredProcedures", "StoredP
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scripts", "Scripts", "{16EBC3CC-E821-4C22-BA38-EC6FDB7BAC17}"
 	ProjectSection(SolutionItems) = preProject
+		SQL\Scripts\HangfireDatabase.sql = SQL\Scripts\HangfireDatabase.sql
 		SQL\Scripts\Init.sql = SQL\Scripts\Init.sql
 	EndProjectSection
 EndProject

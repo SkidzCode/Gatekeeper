@@ -20,6 +20,8 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Identity.Data;
 using RegisterRequest = GateKeeper.Server.Models.Account.RegisterRequest;
 using GateKeeper.Server.Models.Site;
+using System.Runtime.InteropServices;
+using System.Security;
 
 namespace GateKeeper.Server.Services
 {
@@ -35,14 +37,28 @@ namespace GateKeeper.Server.Services
         private readonly IVerifyTokenService _verificationService;
         private readonly IUserService _userService;
         private readonly ISettingsService _settingsService;
+        private readonly IKeyManagementService _keyManagementService;
 
         /// <summary>
         /// Constructor for UserAuthenticationService.
         /// </summary>
-        /// <param name="configuration">Application configuration dependency.</param>
-        /// <param name="dbHelper">Database helper for DB operations.</param>
+        /// <param name="userService">User-related operations.</param>
+        /// <param name="verificationService">Verification token operations.</param>
+        /// <param name="configuration">App configuration (used for time-based configs, etc.).</param>
+        /// <param name="dbHelper">Database wrapper for DB access.</param>
         /// <param name="logger">Logger for logging information and errors.</param>
-        public UserAuthenticationService(IUserService userService, IVerifyTokenService verificationService, IConfiguration configuration, IDBHelper dbHelper, ILogger<UserAuthenticationService> logger, IEmailService emailService, ISettingsService settingsService)
+        /// <param name="emailService">Service to handle email communications.</param>
+        /// <param name="settingsService">Service to retrieve settings for users.</param>
+        /// <param name="keyManagementService">Key Management Service for retrieving rotating JWT keys.</param>
+        public UserAuthenticationService(
+            IUserService userService,
+            IVerifyTokenService verificationService,
+            IConfiguration configuration,
+            IDBHelper dbHelper,
+            ILogger<UserAuthenticationService> logger,
+            IEmailService emailService,
+            ISettingsService settingsService,
+            IKeyManagementService keyManagementService)
         {
             _configuration = configuration;
             _dbHelper = dbHelper;
@@ -51,6 +67,7 @@ namespace GateKeeper.Server.Services
             _verificationService = verificationService;
             _userService = userService;
             _settingsService = settingsService;
+            _keyManagementService = keyManagementService;
         }
 
         /// <inheritdoc />
@@ -362,36 +379,75 @@ namespace GateKeeper.Server.Services
         #region Private Helper Methods
 
         /// <summary>
-        /// Generates a JWT access token for the authenticated user.
+        /// Generates a JWT access token for the authenticated user, using a rotating secret key.
         /// </summary>
         /// <param name="user">Authenticated user details.</param>
         /// <returns>JWT access token as a string.</returns>
         private async Task<string> GenerateJwtToken(User user)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_configuration["JwtConfig:Secret"]);
+
+            // 1) Retrieve the current signing key from the key-management service (as a SecureString).
+            SecureString secureKey = await _keyManagementService.GetCurrentKeyAsync();
+            if (secureKey == null)
+                throw new InvalidOperationException("No active signing key available.");
+
+            // 2) Convert SecureString to byte[] (this includes base64 decoding).
+            byte[] keyBytes;
+            IntPtr bstrPtr = Marshal.SecureStringToBSTR(secureKey);
+            try
+            {
+                string base64Key = Marshal.PtrToStringBSTR(bstrPtr);
+                keyBytes = Convert.FromBase64String(base64Key);
+            }
+            finally
+            {
+                // Always free the BSTR memory
+                Marshal.ZeroFreeBSTR(bstrPtr);
+            }
+
+            // 3) Construct the user claims
             var claims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                    new Claim(ClaimTypes.Name, user.Username),
-                    new Claim(ClaimTypes.Email, user.Email),
-                };
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.Email, user.Email),
+            };
 
             // Add roles as separate claims
-            foreach (var role in user.Roles)
-                claims.Add(new Claim(ClaimTypes.Role, role));
+            if (user.Roles != null)
+            {
+                foreach (var role in user.Roles)
+                {
+                    claims.Add(new Claim(ClaimTypes.Role, role));
+                }
+            }
 
+            // 4) Create signing credentials
+            var securityKey = new SymmetricSecurityKey(keyBytes);
+            var creds = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+            // 5) Build token descriptor
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["JwtConfig:ExpirationMinutes"])),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
+                // Duration from config (fallback: 60 minutes if not found)
+                Expires = DateTime.UtcNow.AddMinutes(
+                    Convert.ToDouble(_configuration["JwtConfig:ExpirationMinutes"] ?? "60")
+                ),
+                SigningCredentials = creds,
                 Issuer = _configuration["JwtConfig:Issuer"],
                 Audience = _configuration["JwtConfig:Audience"]
             };
 
+            // 6) Create the token
             var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
+            string jwt = tokenHandler.WriteToken(token);
+
+            // 7) Zero out the key bytes from memory once we're done
+            Array.Clear(keyBytes, 0, keyBytes.Length);
+
+            return jwt;
         }
 
 

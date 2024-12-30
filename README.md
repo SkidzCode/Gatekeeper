@@ -71,6 +71,10 @@ GateKeeper is a versatile web application designed to serve as a robust base tem
 
 - The system is designed to be extensible, allowing for the addition of new resource types and management features as needed.
 
+### Notification System
+
+GateKeeper includes a built-in notification system to send messages to users of the site when needed. This feature allows administrators to communicate important information directly to users through the application.
+
 ### Settings Management
 
 - **Global and User-Specific Settings**: The application supports overarching settings applicable to all users, alongside personalized settings tailored to individual user needs.
@@ -110,6 +114,10 @@ GateKeeper is a versatile web application designed to serve as a robust base tem
 2. **Encryption in Transit**:
     
     - **HTTPS**: The application is configured to use HTTPS to encrypt data transmitted between the client and the server, ensuring that sensitive information such as login credentials and tokens are protected during transmission.
+
+### Key Management
+
+GateKeeper includes a `KeyManagementService` which creates and rotates new secret keys. A new task runs every 24 hours using Hangfire to create new secret keys. Secure messages are used to load and store the key in memory, ensuring that keys are managed securely.
 
 ### Compliance Standards
 
@@ -271,6 +279,3 @@ By employing these strategies and tools, GateKeeper is well-equipped to handle s
 ## Conclusion
 
 GateKeeper is a versatile and secure web application tailored to serve as a foundational template for developing various types of websites. By integrating modern technologies and following best development practices, it guarantees high performance, robust security, and ease of maintenance. Comprehensive documentation and clear contribution guidelines foster an inclusive environment for contributors, driving continuous improvement and innovation within the project.
-
----
-
