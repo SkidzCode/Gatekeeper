@@ -11,7 +11,7 @@ namespace GateKeeper.Server.Services
 {
     public class RoleService : IRoleService
     {
-        private readonly IDBHelper _dbHelper;
+        private readonly IDbHelper _dbHelper;
         private readonly ILogger<RoleService> _logger;
 
         /// <summary>
@@ -22,7 +22,7 @@ namespace GateKeeper.Server.Services
         /// <param name="logger">Logger for RoleService.</param>
         public RoleService(
             IConfiguration configuration,
-            IDBHelper dbHelper,
+            IDbHelper dbHelper,
             ILogger<RoleService> logger)
         {
             _dbHelper = dbHelper;

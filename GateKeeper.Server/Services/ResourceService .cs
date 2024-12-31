@@ -10,11 +10,11 @@ namespace GateKeeper.Server.Services
 {
     public class ResourceService : IResourceService
     {
-        private readonly IDBHelper _dbHelper;
+        private readonly IDbHelper _dbHelper;
         private readonly ILogger<ResourceService> _logger;
         private readonly string _resourceDirectory;
 
-        public ResourceService(IDBHelper dbHelper, ILogger<ResourceService> logger)
+        public ResourceService(IDbHelper dbHelper, ILogger<ResourceService> logger)
         {
             _dbHelper = dbHelper;
             _logger = logger;

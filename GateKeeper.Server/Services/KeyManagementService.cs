@@ -10,14 +10,14 @@ namespace GateKeeper.Server.Services
 {
     public class KeyManagementService : IKeyManagementService
     {
-        private readonly IDBHelper _dbHelper;
+        private readonly IDbHelper _dbHelper;
         private readonly ILogger<KeyManagementService> _logger;
 
         // This could be stored in environment variables or Azure Key Vault, etc.
         private readonly byte[] _masterEncryptionKey;
 
         public KeyManagementService(
-            IDBHelper dbHelper,
+            IDbHelper dbHelper,
             ILogger<KeyManagementService> logger,
             byte[] masterEncryptionKey)
         {

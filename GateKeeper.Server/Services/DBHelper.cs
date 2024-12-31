@@ -6,7 +6,7 @@ using GateKeeper.Server.Interface;
 
 namespace GateKeeper.Server.Services;
 
-public class DBHelper : IDBHelper
+public class DBHelper : IDbHelper
 {
     public readonly string ConnectionString;
 

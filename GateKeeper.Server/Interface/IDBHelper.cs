@@ -2,7 +2,7 @@
 
 namespace GateKeeper.Server.Interface;
 
-public interface IDBHelper
+public interface IDbHelper
 {
     Task<IMySqlConnectorWrapper> GetWrapperAsync();
 }

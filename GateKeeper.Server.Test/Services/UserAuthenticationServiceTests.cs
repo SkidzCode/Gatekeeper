@@ -15,23 +15,25 @@ namespace GateKeeper.Server.Test.Services
     [TestClass]
     public class UserAuthenticationServiceTests
     {
-        private Mock<IDBHelper> _mockDbHelper;
+        private Mock<IDbHelper> _mockDbHelper;
         private Mock<ILogger<UserAuthenticationService>> _mockLogger;
         private Mock<IUserService> _mockUserService;
         private Mock<IEmailService> _mockEmailService;
         private Mock<IVerifyTokenService> _mockVerificationService;
         private Mock<ISettingsService> _mockSettingsService;
+        private Mock<IKeyManagementService> _mockKeyManagementService;
         private UserAuthenticationService _authService;
 
         [TestInitialize]
         public void Setup()
         {
-            _mockDbHelper = new Mock<IDBHelper>();
+            _mockDbHelper = new Mock<IDbHelper>();
             _mockLogger = new Mock<ILogger<UserAuthenticationService>>();
             _mockUserService = new Mock<IUserService>();
             _mockEmailService = new Mock<IEmailService>();
             _mockVerificationService = new Mock<IVerifyTokenService>();
             _mockSettingsService = new Mock<ISettingsService>();
+            _mockKeyManagementService = new Mock<IKeyManagementService>();
             var mockConfiguration = new Mock<IConfiguration>();
 
             // Set up the JWT configuration values
@@ -55,7 +57,8 @@ namespace GateKeeper.Server.Test.Services
                 _mockDbHelper.Object,
                 _mockLogger.Object,
                 _mockEmailService.Object,
-                _mockSettingsService.Object
+                _mockSettingsService.Object,
+                _mockKeyManagementService.Object
             );
         }
 
@@ -150,7 +153,7 @@ namespace GateKeeper.Server.Test.Services
         {
             // Arrange
             string verificationCode = "verification_code";
-            var user = new User { Id = 1, FirstName = "John", LastName = "Doe", Email = "john.doe@example.com", Username = "johndoe"  };
+            var user = new User { Id = 1, FirstName = "John", LastName = "Doe", Email = "john.doe@example.com", Username = "johndoe" };
 
             _mockVerificationService.Setup(vs => vs.VerifyTokenAsync(It.IsAny<VerifyTokenRequest>()))
                 .ReturnsAsync((true, user, "NewUser"));
@@ -172,7 +175,7 @@ namespace GateKeeper.Server.Test.Services
         {
             // Arrange
             string refreshToken = "refresh_token";
-            var user = new User { Id = 1, FirstName = "John", LastName = "Doe", Email = "john.doe@example.com", Username = "johndoe", Roles = [] };
+            var user = new User { Id = 1, FirstName = "John", LastName = "Doe", Email = "john.doe@example.com", Username = "johndoe", Roles = new List<string>() };
 
             _mockVerificationService.Setup(vs => vs.VerifyTokenAsync(It.IsAny<VerifyTokenRequest>()))
                 .ReturnsAsync((true, user, "Refresh"));

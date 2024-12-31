@@ -19,9 +19,9 @@ namespace GateKeeper.Server.Services
 
     public class NotificationTemplateService : INotificationTemplateService
     {
-        private readonly IDBHelper _dbHelper;
+        private readonly IDbHelper _dbHelper;
 
-        public NotificationTemplateService(IDBHelper dbHelper)
+        public NotificationTemplateService(IDbHelper dbHelper)
         {
             _dbHelper = dbHelper;
         }

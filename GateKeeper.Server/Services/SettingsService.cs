@@ -11,7 +11,7 @@ namespace GateKeeper.Server.Services
 {
     public class SettingsService : ISettingsService
     {
-        private readonly IDBHelper _dbHelper;
+        private readonly IDbHelper _dbHelper;
         private readonly ILogger<SettingsService> _logger;
 
         /// <summary>
@@ -19,7 +19,7 @@ namespace GateKeeper.Server.Services
         /// </summary>
         /// <param name="dbHelper">Database helper for obtaining connections.</param>
         /// <param name="logger">Logger for SettingsService.</param>
-        public SettingsService(IDBHelper dbHelper, ILogger<SettingsService> logger)
+        public SettingsService(IDbHelper dbHelper, ILogger<SettingsService> logger)
         {
             _dbHelper = dbHelper;
             _logger = logger;

@@ -19,7 +19,7 @@ namespace GateKeeper.Server.Services
     /// </summary>
     public class VerifyTokenService : IVerifyTokenService
     {
-        private readonly IDBHelper _dbHelper;
+        private readonly IDbHelper _dbHelper;
         private readonly ILogger<VerifyTokenService> _logger;
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
@@ -30,7 +30,7 @@ namespace GateKeeper.Server.Services
         /// <param name="configuration">Application configuration dependency.</param>
         /// <param name="dbHelper">Database helper for DB operations.</param>
         /// <param name="logger">Logger for logging information and errors.</param>
-        public VerifyTokenService(IConfiguration configuration, IDBHelper dbHelper, ILogger<VerifyTokenService> logger, IEmailService emailService)
+        public VerifyTokenService(IConfiguration configuration, IDbHelper dbHelper, ILogger<VerifyTokenService> logger, IEmailService emailService)
         {
             _configuration = configuration;
             _dbHelper = dbHelper;

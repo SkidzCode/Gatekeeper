@@ -30,7 +30,7 @@ namespace GateKeeper.Server.Services
     /// </summary>
     public class UserAuthenticationService : IUserAuthenticationService
     {
-        private readonly IDBHelper _dbHelper;
+        private readonly IDbHelper _dbHelper;
         private readonly ILogger<UserAuthenticationService> _logger;
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
@@ -54,7 +54,7 @@ namespace GateKeeper.Server.Services
             IUserService userService,
             IVerifyTokenService verificationService,
             IConfiguration configuration,
-            IDBHelper dbHelper,
+            IDbHelper dbHelper,
             ILogger<UserAuthenticationService> logger,
             IEmailService emailService,
             ISettingsService settingsService,

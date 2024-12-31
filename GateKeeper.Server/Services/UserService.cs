@@ -10,14 +10,14 @@ namespace GateKeeper.Server.Services;
 
 public class UserService : IUserService
 {
-    private readonly IDBHelper _dbHelper;
+    private readonly IDbHelper _dbHelper;
     private readonly ILogger<UserService> _logger;
 
     /// <summary>
     /// Constructor for the UserController.
     /// </summary>
     /// <param name="configuration">Application configuration dependency.</param>
-    public UserService(IConfiguration configuration, IDBHelper dbHelper, ILogger<UserService> logger)
+    public UserService(IConfiguration configuration, IDbHelper dbHelper, ILogger<UserService> logger)
     {
         // Retrieve database connection string
         var dbConfig = configuration.GetSection("DatabaseConfig").Get<DatabaseConfig>() ?? new DatabaseConfig();
@@ -160,6 +160,8 @@ public class UserService : IUserService
                 {
                     user?.Roles.Add(roleName);
                 }
+                else
+                    break;
             }
         }
         return user;

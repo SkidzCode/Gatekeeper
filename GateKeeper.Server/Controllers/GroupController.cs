@@ -14,7 +14,7 @@ namespace GateKeeper.Server.Controllers
     [Route("api/[controller]")]
     public class GroupController : ControllerBase
     {
-        private readonly IDBHelper _dbHelper;
+        private readonly IDbHelper _dbHelper;
         // Service for handling JSON Web Token (JWT) operations
         private readonly IUserService _userService;
         private readonly ILogger<UserController> _logger;
@@ -24,7 +24,7 @@ namespace GateKeeper.Server.Controllers
         /// </summary>
         /// <param name="configuration">Application configuration dependency.</param>
         /// <param name="jwtService">JWT service dependency.</param>
-        public GroupController(IConfiguration configuration, IDBHelper dbHelper, IUserService userService, ILogger<UserController> logger)
+        public GroupController(IConfiguration configuration, IDbHelper dbHelper, IUserService userService, ILogger<UserController> logger)
         {
             _userService = userService;
             _dbHelper = dbHelper;

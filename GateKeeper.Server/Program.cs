@@ -24,7 +24,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
 
-builder.Services.AddSingleton<IDBHelper, DBHelper>();
+builder.Services.AddSingleton<IDbHelper, DBHelper>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
@@ -106,7 +106,7 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddSingleton<IKeyManagementService>(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
-    var dbHelper = sp.GetRequiredService<IDBHelper>();
+    var dbHelper = sp.GetRequiredService<IDbHelper>();
     var logger = sp.GetRequiredService<ILogger<KeyManagementService>>();
 
     // Load the base64-encoded key from user secrets: "Encryption:MasterKey"

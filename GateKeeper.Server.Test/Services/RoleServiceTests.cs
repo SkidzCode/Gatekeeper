@@ -18,14 +18,14 @@ namespace GateKeeper.Server.Test.Services
     [TestClass]
     public class RoleServiceTests
     {
-        private Mock<IDBHelper> _mockDbHelper;
+        private Mock<IDbHelper> _mockDbHelper;
         private Mock<ILogger<RoleService>> _mockLogger;
         private RoleService _roleService;
 
         [TestInitialize]
         public void Setup()
         {
-            _mockDbHelper = new Mock<IDBHelper>();
+            _mockDbHelper = new Mock<IDbHelper>();
             _mockLogger = new Mock<ILogger<RoleService>>();
             var mockConfiguration = new Mock<IConfiguration>();
 
