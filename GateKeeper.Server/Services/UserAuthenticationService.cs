@@ -22,6 +22,8 @@ using RegisterRequest = GateKeeper.Server.Models.Account.RegisterRequest;
 using GateKeeper.Server.Models.Site;
 using System.Runtime.InteropServices;
 using System.Security;
+using GateKeeper.Server.Models.Account.Login;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace GateKeeper.Server.Services
 {
@@ -30,6 +32,9 @@ namespace GateKeeper.Server.Services
     /// </summary>
     public class UserAuthenticationService : IUserAuthenticationService
     {
+        private readonly IDataProtector _protector;
+        private IHttpContextAccessor _httpContextAccessor;
+
         private readonly IDbHelper _dbHelper;
         private readonly ILogger<UserAuthenticationService> _logger;
         private readonly IConfiguration _configuration;
@@ -38,6 +43,8 @@ namespace GateKeeper.Server.Services
         private readonly IUserService _userService;
         private readonly ISettingsService _settingsService;
         private readonly IKeyManagementService _keyManagementService;
+
+        private const string cookieName = "LoginAttempts";
 
         /// <summary>
         /// Constructor for UserAuthenticationService.
@@ -50,6 +57,8 @@ namespace GateKeeper.Server.Services
         /// <param name="emailService">Service to handle email communications.</param>
         /// <param name="settingsService">Service to retrieve settings for users.</param>
         /// <param name="keyManagementService">Key Management Service for retrieving rotating JWT keys.</param>
+        /// <param name="protector"></param>
+        /// <param name="httpContextAccessor"></param>
         public UserAuthenticationService(
             IUserService userService,
             IVerifyTokenService verificationService,
@@ -58,7 +67,9 @@ namespace GateKeeper.Server.Services
             ILogger<UserAuthenticationService> logger,
             IEmailService emailService,
             ISettingsService settingsService,
-            IKeyManagementService keyManagementService)
+            IKeyManagementService keyManagementService,
+            IDataProtectionProvider protector, 
+            IHttpContextAccessor httpContextAccessor)
         {
             _configuration = configuration;
             _dbHelper = dbHelper;
@@ -68,6 +79,8 @@ namespace GateKeeper.Server.Services
             _userService = userService;
             _settingsService = settingsService;
             _keyManagementService = keyManagementService;
+            _protector = protector.CreateProtector("SecureCookies"); ;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         /// <inheritdoc />
@@ -122,52 +135,56 @@ namespace GateKeeper.Server.Services
         }
 
         /// <inheritdoc />
-        public async Task<(bool isAuthenticated, string accessToken, string refreshToken, User? user, List<Setting> settings)> LoginAsync(UserLoginRequest userLogin)
+        public async Task<LoginResponse> LoginAsync(UserLoginRequest userLogin)
         {
-            try
+            LoginResponse response = new LoginResponse();
+
+            response.User = await _userService.GetUser(userLogin.Identifier);
+            response = await LoginAttempts(response);
+
+            if (response.ToMany)
+                return response;
+
+            int? userId = response.User?.Id ?? null;
+            
+            List<Setting> theSettings = await _settingsService.GetAllSettingsAsync(userId);
+            response.Settings = theSettings.Where(s => s.UserId == null).ToList();
+            List<Setting> userSettings = theSettings
+                .GroupBy(s => new { s.Name, s.Category })
+                .SelectMany(group =>
+                {
+                    // If any setting in the group has a UserId, exclude the ones without a UserId
+                    if (group.Any(s => s.UserId.HasValue))
+                        return group.Where(s => s.UserId.HasValue);
+                    // Otherwise, include all
+                    return group;
+                })
+                .ToList();
+
+            if (response.User == null || string.IsNullOrEmpty(response.User.Salt) ||
+                string.IsNullOrEmpty(response.User.Password))
             {
-
-                User? user = await _userService.GetUser(userLogin.Identifier);
-
-                int? userId = user?.Id ?? null;
-                List<Setting> theSettings = await _settingsService.GetAllSettingsAsync(userId);
-                List<Setting> settings = theSettings.Where(s => s.UserId == null).ToList();
-                List<Setting> userSettings = theSettings
-                    .GroupBy(s => new { s.Name, s.Category })
-                    .SelectMany(group =>
-                    {
-                        // If any setting in the group has a UserId, exclude the ones without a UserId
-                        if (group.Any(s => s.UserId.HasValue))
-                        {
-                            return group.Where(s => s.UserId.HasValue);
-                        }
-
-                        // Otherwise, include all
-                        return group;
-                    })
-                    .ToList();
-
-
-
-                if (user == null || string.IsNullOrEmpty(user.Salt) || string.IsNullOrEmpty(user.Password))
-                    return (false, "", "", null, settings);
-
-                var hashedPassword = PasswordHelper.HashPassword(userLogin.Password, user.Salt);
-
-                if (hashedPassword != user.Password)
-                    return (false, string.Empty, string.Empty, null, settings);
-
-                // Generate tokens
-                var accessToken = await GenerateJwtToken(user);
-                string refreshToken = await _verificationService.GenerateTokenAsync(user.Id, "Refresh");
-
-                return (true, accessToken, refreshToken, user, userSettings);
+                response.FailureReason = "User not found";
+                return response;
             }
-            catch (Exception ex)
+
+            var hashedPassword = PasswordHelper.HashPassword(userLogin.Password, response.User.Salt);
+
+            if (hashedPassword != response.User.Password)
             {
-                _logger.LogError(ex, "Error during login.");
-                return (false, string.Empty, string.Empty, null, null);
+                await response.User.ClearPHIAsync();
+                response.FailureReason = "Invalid credentials";
+                return response;
             }
+
+            // Generate tokens
+            response.AccessToken = await GenerateJwtToken(response.User);
+            response.RefreshToken = await _verificationService.GenerateTokenAsync(response.User.Id, "Refresh");
+            response.SessionId = response.RefreshToken.Split('.')[0];
+            response.IsSuccessful = true;
+            response.Settings = userSettings;
+            await DeleteCookie();
+            return response;
         }
 
         /// <inheritdoc />
@@ -217,50 +234,55 @@ namespace GateKeeper.Server.Services
         }
 
         /// <inheritdoc />
-        public async Task<(bool isSuccessful, string accessToken, string refreshToken, User? user, List<Setting> settings)> RefreshTokensAsync(string refreshToken)
+        public async Task<LoginResponse> RefreshTokensAsync(string refreshToken)
         {
-            try
+            LoginResponse response = new LoginResponse();
+            var (authenticated, user, verifyType) = await _verificationService.VerifyTokenAsync(new VerifyTokenRequest()
             {
-                var (authenticated, user, verifyType) = await _verificationService.VerifyTokenAsync(new VerifyTokenRequest()
+                TokenType = "Refresh",
+                VerificationCode = refreshToken
+            });
+
+            response.User = user;
+            response = await LoginAttempts(response);
+
+            if (response.ToMany) return response;
+
+            int? userId = response.User?.Id ?? null;
+            List<Setting> theSettings = await _settingsService.GetAllSettingsAsync(userId);
+            response.Settings = theSettings.Where(s => s.UserId == null).ToList();
+            List<Setting> userSettings = theSettings
+                .GroupBy(s => new { s.Name, s.Category })
+                .SelectMany(group =>
                 {
-                    TokenType = "Refresh",
-                    VerificationCode = refreshToken
-                });
-
-                int? userId = user?.Id ?? null;
-                List<Setting> theSettings = await _settingsService.GetAllSettingsAsync(userId);
-                List<Setting> settings = theSettings.Where(s => s.UserId == null).ToList();
-                List<Setting> userSettings = theSettings
-                    .GroupBy(s => new { s.Name, s.Category })
-                    .SelectMany(group =>
+                    // If any setting in the group has a UserId, exclude the ones without a UserId
+                    if (group.Any(s => s.UserId.HasValue))
                     {
-                        // If any setting in the group has a UserId, exclude the ones without a UserId
-                        if (group.Any(s => s.UserId.HasValue))
-                        {
-                            return group.Where(s => s.UserId.HasValue);
-                        }
+                        return group.Where(s => s.UserId.HasValue);
+                    }
 
-                        // Otherwise, include all
-                        return group;
-                    })
-                    .ToList();
+                    // Otherwise, include all
+                    return group;
+                })
+                .ToList();
 
-                if (!authenticated || user == null || verifyType != "Refresh")
-                    return (false, string.Empty, string.Empty, null, settings);
-
-                // Generate new tokens
-                var newAccessToken = await GenerateJwtToken(user);
-                string newRefreshToken = await _verificationService.GenerateTokenAsync(user.Id, "Refresh");
-
-                await _verificationService.RevokeTokensAsync(user.Id, "Refresh", refreshToken);
-
-                return (true, newAccessToken, newRefreshToken, user, userSettings);
-            }
-            catch (Exception ex)
+            if (!authenticated || response.User == null || verifyType != "Refresh")
             {
-                _logger.LogError(ex, "Error refreshing tokens.");
-                return (false, string.Empty, string.Empty, null, new List<Setting>());
+                response.FailureReason = "Invalid refresh token.";
+                if (response.User != null)
+                    await response.User.ClearPHIAsync();
+                return response;
             }
+
+            await _verificationService.RevokeTokensAsync(response.User.Id, "Refresh", refreshToken);
+            // Generate new tokens
+            response.AccessToken = await GenerateJwtToken(response.User);
+            response.RefreshToken = await _verificationService.GenerateTokenAsync(response.User.Id, "Refresh");
+            response.SessionId = response.RefreshToken.Split('.')[0];
+            response.IsSuccessful = true;
+            response.Settings = userSettings;
+            await DeleteCookie();
+            return response;
         }
 
         public async Task InitiatePasswordResetAsync(User user, InitiatePasswordResetRequest initiateRequest)
@@ -290,7 +312,7 @@ namespace GateKeeper.Server.Services
 
 
         /// <inheritdoc />
-        public async Task<bool> ResetPasswordAsync(PasswordResetRequest resetRequest)
+        public async Task<(bool, int)> ResetPasswordAsync(PasswordResetRequest resetRequest)
         {
             var (isValid, userTemp, validationType) =
                 await _verificationService.VerifyTokenAsync(new VerifyTokenRequest()
@@ -298,10 +320,11 @@ namespace GateKeeper.Server.Services
                     TokenType = "ForgotPassword",
                     VerificationCode = resetRequest.ResetToken
                 });
-            if (userTemp != null && isValid && validationType == "ForgotPassword")
-                return (await _userService.ChangePassword(userTemp.Id, resetRequest.NewPassword)) > 0;
-
-            return false;
+            var isSuccessful = (userTemp != null &&
+                                isValid &&
+                                validationType == "ForgotPassword" &&
+                                (await _userService.ChangePassword(userTemp.Id, resetRequest.NewPassword)) > 0);
+            return (isSuccessful, userTemp?.Id ?? 0);
         }
 
         public async Task<bool> UsernameExistsAsync(string username)
@@ -502,6 +525,67 @@ namespace GateKeeper.Server.Services
             await connection.ExecuteNonQueryAsync("AssignRoleToUser", CommandType.StoredProcedure,
                 new MySqlParameter("@p_UserId", userId),
                 new MySqlParameter("@p_RoleName", role));
+        }
+
+        private async Task<LoginResponse> LoginAttempts(LoginResponse loginResponse)
+        {
+            
+            if (_httpContextAccessor.HttpContext == null) return loginResponse;
+
+            int maxAttempts = Convert.ToInt32(_configuration["LoginSettings:MaxFailedAttempts"]);
+            int cookieExpiryMinutes = Convert.ToInt32(_configuration["LoginSettings:CookieExpires"]); ;
+            bool lockoutEnabled = Convert.ToBoolean(_configuration["LoginSettings:LockoutEnabled"]); ;
+
+            // Read the current attempt count from encrypted cookie
+            var attemptsCookie = _httpContextAccessor.HttpContext.Request.Cookies[cookieName];
+            if (!string.IsNullOrEmpty(attemptsCookie))
+            {
+                try
+                {
+                    // Decrypt the cookie value
+                    var decryptedValue = _protector.Unprotect(attemptsCookie);
+                    if (int.TryParse(decryptedValue, out int parsedAttempts))
+                        loginResponse.Attempts = parsedAttempts;
+                }
+                catch
+                {
+                    // If decryption fails or data is tampered, we treat it as invalid
+                    // (Optionally reset to 0 or handle differently)
+                    loginResponse.Attempts = 100;
+                }
+            }
+
+            // Increment and protect (encrypt) the new attempt count
+            loginResponse.Attempts++;
+            var encryptedAttempts = _protector.Protect(loginResponse.Attempts.ToString());
+
+            // Build secure cookie options
+            var cookieOptions = new CookieOptions
+            {
+                Expires = DateTime.UtcNow.AddMinutes(cookieExpiryMinutes),
+                HttpOnly = true,      // Prevents JavaScript from accessing the cookie
+                Secure = true,        // Ensures the cookie is only sent over HTTPS
+                IsEssential = true    // Ensures the cookie is sent even if the user hasn't consented
+            };
+
+            // Write the updated (encrypted) attempts back to the cookie
+            _httpContextAccessor.HttpContext.Response.Cookies.Append(cookieName, encryptedAttempts, cookieOptions);
+            loginResponse.ToMany = loginResponse.Attempts > maxAttempts;
+
+            if (!loginResponse.ToMany) return loginResponse;
+
+            if (loginResponse.User != null)
+                await loginResponse.User.ClearPHIAsync();
+            loginResponse.FailureReason = "Too many login attempts";
+            return loginResponse;
+        }
+
+        private async Task DeleteCookie()
+        {
+            if (_httpContextAccessor.HttpContext == null) return;
+
+            // If login is successful, remove the cookie to reset attempts
+            _httpContextAccessor.HttpContext.Response.Cookies.Delete(cookieName);
         }
 
         #endregion

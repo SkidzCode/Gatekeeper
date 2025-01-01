@@ -1,14 +1,14 @@
 using GateKeeper.Server.Interface;
-using GateKeeper.Server.Interface;
 using GateKeeper.Server.Services;
-using GateKeeper.Server.Database;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
-using System.Text;
 using Hangfire;
 using Hangfire.MySql;
+using Serilog;
+using GateKeeper.Server.Middleware;
+
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,10 +19,30 @@ if (builder.Environment.IsDevelopment())
     builder.Configuration.AddUserSecrets<Program>();
 }
 
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
+#region Add Serilog
 
+// 1) Configure Serilog from appsettings.json
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    // Optionally, configure additional filters or sinks here.
+    // For example, to filter out data that may contain sensitive info:
+    .Filter.ByExcluding(logEvent =>
+    {
+        // Example: exclude logs that may contain full user data
+        // if (logEvent.Properties.ContainsKey("PHI")) ...
+        return false; // Return true if you want to exclude the event
+    })
+    .CreateLogger();
+
+// 2) Use Serilog as the logging provider
+builder.Host.UseSerilog(Log.Logger);
+
+#endregion
+
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddDataProtection();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddSingleton<IDbHelper, DBHelper>();
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -176,6 +196,9 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+
+app.UseMiddleware<LogEnrichmentMiddleware>();
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -200,4 +223,16 @@ RecurringJob.AddOrUpdate<IKeyManagementService>(
     Cron.Daily // Runs every day at 00:00
 );
 
-app.Run();
+try
+{
+    Log.Information("Starting up the application...");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly.");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

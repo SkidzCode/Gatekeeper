@@ -61,6 +61,15 @@ namespace GateKeeper.Server.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to There was an error during the login process.
+        /// </summary>
+        public static string LoginError {
+            get {
+                return ResourceManager.GetString("LoginError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Invalid credentials.
         /// </summary>
         public static string LoginInvalid {
@@ -75,6 +84,15 @@ namespace GateKeeper.Server.Resources {
         public static string LoginInvalidRefreshToken {
             get {
                 return ResourceManager.GetString("LoginInvalidRefreshToken", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to You have exceeded the maximum number of login attempts. Please try again after 30 minutes..
+        /// </summary>
+        public static string LoginMaxAttempts {
+            get {
+                return ResourceManager.GetString("LoginMaxAttempts", resourceCulture);
             }
         }
         

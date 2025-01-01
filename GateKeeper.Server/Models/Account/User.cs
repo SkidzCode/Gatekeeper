@@ -14,4 +14,16 @@ public class User
     public DateTime? UpdatedAt { get; set; }
     public List<string> Roles { get; set; } = new List<string>();
 
+    public Task ClearPHIAsync()
+    {
+        FirstName = string.Empty;
+        LastName = string.Empty;
+        Email = string.Empty;
+        Username = string.Empty;
+        Phone = string.Empty;
+        Password = string.Empty;
+        Salt = string.Empty;
+        Roles.Clear();
+        return Task.CompletedTask;
+    }
 }

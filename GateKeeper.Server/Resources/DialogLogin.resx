@@ -152,4 +152,10 @@
     <value>There was an error loading your profile</value>
     <comment>0 = Error message</comment>
   </data>
+  <data name="LoginMaxAttempts" xml:space="preserve">
+    <value>You have exceeded the maximum number of login attempts. Please try again after 30 minutes.</value>
+  </data>
+  <data name="LoginError" xml:space="preserve">
+    <value>There was an error during the login process</value>
+  </data>
 </root>

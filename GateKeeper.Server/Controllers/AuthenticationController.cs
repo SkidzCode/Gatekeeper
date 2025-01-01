@@ -4,6 +4,10 @@ using System.Security.Claims;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Account;
 using GateKeeper.Server.Resources;
+using System.Net;
+using GateKeeper.Server.Models.Account.Login;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace GateKeeper.Server.Controllers
 {
@@ -24,7 +28,10 @@ namespace GateKeeper.Server.Controllers
         /// <param name="authService">Authentication service dependency.</param>
         /// <param name="logger">Logger for logging information and errors.</param>
         /// <param name="userService">User service dependency.</param>
-        public AuthenticationController(IUserAuthenticationService authService, ILogger<AuthenticationController> logger, IUserService userService)
+        public AuthenticationController(
+            IUserAuthenticationService authService, 
+            ILogger<AuthenticationController> logger, 
+            IUserService userService)
         {
             _authService = authService;
             _logger = logger;
@@ -93,29 +100,55 @@ namespace GateKeeper.Server.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] UserLoginRequest loginRequest)
         {
+            
+            LoginResponse response = new();
             if (!ModelState.IsValid) return BadRequest(ModelState);
+
             try
             {
-                var (isAuthenticated, accessToken, refreshToken, user, settings) = await _authService.LoginAsync(loginRequest);
+                // Attempt to authenticate
+                response = await _authService.LoginAsync(loginRequest);
 
-                if (!isAuthenticated || user == null)
-                    return Unauthorized(new { error = DialogLogin.LoginInvalid });
+                if (!response.IsSuccessful || response.User == null)
+                {
+                    return Unauthorized(response.ToMany ? 
+                        new { error = DialogLogin.LoginMaxAttempts } : 
+                        new { error = DialogLogin.LoginInvalid });
+                }
 
+                // Return the tokens and user info
                 return Ok(new
                 {
-                    accessToken,
-                    refreshToken,
-                    user,
-                    settings
+                    response.AccessToken,
+                    response.RefreshToken,
+                    response.User,
+                    response.Settings
                 });
             }
             catch (Exception ex)
             {
-                return HandleInternalError(ex, "DialogLogin.LoginError");
+                response.IsSuccessful = false;
+                response.FailureReason = "Internal error";
+                return HandleInternalError(ex, DialogLogin.LoginError);
             }
-
-
+            finally
+            {
+                string _userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+                string _userAgent = Request.Headers["User-Agent"].ToString();
+                if (response.IsSuccessful)
+                {
+                    _logger.LogInformation("User login successful: {UserId}, IP: {IpAddress}, Device: {UserAgent}, Time: {Timestamp}",
+                        response.User?.Id, _userIp, _userAgent, DateTime.UtcNow);
+                }
+                else
+                {
+                    // response.User could be null if login fails, so we use null-conditional
+                    _logger.LogWarning("User login failed for {UserId}, IP: {IpAddress}, Reason: {Reason}, Time: {Timestamp}",
+                        response.User?.Id, _userIp, response.FailureReason, DateTime.UtcNow);
+                }
+            }
         }
+
 
         /// <summary>
         /// Refreshes JWT tokens using a valid refresh token.
@@ -127,27 +160,40 @@ namespace GateKeeper.Server.Controllers
         public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest refreshRequest)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
+            LoginResponse response = new();
             try
             {
-                var (isSuccessful, newAccessToken, newRefreshToken, newUser, newSettings) =
-                    await _authService.RefreshTokensAsync(refreshRequest.RefreshToken);
-
-                if (!isSuccessful)
-                    return Unauthorized(new { error = DialogLogin.LoginInvalidRefreshToken });
+                response = await _authService.RefreshTokensAsync(refreshRequest.RefreshToken);
+                if (!response.IsSuccessful)
+                    return Unauthorized(response.ToMany ?
+                        new { error = DialogLogin.LoginMaxAttempts } :
+                        new { error = DialogLogin.LoginInvalidRefreshToken }); 
 
                 return Ok(new
                 {
-                    accessToken = newAccessToken,
-                    refreshToken = newRefreshToken,
-                    user = newUser,
-                    settings = newSettings
+                    accessToken = response.AccessToken,
+                    refreshToken = response.RefreshToken,
+                    user = response.User,
+                    settings = response.Settings
                 });
             }
             catch (Exception ex)
             {
+                response.IsSuccessful = false;
+                response.FailureReason = "Internal error";
                 return HandleInternalError(ex, DialogLogin.LoginInvalidRefreshToken);
             }
-
+            finally
+            {
+                string _userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+                string _userAgent = Request.Headers["User-Agent"].ToString();
+                if (response.IsSuccessful)
+                    _logger.LogInformation("User refreshed token successful: {UserId}, IP: {IpAddress}, Device: {UserAgent}, Time: {Timestamp}",
+                        response.User?.Id, _userIp, _userAgent, DateTime.UtcNow);
+                else
+                    _logger.LogWarning("User refreshed token failed for {UserId}, IP: {IpAddress}, Reason: {Reason}, Time: {Timestamp}",
+                        response.User?.Id, _userIp, response.FailureReason, DateTime.UtcNow);
+            }
         }
 
         /// <summary>
@@ -160,10 +206,11 @@ namespace GateKeeper.Server.Controllers
         public async Task<IActionResult> Logout([FromBody] LogoutRequest logoutRequest)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
+            var userId = 0;
             try
             {
                 string? nameIdentifier = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var userId = int.Parse((User.FindFirst("UserId")?.Value ?? nameIdentifier) ?? string.Empty);
+                userId = int.Parse((User.FindFirst("UserId")?.Value ?? nameIdentifier) ?? userId.ToString());
 
                 var revokedCount = await _authService.LogoutAsync(logoutRequest.Token, userId);
                 return Ok(new { message = string.Format(DialogLogin.LogoutRevokeToken, revokedCount) });
@@ -171,6 +218,13 @@ namespace GateKeeper.Server.Controllers
             catch (Exception ex)
             {
                 return HandleInternalError(ex, DialogLogin.LogoutError);
+            }
+            finally
+            {
+                string _userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+                string _userAgent = Request.Headers["User-Agent"].ToString();
+                _logger.LogInformation("User logout: {UserId}, IP: {IpAddress}, Time: {Timestamp}",
+                    userId, _userIp, DateTime.UtcNow);
             }
         }
 
@@ -221,10 +275,12 @@ namespace GateKeeper.Server.Controllers
         public async Task<IActionResult> ResetPassword([FromBody] PasswordResetRequest resetRequest)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
+            bool isSuccessful = false;
+            var userId = 0;
             try
             {
-                var result = await _authService.ResetPasswordAsync(resetRequest);
-                if (result)
+                (isSuccessful, userId) = await _authService.ResetPasswordAsync(resetRequest);
+                if (isSuccessful)
                     return Ok(new { message = DialogPassword.UserPasswordResetSuccess });
                 else
                     return BadRequest(new { message = DialogPassword.UserPasswordResetError });
@@ -232,6 +288,15 @@ namespace GateKeeper.Server.Controllers
             catch (Exception ex)
             {
                 return HandleInternalError(ex, DialogPassword.UserPasswordResetTokenError);
+            }
+            finally
+            {
+                string _userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+                string _userAgent = Request.Headers["User-Agent"].ToString();
+                if (isSuccessful)
+                    _logger.LogInformation("Password changed for {UserId}, IP: {IpAddress}, Method: {Method}, Time: {Timestamp}",
+                        userId, _userIp, "Token verification", DateTime.UtcNow);
+
             }
         }
 

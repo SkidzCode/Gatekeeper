@@ -44,7 +44,7 @@ export class AuthInterceptor implements HttpInterceptor {
 
   private isExcludedUrl(url: string): boolean {
     // Construct the full API base URL dynamically
-    const apiBaseUrl = `${window.location.origin}`;
+    const apiBaseUrl = ''; //`${window.location.origin}`;
 
     // Define URLs that should be excluded from interception
     const excludedEndpoints = [
