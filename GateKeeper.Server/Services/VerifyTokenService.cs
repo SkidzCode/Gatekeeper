@@ -3,12 +3,14 @@ using System.Data;
 using System.Web;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Account;
+using GateKeeper.Server.Models.Account.Login;
+using System.Xml;
 
 namespace GateKeeper.Server.Services
 {
     public interface IVerifyTokenService
     {
-        public Task<(bool, User?, string)> VerifyTokenAsync(VerifyTokenRequest verificationCode);
+        public Task<TokenVerificationResponse> VerifyTokenAsync(VerifyTokenRequest verificationCode);
         public Task<string> GenerateTokenAsync(int userId, string verifyType);
         public Task<int> RevokeTokensAsync(int userId, string verifyType, string? token = null);
     }
@@ -23,6 +25,7 @@ namespace GateKeeper.Server.Services
         private readonly ILogger<VerifyTokenService> _logger;
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
+        private readonly IUserService _userService;
 
         /// <summary>
         /// Constructor for VerificationService.
@@ -30,70 +33,95 @@ namespace GateKeeper.Server.Services
         /// <param name="configuration">Application configuration dependency.</param>
         /// <param name="dbHelper">Database helper for DB operations.</param>
         /// <param name="logger">Logger for logging information and errors.</param>
-        public VerifyTokenService(IConfiguration configuration, IDbHelper dbHelper, ILogger<VerifyTokenService> logger, IEmailService emailService)
+        /// <param name="userService"></param>
+        public VerifyTokenService(
+            IConfiguration configuration, 
+            IDbHelper dbHelper, 
+            ILogger<VerifyTokenService> logger, 
+            IEmailService emailService,
+            IUserService userService)
         {
             _configuration = configuration;
             _dbHelper = dbHelper;
             _logger = logger;
             _emailService = emailService;
+            _userService = userService;
         }
 
         /// <inheritdoc />
-        public async Task<(bool, User?, string)> VerifyTokenAsync(VerifyTokenRequest verifyRequest)
+        public async Task<TokenVerificationResponse> VerifyTokenAsync(VerifyTokenRequest verifyRequest)
         {
-            string verificationCode = verifyRequest.VerificationCode;
-            var tokenParts = verificationCode.Split('.');
+            TokenVerificationResponse response = new TokenVerificationResponse();
+            response.VerificationCode = verifyRequest.VerificationCode;
+            var tokenParts = response.VerificationCode.Split('.');
             if (tokenParts.Length != 2)
             {
-                _logger.LogWarning("Invalid verification code format.");
-                return (false, null, string.Empty);
+                response.FailureReason = "Invalid token format";
+                return response;
             }
 
-            var tokenId = tokenParts[0];
+            response.SessionId = tokenParts[0];
             var providedTokenPart = tokenParts[1];
+            
             string tokenUsername = string.Empty;
-            User? user = null;
-            string validationType = string.Empty;
 
-            try
+
+            await using var connection = await _dbHelper.GetWrapperAsync();
+            await using var reader = await connection.ExecuteReaderAsync("ValidateUser", CommandType.StoredProcedure,
+                new MySqlParameter("@p_Id", MySqlDbType.VarChar, 36) { Value = response.SessionId });
+
+            if (!await reader.ReadAsync())
             {
-                await using var connection = await _dbHelper.GetWrapperAsync();
-                await using var reader = await connection.ExecuteReaderAsync("ValidateUser", CommandType.StoredProcedure,
-                    new MySqlParameter("@p_Id", MySqlDbType.VarChar, 36) { Value = tokenId });
-
-                if (!await reader.ReadAsync() || Convert.ToBoolean(reader["Revoked"]))
-                    return (false, null, validationType);
-
-                bool alreadyComplete = Convert.ToBoolean(reader["Complete"]);
-                validationType = reader["VerifyType"].ToString() ?? string.Empty;
-                string salt = reader["RefreshSalt"].ToString() ?? string.Empty;
-                string storedHashedToken = reader["HashedToken"].ToString() ?? string.Empty;
-                var hashedProvidedToken = PasswordHelper.HashPassword(providedTokenPart, salt);
-
-                user = new User()
-                {
-                    Id = Convert.ToInt32(reader["UserId"]),
-                    FirstName = reader["FirstName"].ToString() ?? string.Empty,
-                    LastName = reader["LastName"].ToString() ?? string.Empty,
-                    Email = reader["Email"].ToString() ?? string.Empty,
-                    Phone = reader["Phone"].ToString() ?? string.Empty,
-                    Salt = reader["Salt"].ToString() ?? string.Empty,
-                    Password = reader["Password"].ToString() ?? string.Empty,
-                    Username = reader["Username"].ToString() ?? string.Empty
-                };
-
-                if (storedHashedToken != hashedProvidedToken ||
-                    alreadyComplete ||
-                    verifyRequest.TokenType != validationType)
-                    return (false, user, validationType);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error validating verification token.");
-                throw;
+                response.FailureReason = "Invalid Session Id";
+                return response;
             }
 
-            return (!string.IsNullOrEmpty(user?.Username), user, validationType);
+            if (Convert.ToBoolean(reader["Revoked"]))
+            {
+                response.FailureReason = "Token already revoked";
+                return response;
+            }
+
+            if (Convert.ToBoolean(reader["Complete"]))
+            {
+                response.FailureReason = "Token already completed";
+                return response;
+            }
+
+            response.TokenType = reader["VerifyType"].ToString() ?? string.Empty;
+            if (verifyRequest.TokenType != response.TokenType)
+            {
+                response.FailureReason = "Incorrect token type";
+                return response;
+            }
+
+
+            string salt = reader["RefreshSalt"].ToString() ?? string.Empty;
+            string storedHashedToken = reader["HashedToken"].ToString() ?? string.Empty;
+            var hashedProvidedToken = PasswordHelper.HashPassword(providedTokenPart, salt);
+
+            response.User = new User()
+            {
+                Id = Convert.ToInt32(reader["UserId"]),
+                FirstName = reader["FirstName"].ToString() ?? string.Empty,
+                LastName = reader["LastName"].ToString() ?? string.Empty,
+                Email = reader["Email"].ToString() ?? string.Empty,
+                Phone = reader["Phone"].ToString() ?? string.Empty,
+                Salt = reader["Salt"].ToString() ?? string.Empty,
+                Password = reader["Password"].ToString() ?? string.Empty,
+                Username = reader["Username"].ToString() ?? string.Empty,
+                Roles = await _userService.GetRolesAsync(Convert.ToInt32(reader["UserId"]))
+            };
+
+            if (storedHashedToken != hashedProvidedToken)
+            {
+                response.FailureReason = "Invalid token";
+                await response.User.ClearPHIAsync();
+                return response;
+            }
+
+            response.IsVerified = true;
+            return response;
         }
 
         /// <summary>

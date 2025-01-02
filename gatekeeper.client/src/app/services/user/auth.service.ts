@@ -130,9 +130,9 @@ export class AuthService {
   }
 
   logout(): void {
-    // Optionally call the server to invalidate the token
-    this.clearTokens();
-    this.clearUser();
+    this.logoutCurrentSession().subscribe(message => {
+      console.log(message);
+    });
   }
 
   getAccessToken(): string | null {
@@ -262,7 +262,7 @@ export class AuthService {
    * Logs out the user from the current session.
    */
   logoutCurrentSession(): Observable<{ message: string }> {
-    const body: LogoutRequest = { token: this.getAccessToken() ?? '' };
+    const body: LogoutRequest = { token: this.getRefreshToken() ?? '' };
     return this.http.post<{ message: string }>(`${this.baseUrl}/logout`, body).pipe(
       tap(() => {
         this.clearTokens();

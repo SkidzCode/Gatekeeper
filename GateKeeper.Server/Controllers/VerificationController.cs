@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Services;
 using GateKeeper.Server.Models.Account;
+using GateKeeper.Server.Models.Account.Login;
 
 namespace GateKeeper.Server.Controllers
 {
@@ -41,24 +42,35 @@ namespace GateKeeper.Server.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ValidateTokenAsync([FromBody] VerifyTokenRequest verifyRequest)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+            TokenVerificationResponse response = new();
             try
             {
-                var (isAuthenticated, user, verificationType) = await _verificationService.VerifyTokenAsync(verifyRequest);
-                if (!isAuthenticated)
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+
+                response = await _verificationService.VerifyTokenAsync(verifyRequest);
+                if (!response.IsVerified)
                     return BadRequest("Invalid Token");
 
-                _verificationService.RevokeTokensAsync(user.Id, verifyRequest.TokenType, verifyRequest.VerificationCode);
+                await _verificationService.RevokeTokensAsync(response.User.Id, verifyRequest.TokenType, verifyRequest.VerificationCode);
 
                 return Ok(new { message = "Token Valid" });
             }
             catch (Exception ex)
             {
+                response.FailureReason = "Internal error:" + ex.Message;
                 _logger.LogError(ex, "An error occurred during validation token validation.");
                 return StatusCode(500, new { error = "An error occurred during validation token validation." });
+            }
+            finally
+            {
+                string _userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+                string _userAgent = Request.Headers["User-Agent"].ToString();
+                if (response.IsVerified)
+                    _logger.LogInformation("Token validated {UserId}, IP: {IpAddress}, Token: {Token}",
+                        response.User?.Id, _userIp, verifyRequest.VerificationCode);
+                else
+                    _logger.LogWarning("Password reset failed for {UserId}, IP: {IpAddress}, UserAgent: {_userAgent}, Token: {Token}, Failure Reason: {FailureReason}",
+                        response.User?.Id, _userIp, verifyRequest.VerificationCode, response.FailureReason);
             }
         }
 

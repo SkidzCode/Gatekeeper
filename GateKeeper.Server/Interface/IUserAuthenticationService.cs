@@ -37,7 +37,7 @@ namespace GateKeeper.Server.Interface
         /// </summary>
         /// <param name="verificationCode">The code sent to the user's email or phone.</param>
         /// <returns>Whether the verification was successful.</returns>
-        Task<(bool, User, string)> VerifyNewUser(string verificationCode);
+        Task<TokenVerificationResponse> VerifyNewUser(string verificationCode);
 
         /// <summary>
         /// Refreshes JWT access and refresh tokens using a valid refresh token.
@@ -58,7 +58,7 @@ namespace GateKeeper.Server.Interface
         /// </summary>
         /// <param name="resetRequest">The reset request containing the token and new password.</param>
         /// <returns>Whether the password reset was successful.</returns>
-        Task<(bool, int)> ResetPasswordAsync(PasswordResetRequest resetRequest);
+        Task<TokenVerificationResponse> ResetPasswordAsync(PasswordResetRequest resetRequest);
 
         /// <summary>
         /// Validates the strength of a given password.

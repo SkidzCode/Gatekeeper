@@ -78,16 +78,37 @@ namespace GateKeeper.Server.Controllers
         public async Task<IActionResult> VerifyNewUser([FromBody] VerifyUserRequest request)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
+            TokenVerificationResponse response = new();
             try
             {
-                var (isVerified, _, verificationType) = await _authService.VerifyNewUser(request.VerificationCode);
-                if (isVerified && verificationType == "NewUser")
+                response = await _authService.VerifyNewUser(request.VerificationCode);
+                if (response.IsVerified)
                     return Ok(new { message = DialogRegister.RegisterSucess });
                 return BadRequest(new { error = DialogVerify.VerifyInvalid });
             }
             catch (Exception ex)
             {
+                response.IsVerified = false;
+                response.FailureReason = "Internal error: " + ex.Message;
+                if (response.User != null)
+                    response.User.ClearPHIAsync();
                 return HandleInternalError(ex, DialogVerify.VerifyError);
+            }
+            finally
+            {
+                string _userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+                string _userAgent = Request.Headers["User-Agent"].ToString();
+                if (response.IsVerified)
+                {
+                    _logger.LogInformation("User verification: {UserId}, IP: {IpAddress}, Device: {UserAgent}",
+                        response.User?.Id, _userIp, _userAgent);
+                }
+                else
+                {
+                    // response.User could be null if login fails, so we use null-conditional
+                    _logger.LogWarning("User verification failed {UserId}, IP: {IpAddress}, Reason: {Reason}, Token: {Token}",
+                        response.User?.Id, _userIp, response.FailureReason, response.VerificationCode);
+                }
             }
         }
 
@@ -128,7 +149,7 @@ namespace GateKeeper.Server.Controllers
             catch (Exception ex)
             {
                 response.IsSuccessful = false;
-                response.FailureReason = "Internal error";
+                response.FailureReason = "Internal error: " + ex.Message;
                 return HandleInternalError(ex, DialogLogin.LoginError);
             }
             finally
@@ -137,14 +158,14 @@ namespace GateKeeper.Server.Controllers
                 string _userAgent = Request.Headers["User-Agent"].ToString();
                 if (response.IsSuccessful)
                 {
-                    _logger.LogInformation("User login successful: {UserId}, IP: {IpAddress}, Device: {UserAgent}, Time: {Timestamp}",
-                        response.User?.Id, _userIp, _userAgent, DateTime.UtcNow);
+                    _logger.LogInformation("User login successful: {UserId}, IP: {IpAddress}, Device: {UserAgent}",
+                        response.User?.Id, _userIp, _userAgent);
                 }
                 else
                 {
                     // response.User could be null if login fails, so we use null-conditional
-                    _logger.LogWarning("User login failed for {UserId}, IP: {IpAddress}, Reason: {Reason}, Time: {Timestamp}",
-                        response.User?.Id, _userIp, response.FailureReason, DateTime.UtcNow);
+                    _logger.LogWarning("User login failed for {UserId}, IP: {IpAddress}, Reason: {Reason}",
+                        response.User?.Id, _userIp, response.FailureReason);
                 }
             }
         }
@@ -180,7 +201,7 @@ namespace GateKeeper.Server.Controllers
             catch (Exception ex)
             {
                 response.IsSuccessful = false;
-                response.FailureReason = "Internal error";
+                response.FailureReason = "Internal error: " + ex.Message;
                 return HandleInternalError(ex, DialogLogin.LoginInvalidRefreshToken);
             }
             finally
@@ -188,11 +209,11 @@ namespace GateKeeper.Server.Controllers
                 string _userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
                 string _userAgent = Request.Headers["User-Agent"].ToString();
                 if (response.IsSuccessful)
-                    _logger.LogInformation("User refreshed token successful: {UserId}, IP: {IpAddress}, Device: {UserAgent}, Time: {Timestamp}",
-                        response.User?.Id, _userIp, _userAgent, DateTime.UtcNow);
+                    _logger.LogInformation("User refreshed token successful: {UserId}, IP: {IpAddress}, Device: {UserAgent}",
+                        response.User?.Id, _userIp, _userAgent);
                 else
-                    _logger.LogWarning("User refreshed token failed for {UserId}, IP: {IpAddress}, Reason: {Reason}, Time: {Timestamp}",
-                        response.User?.Id, _userIp, response.FailureReason, DateTime.UtcNow);
+                    _logger.LogWarning("User refreshed token failed for {UserId}, IP: {IpAddress}, Reason: {Reason}",
+                        response.User?.Id, _userIp, response.FailureReason);
             }
         }
 
@@ -207,24 +228,32 @@ namespace GateKeeper.Server.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
             var userId = 0;
+            var revokedCount = 0;
+            string failureReason = "";
             try
             {
-                string? nameIdentifier = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                userId = int.Parse((User.FindFirst("UserId")?.Value ?? nameIdentifier) ?? userId.ToString());
-
-                var revokedCount = await _authService.LogoutAsync(logoutRequest.Token, userId);
+                userId = GetUserIdFromClaims();
+                revokedCount = await _authService.LogoutAsync(logoutRequest.Token, userId);
+                if (revokedCount == 0)
+                    failureReason = "Token not found";
                 return Ok(new { message = string.Format(DialogLogin.LogoutRevokeToken, revokedCount) });
             }
             catch (Exception ex)
             {
+                revokedCount = 0;
+                failureReason = "Internal error: " + ex.Message;
                 return HandleInternalError(ex, DialogLogin.LogoutError);
             }
             finally
             {
                 string _userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
                 string _userAgent = Request.Headers["User-Agent"].ToString();
-                _logger.LogInformation("User logout: {UserId}, IP: {IpAddress}, Time: {Timestamp}",
-                    userId, _userIp, DateTime.UtcNow);
+                if (revokedCount > 0)
+                    _logger.LogInformation("User logout: {UserId}, IP: {IpAddress}",
+                        userId, _userIp, DateTime.UtcNow);
+                else
+                    _logger.LogWarning("User logout with unknown token: {UserId}, IP: {IpAddress}, token:{RefreshToken}, Reason: {Reason}",
+                        userId, _userIp, logoutRequest.Token, failureReason);
             }
         }
 
@@ -237,10 +266,15 @@ namespace GateKeeper.Server.Controllers
         [AllowAnonymous]
         public IActionResult InitiatePasswordReset([FromBody] InitiatePasswordResetRequest initiateRequest)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            string _userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+            string _userAgent = Request.Headers["User-Agent"].ToString();
+            var userId = 0;
             try
             {
+                if (!ModelState.IsValid) return BadRequest(ModelState);
+
                 User? user = _userService.GetUser(initiateRequest.EmailOrUsername).Result;
+                userId = user?.Id ?? 0;
                 if (user == null) return BadRequest(DialogPassword.UserMissing);
 
                 // Fire and forget the background process
@@ -252,16 +286,21 @@ namespace GateKeeper.Server.Controllers
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "An error occurred during the password reset background process.");
+                        _logger.LogError(ex, "User initiated password reset error:: {UserId}, Identifier: {Identifier}, IP: {IpAddress}, Device: {UserAgent}",
+                            userId, initiateRequest.EmailOrUsername, _userIp, _userAgent);
                     }
                 });
+                
             }
             catch (Exception ex)
             {
                 return HandleInternalError(ex, DialogPassword.UserPasswordResetInitiateError);
             }
-
-            // Return response immediately to the user
+            finally
+            {
+                _logger.LogInformation("User initiates password reset: {UserId}, Identifier: {Identifier}, IP: {IpAddress}, Device: {UserAgent}",
+                    userId, initiateRequest.EmailOrUsername, _userIp, _userAgent);
+            }
             return Ok(new { message = string.Format(DialogPassword.UserPasswordResetStarted, initiateRequest.EmailOrUsername) });
         }
 
@@ -277,9 +316,10 @@ namespace GateKeeper.Server.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
             bool isSuccessful = false;
             var userId = 0;
+            TokenVerificationResponse response = new();
             try
             {
-                (isSuccessful, userId) = await _authService.ResetPasswordAsync(resetRequest);
+                response = await _authService.ResetPasswordAsync(resetRequest);
                 if (isSuccessful)
                     return Ok(new { message = DialogPassword.UserPasswordResetSuccess });
                 else
@@ -287,6 +327,7 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
+                
                 return HandleInternalError(ex, DialogPassword.UserPasswordResetTokenError);
             }
             finally
@@ -294,8 +335,11 @@ namespace GateKeeper.Server.Controllers
                 string _userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
                 string _userAgent = Request.Headers["User-Agent"].ToString();
                 if (isSuccessful)
-                    _logger.LogInformation("Password changed for {UserId}, IP: {IpAddress}, Method: {Method}, Time: {Timestamp}",
+                    _logger.LogInformation("Password changed for {UserId}, IP: {IpAddress}, Method: {Method}",
                         userId, _userIp, "Token verification", DateTime.UtcNow);
+                else
+                    _logger.LogWarning("Password reset failed for {UserId}, IP: {IpAddress}, Method: {Method}, Reason: {Reason}",
+                        userId, _userIp, "Token verification", response.FailureReason);
 
             }
         }

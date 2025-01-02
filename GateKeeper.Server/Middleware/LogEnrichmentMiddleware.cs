@@ -1,4 +1,8 @@
-﻿namespace GateKeeper.Server.Middleware;
+﻿using GateKeeper.Server.Models.Account;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
+
+namespace GateKeeper.Server.Middleware;
 
 public class LogEnrichmentMiddleware(RequestDelegate next, ILogger<LogEnrichmentMiddleware> logger)
 {
@@ -7,18 +11,13 @@ public class LogEnrichmentMiddleware(RequestDelegate next, ILogger<LogEnrichment
 
     public async Task InvokeAsync(HttpContext context)
     {
+        Serilog.Context.LogContext.PushProperty("E_Timestamp", DateTime.UtcNow);
         // Generate or fetch correlation ID
         var correlationId = context.TraceIdentifier;
         Serilog.Context.LogContext.PushProperty("CorrelationId", correlationId);
-
-        // If user is authenticated, add user ID
-        if (context.User?.Identity?.IsAuthenticated == true)
-        {
-            var userId = context.User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value; // typical JWT subject
-            if (!string.IsNullOrEmpty(userId))
-                Serilog.Context.LogContext.PushProperty("UserId", userId);
-        }
-
+        var userId = int.Parse(context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        if (userId > 0)
+            Serilog.Context.LogContext.PushProperty("E_UserId", userId);
         await _next(context);
     }
 }

@@ -202,48 +202,38 @@ namespace GateKeeper.Server.Services
         }
 
         /// <inheritdoc />
-        public async Task<(bool, User?, string)> VerifyNewUser(string verificationCode)
+        public async Task<TokenVerificationResponse> VerifyNewUser(string verificationCode)
         {
-            var tokenId = verificationCode.Split('.')[0];
-            User? user = null;
-            try
-            {
-                var (isValid, userTemp, validationType) =
-                    await _verificationService.VerifyTokenAsync(new VerifyTokenRequest()
-                    {
-                        VerificationCode = verificationCode,
-                        TokenType = "NewUser",
-                    });
-                user = userTemp;
-
-                if (isValid && user != null && validationType == "NewUser")
+            TokenVerificationResponse response = new(); 
+            response = await _verificationService.VerifyTokenAsync(
+                new VerifyTokenRequest()
                 {
-                    await using var connection = await _dbHelper.GetWrapperAsync();
-                    await connection.ExecuteNonQueryAsync("ValidateFinish", CommandType.StoredProcedure,
-                        new MySqlParameter("@p_UserId", user.Id),
-                        new MySqlParameter("@p_Id", tokenId));
-                }
+                    VerificationCode = verificationCode,
+                    TokenType = "NewUser",
+                });
 
-                return (isValid, user, validationType);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error validating refresh token.");
-                throw;
-            }
+
+            if (!response.IsVerified) return response;
+
+            await using var connection = await _dbHelper.GetWrapperAsync();
+            await connection.ExecuteNonQueryAsync("ValidateFinish", CommandType.StoredProcedure,
+                new MySqlParameter("@p_UserId", response.User?.Id),
+                new MySqlParameter("@p_Id", response.SessionId));
+
+            return response;
         }
 
         /// <inheritdoc />
         public async Task<LoginResponse> RefreshTokensAsync(string refreshToken)
         {
             LoginResponse response = new LoginResponse();
-            var (authenticated, user, verifyType) = await _verificationService.VerifyTokenAsync(new VerifyTokenRequest()
+            var response2 = await _verificationService.VerifyTokenAsync(new VerifyTokenRequest()
             {
                 TokenType = "Refresh",
                 VerificationCode = refreshToken
             });
 
-            response.User = user;
+            response.User = response2.User;
             response = await LoginAttempts(response);
 
             if (response.ToMany) return response;
@@ -266,9 +256,9 @@ namespace GateKeeper.Server.Services
                 })
                 .ToList();
 
-            if (!authenticated || response.User == null || verifyType != "Refresh")
+            if (!response2.IsVerified || response.User == null)
             {
-                response.FailureReason = "Invalid refresh token.";
+                response.FailureReason = response2.FailureReason;
                 if (response.User != null)
                     await response.User.ClearPHIAsync();
                 return response;
@@ -312,19 +302,19 @@ namespace GateKeeper.Server.Services
 
 
         /// <inheritdoc />
-        public async Task<(bool, int)> ResetPasswordAsync(PasswordResetRequest resetRequest)
+        public async Task<TokenVerificationResponse> ResetPasswordAsync(PasswordResetRequest resetRequest)
         {
-            var (isValid, userTemp, validationType) =
+            var response =
                 await _verificationService.VerifyTokenAsync(new VerifyTokenRequest()
                 {
                     TokenType = "ForgotPassword",
                     VerificationCode = resetRequest.ResetToken
                 });
-            var isSuccessful = (userTemp != null &&
-                                isValid &&
-                                validationType == "ForgotPassword" &&
-                                (await _userService.ChangePassword(userTemp.Id, resetRequest.NewPassword)) > 0);
-            return (isSuccessful, userTemp?.Id ?? 0);
+
+            if (!response.IsVerified) return response;
+
+            await _userService.ChangePassword(response.User.Id, resetRequest.NewPassword);
+            return response;
         }
 
         public async Task<bool> UsernameExistsAsync(string username)
