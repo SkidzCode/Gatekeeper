@@ -3,7 +3,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using GateKeeper.Server.Services;
 using GateKeeper.Server.Interface;
-using GateKeeper.Server.Models.Account;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using MySqlConnector;
@@ -12,6 +11,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Threading;
 using IConfiguration = Microsoft.Extensions.Configuration.IConfiguration;
+using GateKeeper.Server.Models.Account.User;
 
 namespace GateKeeper.Server.Test.Services
 {

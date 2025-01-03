@@ -5,6 +5,7 @@ using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Account;
 using GateKeeper.Server.Models.Account.Login;
 using System.Xml;
+using GateKeeper.Server.Models.Account.UserModels;
 
 namespace GateKeeper.Server.Services
 {

@@ -5,6 +5,7 @@ using System.Data;
 using GateKeeper.Server.Controllers;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Account;
+using GateKeeper.Server.Models.Account.UserModels;
 
 namespace GateKeeper.Server.Services;
 
@@ -30,11 +31,15 @@ public class UserService : IUserService
     /// </summary>
     /// <param name="user">User object containing registration details.</param>
     /// <returns>HTTP response indicating success or failure.</returns>
-    public async Task<(int, User)> AddUser(User user)
+    public async Task<RegistrationResponse> RegisterUser(User user)
     {
+        RegistrationResponse response = new RegistrationResponse()
+        {
+            User = user
+        };
         // Step 1: Generate a unique salt and hash the user's password
         var salt = PasswordHelper.GenerateSalt();
-        var hashedPassword = PasswordHelper.HashPassword(user.Password, salt);
+        response.User.Password = PasswordHelper.HashPassword(response.User.Password, salt);
 
         // Step 2: Establish database connection
         await using var connection = await _dbHelper.GetWrapperAsync();
@@ -45,18 +50,26 @@ public class UserService : IUserService
             new MySqlParameter("@p_LastName", MySqlDbType.VarChar, 50) { Value = user.LastName },
             new MySqlParameter("@p_Email", MySqlDbType.VarChar, 100) { Value = user.Email },
             new MySqlParameter("@p_Username", MySqlDbType.VarChar, 50) { Value = user.Username },
-            new MySqlParameter("@p_Password", MySqlDbType.VarChar, 255) { Value = hashedPassword },
+            new MySqlParameter("@p_Password", MySqlDbType.VarChar, 255) { Value = response.User.Password },
             new MySqlParameter("@p_Salt", MySqlDbType.VarChar, 255) { Value = salt },
             new MySqlParameter("@p_Phone", MySqlDbType.VarChar, 15) { Value = user.Phone },
             new MySqlParameter("@p_ResultCode", MySqlDbType.Int32) { Direction = ParameterDirection.Output },
             new MySqlParameter("last_id", MySqlDbType.Int32) { Direction = ParameterDirection.Output });
 
         var resultCode = (int)outputParameters["@p_ResultCode"];
-        if (outputParameters["last_id"] != DBNull.Value)
+        response.FailureReason = resultCode switch
         {
-            user.Id = Convert.ToInt32(outputParameters["last_id"]);
-        }
-        return (resultCode, user);
+            1 => "Email already exists.",
+            2 => "Username already exists.",
+            3 => "Both Email and Username already exist.",
+            _ => response.FailureReason
+        };
+
+        if (outputParameters["last_id"] == DBNull.Value) return response;
+
+        response.IsSuccessful = true;
+        response.User.Id = Convert.ToInt32(outputParameters["last_id"]);
+        return response;
     }
 
     public async Task<int> ChangePassword(int userId, string newPassword)

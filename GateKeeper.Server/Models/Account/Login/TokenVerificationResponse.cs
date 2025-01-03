@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using GateKeeper.Server.Models.Account.UserModels;
 
 namespace GateKeeper.Server.Models.Account.Login;
 

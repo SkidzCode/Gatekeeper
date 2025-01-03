@@ -1,4 +1,4 @@
-﻿namespace GateKeeper.Server.Models.Account;
+﻿namespace GateKeeper.Server.Models.Account.UserModels;
 public class User
 {
     public int Id { get; set; }

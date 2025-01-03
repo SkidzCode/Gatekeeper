@@ -22,19 +22,22 @@ if (builder.Environment.IsDevelopment())
 #region Add Serilog
 
 // 1) Configure Serilog from appsettings.json
-Log.Logger = new LoggerConfiguration()
+    Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
-    // Optionally, configure additional filters or sinks here.
-    // For example, to filter out data that may contain sensitive info:
+    // 2) Add the tamper-proof, chained file sink:
     .Filter.ByExcluding(logEvent =>
     {
         // Example: exclude logs that may contain full user data
         // if (logEvent.Properties.ContainsKey("PHI")) ...
         return false; // Return true if you want to exclude the event
     })
+    .WriteTo.ChainedFile(
+        mainLogFilePath: "Logs/chained-log.txt",
+        hashesOnlyFilePath: "Logs/chained-log-hashes.txt"
+    )
     .CreateLogger();
 
-// 2) Use Serilog as the logging provider
+// 3) Use Serilog as the logging provider
 builder.Host.UseSerilog(Log.Logger);
 
 #endregion

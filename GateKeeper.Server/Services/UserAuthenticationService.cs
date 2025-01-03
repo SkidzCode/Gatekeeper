@@ -24,6 +24,7 @@ using System.Runtime.InteropServices;
 using System.Security;
 using GateKeeper.Server.Models.Account.Login;
 using Microsoft.AspNetCore.DataProtection;
+using GateKeeper.Server.Models.Account.UserModels;
 
 namespace GateKeeper.Server.Services
 {
@@ -84,54 +85,46 @@ namespace GateKeeper.Server.Services
         }
 
         /// <inheritdoc />
-        public async Task RegisterUserAsync(RegisterRequest registerRequest)
+        public async Task<RegistrationResponse> RegisterUserAsync(RegisterRequest registerRequest)
         {
-            try
+            RegistrationResponse response = new RegistrationResponse();
+
+            response.User = new User()
             {
-                if (!await ValidatePasswordStrengthAsync(registerRequest.Password))
-                {
-                    throw new ApplicationException("Weak password.");
-                }
-
-                var (resultCode, userFinal) = await _userService.AddUser(new User()
-                {
-                    FirstName = registerRequest.FirstName,
-                    Email = registerRequest.Email,
-                    LastName = registerRequest.LastName,
-                    Password = registerRequest.Password,
-                    Username = registerRequest.Username,
-                    Phone = registerRequest.Phone
-                });
+                FirstName = registerRequest.FirstName,
+                Email = registerRequest.Email,
+                LastName = registerRequest.LastName,
+                Password = registerRequest.Password,
+                Username = registerRequest.Username,
+                Phone = registerRequest.Phone
+            };
 
 
-                switch (resultCode)
-                {
-                    case 1:
-                        throw new ApplicationException("Email already exists.");
-                    case 2:
-                        throw new ApplicationException("Username already exists.");
-                    case 3:
-                        throw new ApplicationException("Both Email and Username already exist.");
-                }
-
-                await AssignRoleToUser(userFinal.Id, "NewUser");
-                string results = await _verificationService.GenerateTokenAsync(userFinal.Id, "NewUser");
-
-                string emailBody = await File.ReadAllTextAsync("Documents/EmailVerificationTemplate.html");
-                emailBody = emailBody.Replace("UNIQUE_VERIFICATION_TOKEN", WebUtility.UrlEncode(results));
-                emailBody = emailBody.Replace("FIRST_NAME", userFinal.FirstName);
-                emailBody = emailBody.Replace("LAST_NAME", userFinal.LastName);
-                emailBody = emailBody.Replace("EMAIL", userFinal.Email);
-                emailBody = emailBody.Replace("USERNAME", userFinal.Username);
-                emailBody = emailBody.Replace("REPLACE_URL", registerRequest.Website);
-
-                await _emailService.SendEmailAsync("skidz@r-u.me", "Your verification token", emailBody);
-            }
-            catch (Exception ex)
+            if (!await ValidatePasswordStrengthAsync(registerRequest.Password))
             {
-                _logger.LogError(ex, "Error registering user.");
-                throw;
+                response.FailureReason = "Password does not meet the required complexity.";
+                return response;
             }
+
+            response = await _userService.RegisterUser(response.User);
+
+            if (!response.IsSuccessful)
+                return response;
+
+            await AssignRoleToUser(response.User.Id, "NewUser");
+            string results = await _verificationService.GenerateTokenAsync(response.User.Id, "NewUser");
+
+            string emailBody = await File.ReadAllTextAsync("Documents/EmailVerificationTemplate.html");
+            emailBody = emailBody.Replace("UNIQUE_VERIFICATION_TOKEN", WebUtility.UrlEncode(results));
+            emailBody = emailBody.Replace("FIRST_NAME", response.User.FirstName);
+            emailBody = emailBody.Replace("LAST_NAME", response.User.LastName);
+            emailBody = emailBody.Replace("EMAIL", response.User.Email);
+            emailBody = emailBody.Replace("USERNAME", response.User.Username);
+            emailBody = emailBody.Replace("REPLACE_URL", registerRequest.Website);
+
+            await _emailService.SendEmailAsync(response.User.Email, "Your verification token", emailBody);
+
+            return response;
         }
 
         /// <inheritdoc />

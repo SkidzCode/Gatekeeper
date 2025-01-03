@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using GateKeeper.Server.Models.Account;
+using GateKeeper.Server.Models.Account.UserModels;
 
 namespace GateKeeper.Server.Interface
 {
@@ -13,7 +13,7 @@ namespace GateKeeper.Server.Interface
         /// </summary>
         /// <param name="user">User object containing registration details.</param>
         /// <returns>A Task representing the asynchronous operation.</returns>
-        Task<(int, User)> AddUser(User user);
+        Task<RegistrationResponse> RegisterUser(User user);
 
         Task<User?> GetUser(string identifier);
         Task<User?> GetUser(int identifier);

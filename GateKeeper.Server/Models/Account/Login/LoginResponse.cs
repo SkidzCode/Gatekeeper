@@ -1,4 +1,5 @@
-﻿using GateKeeper.Server.Models.Site;
+﻿using GateKeeper.Server.Models.Account.UserModels;
+using GateKeeper.Server.Models.Site;
 
 namespace GateKeeper.Server.Models.Account.Login;
 

@@ -1,6 +1,8 @@
 ﻿using System.Threading.Tasks;
 using GateKeeper.Server.Models.Account;
 using GateKeeper.Server.Models.Account.Login;
+using GateKeeper.Server.Models.Account.UserModels;
+using GateKeeper.Server.Models.Account.UserModels;
 using GateKeeper.Server.Models.Site;
 
 namespace GateKeeper.Server.Interface
@@ -30,7 +32,7 @@ namespace GateKeeper.Server.Interface
         /// </summary>
         /// <param name="user">User details for registration.</param>
         /// <returns>A Task representing the registration process.</returns>
-        Task RegisterUserAsync(RegisterRequest user);
+        Task<RegistrationResponse> RegisterUserAsync(RegisterRequest user);
 
         /// <summary>
         /// Verifies a user's email or phone number for account activation.

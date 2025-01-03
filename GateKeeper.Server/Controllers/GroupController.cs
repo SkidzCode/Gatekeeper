@@ -1,5 +1,5 @@
 ﻿using GateKeeper.Server.Interface;
-using GateKeeper.Server.Models.Account;
+using GateKeeper.Server.Models.Account.UserModels;
 using GateKeeper.Server.Resources;
 using GateKeeper.Server.Services;
 using Microsoft.AspNetCore.Authorization;
