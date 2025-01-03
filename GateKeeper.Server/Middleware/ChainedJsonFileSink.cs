@@ -10,47 +10,49 @@ namespace GateKeeper.Server.Middleware
 {
     public class ChainedFileSink : ILogEventSink
     {
-        private readonly string _mainLogFilePath;
-        private readonly string _hashesOnlyFilePath;
+        private readonly string _mainLogDirectory;
+        private readonly string _hashesOnlyDirectory;
+        private readonly string _fileNamePrefix;
         private readonly ITextFormatter _formatter;
 
+        // We will build new filenames daily (or at any interval you choose).
+        private DateTime _currentDate;
+        private string _currentMainLogFilePath = string.Empty;
+        private string _currentHashesFilePath = string.Empty;
+
+        // This holds the last computed hash in the chain, which we carry over
+        // even when rotating to a new file (if you want the chain to continue).
         private string _previousHash = string.Empty;
+
         private readonly object _syncRoot = new();
 
         /// <summary>
-        /// Constructor for the custom chained file sink.
+        /// Constructor for the custom chained file sink with rotating filenames.
         /// </summary>
-        /// <param name="mainLogFilePath">The path to the main JSON log file.</param>
-        /// <param name="hashesOnlyFilePath">The path to the file that stores only the chain-hashes.</param>
-        /// <param name="formatter">The Serilog formatter to render the log event (e.g., CompactJsonFormatter).</param>
-        public ChainedFileSink(string mainLogFilePath, string hashesOnlyFilePath, ITextFormatter? formatter = null)
+        /// <param name="mainLogDirectory">Directory where JSON logs go.</param>
+        /// <param name="hashesOnlyDirectory">Directory where hash-only logs go.</param>
+        /// <param name="fileNamePrefix">Prefix for the daily filenames, e.g. "chained-log".</param>
+        /// <param name="formatter">Optional Serilog formatter to render the log event (defaults to CompactJsonFormatter).</param>
+        public ChainedFileSink(
+            string mainLogDirectory,
+            string hashesOnlyDirectory,
+            string fileNamePrefix = "chained-log",
+            ITextFormatter? formatter = null)
         {
-            _mainLogFilePath = mainLogFilePath;
-            _hashesOnlyFilePath = hashesOnlyFilePath;
-            _formatter = formatter ?? new CompactJsonFormatter(); // Use Compact JSON by default
+            _mainLogDirectory = mainLogDirectory;
+            _hashesOnlyDirectory = hashesOnlyDirectory;
+            _fileNamePrefix = fileNamePrefix;
 
-            // On startup, try loading the last line from the main file to retrieve the previous chain hash.
-            if (File.Exists(_mainLogFilePath))
-            {
-                var lastLine = File.ReadLines(_mainLogFilePath).LastOrDefault();
-                if (!string.IsNullOrEmpty(lastLine))
-                {
-                    // Attempt to parse the last line as JSON
-                    // and extract the "ChainHash" property if it exists.
-                    try
-                    {
-                        using var doc = JsonDocument.Parse(lastLine);
-                        if (doc.RootElement.TryGetProperty("ChainHash", out var chainHashElement))
-                        {
-                            _previousHash = chainHashElement.GetString() ?? string.Empty;
-                        }
-                    }
-                    catch
-                    {
-                        // If for some reason the file is corrupted or not JSON, just ignore.
-                    }
-                }
-            }
+            // Use Compact JSON by default.
+            _formatter = formatter ?? new CompactJsonFormatter();
+
+            // Ensure directories exist.
+            Directory.CreateDirectory(_mainLogDirectory);
+            Directory.CreateDirectory(_hashesOnlyDirectory);
+
+            // On startup, initialize today's file paths
+            _currentDate = DateTime.UtcNow.Date;
+            RollFileIfNeeded(force: true);
         }
 
         /// <summary>
@@ -61,25 +63,87 @@ namespace GateKeeper.Server.Middleware
         {
             lock (_syncRoot)
             {
-                // 1) Render the log event as JSON using the provided formatter.
+                // 1) Check if a rotation is needed (if date changed).
+                RollFileIfNeeded();
+
+                // 2) Render the log event as JSON using the formatter.
                 var rawJson = FormatLogEventAsString(logEvent);
 
-                // 2) Compute the new chain hash = SHA256( previousHash + rawJson ).
+                // 3) Compute the new chain hash = SHA256(previousHash + rawJson).
                 var hashInput = _previousHash + rawJson;
                 var currentHash = ComputeSha256Base64(hashInput);
 
-                // 3) Augment the JSON with a new property "ChainHash" = currentHash.
-                //    We do this by parsing the JSON, then re-writing it with the extra property.
+                // 4) Augment the JSON with a new property "ChainHash" = currentHash.
                 var augmentedJson = AugmentJsonWithChainHash(rawJson, currentHash);
 
-                // 4) Append the augmented JSON to the main log file.
-                File.AppendAllText(_mainLogFilePath, augmentedJson + Environment.NewLine);
+                // 5) Append the augmented JSON to the main log file.
+                File.AppendAllText(_currentMainLogFilePath, augmentedJson + Environment.NewLine);
 
-                // 5) Append the current hash to the "hashes-only" file.
-                File.AppendAllText(_hashesOnlyFilePath, currentHash + Environment.NewLine);
+                // 6) Append the current hash to the "hashes-only" file.
+                File.AppendAllText(_currentHashesFilePath, currentHash + Environment.NewLine);
 
-                // 6) Update the _previousHash to the current one for the next iteration.
+                // 7) Update the _previousHash to the current one for the next iteration.
                 _previousHash = currentHash;
+            }
+        }
+
+        /// <summary>
+        /// Decides if we need to roll (rotate) to a new file, based on the date.
+        /// </summary>
+        /// <param name="force">If true, always creates the file regardless of date check.</param>
+        private void RollFileIfNeeded(bool force = false)
+        {
+            var nowDate = DateTime.UtcNow.Date;
+            if (force || nowDate > _currentDate)
+            {
+                // Move to a new date
+                _currentDate = nowDate;
+
+                // Build filenames like: "Logs\chained-log-2025-01-02.txt"
+                var dateString = _currentDate.ToString("yyyy-MM-dd");
+                _currentMainLogFilePath = Path.Combine(
+                    _mainLogDirectory,
+                    $"{_fileNamePrefix}-{dateString}.txt"
+                );
+                _currentHashesFilePath = Path.Combine(
+                    _hashesOnlyDirectory,
+                    $"{_fileNamePrefix}-hashes-{dateString}.txt"
+                );
+
+                // Optional: if you want each day to have its own chain, reset:
+                // _previousHash = string.Empty;
+                //
+                // If you want to *continue* the chain from yesterday’s final hash,
+                // we must read the last chain hash from the new file (if it exists).
+                // That means if the new file already exists for today (like if the app restarted),
+                // we attempt to load the last chain hash from it.
+                // 1) If today's file exists, read from it:
+                if (File.Exists(_currentMainLogFilePath))
+                {
+                    LoadLastChainHash(_currentMainLogFilePath);
+                }
+                else
+                {
+                    // 2) If today's file does NOT exist, look for the NEWEST file in the directory.
+                    //    We'll assume your log files match the pattern "chained-log-YYYY-MM-DD.txt".
+                    var pattern = $"{_fileNamePrefix}-*.txt";
+                    var allFiles = Directory.GetFiles(_mainLogDirectory, pattern);
+                    if (allFiles.Length <= 0) return;
+                    
+                    // Option A) Sort by creation time (descending):
+                    // var newestFile = allFiles
+                    //     .OrderByDescending(f => new FileInfo(f).CreationTimeUtc)
+                    //     .First();
+
+                    // Option B) Sort by filename (descending),
+                    // assuming the date format is in ascending lexical order (yyyy-MM-dd):
+                    var newestFile = allFiles
+                        .OrderByDescending(f => f)  // if names are "chained-log-2025-01-02.txt"
+                        .First();
+
+                    LoadLastChainHash(newestFile);
+                }
+
             }
         }
 
@@ -112,15 +176,13 @@ namespace GateKeeper.Server.Middleware
             try
             {
                 using var doc = JsonDocument.Parse(originalJson);
-                // We'll build a new JSON object that merges the existing properties + the new ChainHash property.
                 var root = doc.RootElement;
 
-                // Use System.Text.Json's JsonElement -> JsonObject (via a dictionary approach).
+                // We'll build a new JSON object that merges existing properties + new ChainHash property.
                 var dict = new Dictionary<string, object>();
 
                 foreach (var prop in root.EnumerateObject())
                 {
-                    // Copy existing properties (propertyName -> propertyValue)
                     dict[prop.Name] = prop.Value.ValueKind switch
                     {
                         JsonValueKind.String => prop.Value.GetString()!,
@@ -128,7 +190,7 @@ namespace GateKeeper.Server.Middleware
                         JsonValueKind.True => true,
                         JsonValueKind.False => false,
                         JsonValueKind.Object => prop.Value.GetRawText(), // Nested JSON
-                        JsonValueKind.Array => prop.Value.GetRawText(), // Arrays
+                        JsonValueKind.Array => prop.Value.GetRawText(),  // Arrays
                         JsonValueKind.Null => null,
                         _ => prop.Value.GetRawText(),
                     };
@@ -142,10 +204,33 @@ namespace GateKeeper.Server.Middleware
             }
             catch
             {
-                // If parsing fails for some reason, fallback to just adding a suffix
-                // Not ideal, but we won't fail the logging pipeline.
-                return originalJson.TrimEnd('}', ' ') + $", \"ChainHash\": \"{chainHash}\"}}";
+                // If parsing fails, fallback to just appending.
+                return originalJson.TrimEnd('}', ' ')
+                    + $", \"ChainHash\": \"{chainHash}\"}}";
             }
         }
+
+        /// <summary>
+        /// Attempts to read the last log line from the file, parse out the "ChainHash",
+        /// and store it in _previousHash.
+        /// </summary>
+        private void LoadLastChainHash(string filePath)
+        {
+            var lastLine = File.ReadLines(filePath).LastOrDefault();
+            if (string.IsNullOrEmpty(lastLine)) return;
+            try
+            {
+                using var doc = JsonDocument.Parse(lastLine);
+                if (doc.RootElement.TryGetProperty("ChainHash", out var chainHashElement))
+                {
+                    _previousHash = chainHashElement.GetString() ?? string.Empty;
+                }
+            }
+            catch
+            {
+                // If for some reason it's not valid JSON, ignore
+            }
+        }
+
     }
 }

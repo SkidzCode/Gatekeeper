@@ -8,18 +8,17 @@ namespace GateKeeper.Server.Middleware
     public static class ChainedFileLoggerConfigurationExtensions
     {
         /// <summary>
-        /// Extension method to add the ChainedFileSink to the Serilog pipeline.
+        /// Extension method to add the ChainedFileSink (with daily rolling) to the Serilog pipeline.
         /// </summary>
         public static LoggerConfiguration ChainedFile(
             this LoggerSinkConfiguration sinkConfiguration,
-            string mainLogFilePath,
-            string hashesOnlyFilePath,
+            string mainLogDirectory,
+            string hashesOnlyDirectory,
+            string fileNamePrefix = "chained-log",
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum)
         {
-            return sinkConfiguration.Sink(
-                new ChainedFileSink(mainLogFilePath, hashesOnlyFilePath, new CompactJsonFormatter()),
-                restrictedToMinimumLevel
-            );
+            var sink = new ChainedFileSink(mainLogDirectory, hashesOnlyDirectory, fileNamePrefix, new CompactJsonFormatter());
+            return sinkConfiguration.Sink(sink, restrictedToMinimumLevel);
         }
     }
 }

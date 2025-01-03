@@ -32,8 +32,9 @@ if (builder.Environment.IsDevelopment())
         return false; // Return true if you want to exclude the event
     })
     .WriteTo.ChainedFile(
-        mainLogFilePath: "Logs/chained-log.txt",
-        hashesOnlyFilePath: "Logs/chained-log-hashes.txt"
+        mainLogDirectory: "Logs",
+        hashesOnlyDirectory: "Logs",
+        fileNamePrefix: "chained-log-rotating" // or anything you prefer
     )
     .CreateLogger();
 
