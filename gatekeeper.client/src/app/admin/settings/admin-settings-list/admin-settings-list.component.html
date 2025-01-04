@@ -1,0 +1,99 @@
+<mat-card>
+  <mat-card-title>Admin Settings</mat-card-title>
+
+  <mat-card-subtitle *ngIf="loading">Loading...</mat-card-subtitle>
+  <mat-card-subtitle *ngIf="errorMessage" class="error-text">
+    {{ errorMessage }}
+  </mat-card-subtitle>
+
+  <mat-card-content>
+
+    <!-- SEARCH / FILTER -->
+    <div class="search-filters">
+      <mat-form-field appearance="fill">
+        <mat-label>Search by Name</mat-label>
+        <input matInput [(ngModel)]="searchName" />
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Search by Category</mat-label>
+        <input matInput [(ngModel)]="searchCategory" />
+      </mat-form-field>
+
+      <button mat-raised-button
+              color="primary"
+              (click)="onSearch()"
+              [disabled]="loading">
+        Search
+      </button>
+    </div>
+
+    <!-- ACTION BAR -->
+    <div class="action-bar">
+      <button mat-raised-button
+              color="accent"
+              (click)="createSetting()"
+              [disabled]="loading">
+        Add New Setting
+      </button>
+    </div>
+
+    <!-- SETTINGS TABLE -->
+    <table mat-table
+           [dataSource]="settings"
+           class="mat-elevation-z8"
+           *ngIf="settings.length > 0">
+      <!-- ID Column -->
+      <ng-container matColumnDef="id">
+        <th mat-header-cell *matHeaderCellDef> ID </th>
+        <td mat-cell *matCellDef="let s">{{ s.id }}</td>
+      </ng-container>
+
+      <!-- Name Column -->
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef> Name </th>
+        <td mat-cell *matCellDef="let s">{{ s.name }}</td>
+      </ng-container>
+
+      <!-- Category Column -->
+      <ng-container matColumnDef="category">
+        <th mat-header-cell *matHeaderCellDef> Category </th>
+        <td mat-cell *matCellDef="let s">{{ s.category }}</td>
+      </ng-container>
+
+      <!-- Type Column -->
+      <ng-container matColumnDef="type">
+        <th mat-header-cell *matHeaderCellDef> Type </th>
+        <td mat-cell *matCellDef="let s">{{ s.settingValueType }}</td>
+      </ng-container>
+
+      <!-- Default Value Column -->
+      <ng-container matColumnDef="defaultValue">
+        <th mat-header-cell *matHeaderCellDef> Default Value </th>
+        <td mat-cell *matCellDef="let s">
+          {{ s.defaultSettingValue }}
+        </td>
+      </ng-container>
+
+      <!-- Actions Column -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef> Actions </th>
+        <td mat-cell *matCellDef="let s">
+          <button mat-raised-button color="primary" (click)="editSetting(s.id)">
+            Edit
+          </button>
+
+          <button mat-raised-button color="warn" (click)="deleteSetting(s)">
+            Delete
+          </button>
+        </td>
+      </ng-container>
+
+      <!-- Header & Row Declarations -->
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+
+    <p *ngIf="!loading && settings.length === 0">No settings found.</p>
+  </mat-card-content>
+</mat-card>

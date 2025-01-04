@@ -1,0 +1,19 @@
+.search-filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.action-bar {
+  margin: 1rem 0;
+}
+
+.error-text {
+  color: red;
+}
+
+table {
+  width: 100%;
+}

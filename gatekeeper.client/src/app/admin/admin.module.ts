@@ -18,7 +18,7 @@ import { MatNativeDateModule } from '@angular/material/core'; // <-- Import here
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
-
+import { MatRadioModule } from '@angular/material/radio';
 
 import { ResourcesEditorComponent } from '../resources/resources-editor/resources-editor.component';
 import { AdminRoutingModule } from './admin-routing.module';
@@ -29,6 +29,8 @@ import { NotificationPreviewDialogComponent } from './notification/notification-
 import { NotificationTemplatesComponent } from './notification/notification-templates/notification-templates.component';
 import { TemplatePreviewIframeComponent } from './notification/template-preview-iframe/template-preview-iframe.component';
 import { AdminLogsBrowserComponent } from './history/admin-logs-browser/admin-logs-browser.component';
+import { AdminSettingsListComponent } from './settings/admin-settings-list/admin-settings-list.component';
+import { AdminSettingsEditComponent } from './settings/admin-settings-edit/admin-settings-edit.component';
 
 @NgModule({
   declarations: [
@@ -40,6 +42,8 @@ import { AdminLogsBrowserComponent } from './history/admin-logs-browser/admin-lo
     TemplatePreviewIframeComponent,
     AdminLogsBrowserComponent,
     ResourcesEditorComponent,
+    AdminSettingsListComponent,
+    AdminSettingsEditComponent,
     
   ],
   imports: [
@@ -63,7 +67,8 @@ import { AdminLogsBrowserComponent } from './history/admin-logs-browser/admin-lo
     MatNativeDateModule,
     MatToolbarModule,
     MatIconModule,
-    MatProgressSpinner
+    MatProgressSpinner,
+    MatRadioModule
   ],
 })
 export class AdminModule { }

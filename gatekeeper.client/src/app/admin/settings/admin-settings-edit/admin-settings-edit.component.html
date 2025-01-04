@@ -1,0 +1,140 @@
+<mat-card>
+  <!-- Dynamic Title -->
+  <mat-card-title *ngIf="isNew">Create New Setting</mat-card-title>
+  <mat-card-title *ngIf="!isNew">
+    Edit Setting (ID: {{ settingId }})
+  </mat-card-title>
+
+  <mat-card-subtitle *ngIf="loading">
+    Loading...
+  </mat-card-subtitle>
+  <mat-card-subtitle *ngIf="errorMessage" class="error-text">
+    {{ errorMessage }}
+  </mat-card-subtitle>
+
+  <mat-card-content *ngIf="!loading">
+    <form (ngSubmit)="saveSetting()">
+      <!-- Name -->
+      <mat-form-field appearance="fill" style="width: 100%;">
+        <mat-label>Setting Name</mat-label>
+        <input matInput
+               [(ngModel)]="setting.name"
+               name="name"
+               required />
+      </mat-form-field>
+
+      <!-- Category -->
+      <mat-form-field appearance="fill" style="width: 100%;">
+        <mat-label>Category</mat-label>
+        <input matInput
+               [(ngModel)]="setting.category"
+               name="category" />
+      </mat-form-field>
+
+      <!-- Value Type -->
+      <mat-form-field appearance="fill" style="width: 100%;">
+        <mat-label>Value Type</mat-label>
+        <mat-select [(ngModel)]="setting.settingValueType"
+                    name="settingValueType">
+          <mat-option *ngFor="let vt of allowedValueTypes"
+                      [value]="vt">
+            {{ vt }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Default Value (switch on settingValueType) -->
+      <ng-container [ngSwitch]="setting.settingValueType">
+        <!-- Boolean -->
+        <div *ngSwitchCase="'boolean'">
+          <label>Default Value (boolean):</label>
+          <mat-radio-group [(ngModel)]="setting.defaultSettingValue"
+                           name="defaultSettingValue"
+                           style="display: flex; gap: 1rem; margin-top: .5rem;">
+            <mat-radio-button [value]="'true'">True</mat-radio-button>
+            <mat-radio-button [value]="'false'">False</mat-radio-button>
+          </mat-radio-group>
+        </div>
+
+        <!-- Integer -->
+        <div *ngSwitchCase="'integer'">
+          <mat-form-field appearance="fill" style="width: 100%;">
+            <mat-label>Default Integer</mat-label>
+            <input matInput
+                   type="number"
+                   [(ngModel)]="setting.defaultSettingValue"
+                   name="defaultSettingValue" />
+          </mat-form-field>
+        </div>
+
+        <!-- Float -->
+        <div *ngSwitchCase="'float'">
+          <mat-form-field appearance="fill" style="width: 100%;">
+            <mat-label>Default Float</mat-label>
+            <input matInput
+                   type="number"
+                   step="any"
+                   [(ngModel)]="setting.defaultSettingValue"
+                   name="defaultSettingValue" />
+          </mat-form-field>
+        </div>
+
+        <!-- JSON -->
+        <div *ngSwitchCase="'json'">
+          <mat-form-field appearance="fill" style="width: 100%;">
+            <mat-label>Default JSON</mat-label>
+            <textarea matInput
+                      rows="3"
+                      [(ngModel)]="setting.defaultSettingValue"
+                      name="defaultSettingValue"></textarea>
+          </mat-form-field>
+        </div>
+
+        <!-- Default: string -->
+        <div *ngSwitchDefault>
+          <mat-form-field appearance="fill" style="width: 100%;">
+            <mat-label>Default Value</mat-label>
+            <input matInput
+                   [(ngModel)]="setting.defaultSettingValue"
+                   name="defaultSettingValue" />
+          </mat-form-field>
+        </div>
+      </ng-container>
+
+      <!-- createdBy (optional, numeric) -->
+      <mat-form-field appearance="fill" style="width: 100%;">
+        <mat-label>Created By (numeric)</mat-label>
+        <input matInput
+               type="number"
+               [(ngModel)]="setting.createdBy"
+               name="createdBy" />
+      </mat-form-field>
+
+      <!-- updatedBy (optional, numeric) -->
+      <mat-form-field appearance="fill" style="width: 100%;">
+        <mat-label>Updated By (numeric)</mat-label>
+        <input matInput
+               type="number"
+               [(ngModel)]="setting.updatedBy"
+               name="updatedBy" />
+      </mat-form-field>
+
+      <!-- Buttons -->
+      <div class="action-buttons">
+        <button mat-raised-button
+                color="primary"
+                type="submit"
+                [disabled]="loading">
+          Save
+        </button>
+        <button mat-raised-button
+                color="warn"
+                type="button"
+                (click)="cancel()"
+                [disabled]="loading">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>
