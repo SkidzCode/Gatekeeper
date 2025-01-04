@@ -7,17 +7,18 @@ import { AuthService } from '../../../services/user/auth.service'; // Adjust the
 import { Router } from '@angular/router';
 
 @Component({
-  selector: 'app-main-layout',
+  selector: 'app-logged-in',
   standalone: false,
-  templateUrl: './main-layout.component.html',
-  styleUrl: './main-layout.component.scss'
+
+  templateUrl: './logged-in.component.html',
+  styleUrl: './logged-in.component.scss'
 })
-export class MainLayoutComponent implements AfterViewInit {
+export class LoggedInComponent implements AfterViewInit {
   @ViewChild(MatSidenavContainer) sidenavContainer!: MatSidenavContainer;
 
   private breakpointObserver = inject(BreakpointObserver);
   isLoggedIn = false;
-  isAdmim = false;
+  isAdmin = false;
   username: string | null = null;
 
   opened: boolean = true;
@@ -32,7 +33,7 @@ export class MainLayoutComponent implements AfterViewInit {
     this.authService.currentUser$.subscribe((user) => {
       this.isLoggedIn = !!user; // True if user is logged in
       this.username = user?.username || null; // Get username if user exists
-      this.isAdmim = user?.roles.includes('Admin') || false; // Check if user is admin
+      this.isAdmin = user?.roles.includes('Admin') || false; // Check if user is admin
       console.log(`User Roles: ${user?.roles}`);
     });
   }
@@ -44,6 +45,15 @@ export class MainLayoutComponent implements AfterViewInit {
         this.sidenavContainer.updateContentMargins();
         this.cdRef.detectChanges();
       }
+    }, 1000);
+  }
+
+  logout(): void {
+    this.authService.logout();
+    this.isLoggedIn = false;
+    this.username = null;
+    setTimeout(() => {
+      this.router.navigate(['/']);
     }, 1000);
   }
 }

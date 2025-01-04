@@ -4,11 +4,11 @@
                [opened]="true">
     <mat-toolbar>Admin Menu</mat-toolbar>
     <mat-nav-list>
-      <a mat-list-item href="/">Home</a>
+      <a mat-list-item href="/portal">Home</a>
       <a mat-list-item routerLink="/admin/users">Manage Users</a>
       <a mat-list-item routerLink="/admin/notifications/send">Notifications</a>
       <a mat-list-item routerLink="/admin/notifications/templates">Notification Templates</a>
-
+      <a mat-list-item routerLink="/admin/logs">Logs</a>
       <!-- Add more admin links here -->
       <a mat-list-item routerLink="/admin/reports">Reports</a>
       <a mat-list-item routerLink="/admin/settings">Settings</a>
@@ -20,7 +20,7 @@
       <button mat-icon-button (click)="drawer.toggle()">
         <mat-icon>menu</mat-icon>
       </button>
-      <span>Admin - </span>
+      <span>Admin - {{ username }}</span>
     </mat-toolbar>
     <!-- The RouterOutlet will load your admin pages here -->
     <div class="content">

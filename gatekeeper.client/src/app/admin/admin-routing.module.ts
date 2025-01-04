@@ -10,6 +10,8 @@ import { UserEditComponent } from './user/user-edit/user-edit.component';
 import { UserLoginComponent } from '../user/user-login/user-login.component';
 import { NotificationComponent } from './notification/notification/notification.component';
 import { NotificationTemplatesComponent } from './notification/notification-templates/notification-templates.component';
+import { AdminLogsBrowserComponent } from './history/admin-logs-browser/admin-logs-browser.component'
+import { ResourcesEditorComponent } from '../resources/resources-editor/resources-editor.component';
 
 // Guard
 import { AdminGuard } from '../services/guard/admin-guard.service';
@@ -22,8 +24,10 @@ const routes: Routes = [
       { path: 'users', component: UserListComponent, canActivate: [AdminGuard] },
       { path: 'users/edit/:id', component: UserEditComponent, canActivate: [AdminGuard] },
       { path: 'notifications/send', component: NotificationComponent, canActivate: [AdminGuard] },
-      { path: 'notifications/templates', component: NotificationTemplatesComponent },
-      { path: 'login', component: UserLoginComponent }
+      { path: 'notifications/templates', component: NotificationTemplatesComponent, canActivate: [AdminGuard] },
+      { path: 'logs', component: AdminLogsBrowserComponent, canActivate: [AdminGuard] },
+      { path: 'login', component: UserLoginComponent, canActivate: [AdminGuard] },
+      { path: 'resources', component: ResourcesEditorComponent, canActivate: [AdminGuard] },
       // ... more admin routes here
     ],
   },

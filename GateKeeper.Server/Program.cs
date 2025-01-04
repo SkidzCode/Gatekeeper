@@ -9,8 +9,6 @@ using Hangfire.MySql;
 using Serilog;
 using GateKeeper.Server.Middleware;
 
-
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add user secrets in Development environment
@@ -22,7 +20,7 @@ if (builder.Environment.IsDevelopment())
 #region Add Serilog
 
 // 1) Configure Serilog from appsettings.json
-    Log.Logger = new LoggerConfiguration()
+Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     // 2) Add the tamper-proof, chained file sink:
     .Filter.ByExcluding(logEvent =>
@@ -146,7 +144,6 @@ builder.Services.AddSingleton<IKeyManagementService>(sp =>
     return new KeyManagementService(dbHelper, logger, masterKeyBytes);
 });
 
-
 // Add JWT authentication to middleware
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -194,12 +191,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-
 builder.Services.AddAuthorization();
 #endregion
 
 var app = builder.Build();
-
 
 app.UseMiddleware<LogEnrichmentMiddleware>();
 
@@ -213,6 +208,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
     app.UseHangfireDashboard();
 }
+
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -229,7 +225,7 @@ RecurringJob.AddOrUpdate<IKeyManagementService>(
 
 try
 {
-    Log.Information("Starting up the application...");
+    Log.Information("Starting up the application..."); 
     app.Run();
 }
 catch (Exception ex)

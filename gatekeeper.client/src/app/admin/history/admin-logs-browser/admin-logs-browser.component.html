@@ -1,0 +1,180 @@
+<div class="admin-logs-browser-container mat-typography">
+  <mat-card>
+    <mat-card-title>Browse Chained Logs</mat-card-title>
+    <mat-card-content>
+      <form [formGroup]="filtersForm" class="filters-form">
+        <div class="form-row">
+          <!-- Date Field -->
+          <mat-form-field appearance="outline">
+            <mat-label>Select Date</mat-label>
+            <input matInput
+                   [matDatepicker]="picker"
+                   formControlName="logDate"
+                   placeholder="Pick a date"
+                   required />
+            <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+            <mat-datepicker #picker></mat-datepicker>
+            <mat-error *ngIf="filtersForm.get('logDate')?.errors?.['required']">
+              Date is required
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Time Field -->
+          <mat-form-field appearance="outline">
+            <mat-label>Time</mat-label>
+            <input matInput
+                   type="time"
+                   formControlName="logTime"
+                   placeholder="HH:MM" />
+          </mat-form-field>
+
+        
+          <mat-form-field appearance="outline">
+            <mat-label>RequestId</mat-label>
+            <input matInput
+                   formControlName="requestId"
+                   placeholder="Filter by RequestId..." />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>ConnectionId</mat-label>
+            <input matInput
+                   formControlName="connectionId"
+                   placeholder="Filter by ConnectionId..." />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>CorrelationId</mat-label>
+            <input matInput
+                   formControlName="correlationId"
+                   placeholder="Filter by CorrelationId..." />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>User Id</mat-label>
+            <input matInput
+                   formControlName="userId"
+                   placeholder="Filter by UserId..."
+                   type="number" />
+          </mat-form-field>
+        </div>
+        <div class="actions-row">
+          <button mat-flat-button
+                  color="primary"
+                  (click)="onLoadLogs()"
+                  [disabled]="filtersForm.invalid">
+            Load Logs
+          </button>
+          <button mat-stroked-button color="accent" (click)="onApplyFilter()">
+            Apply Filter
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <br />
+
+  <mat-card>
+    <mat-card-title>Log Entries</mat-card-title>
+    <mat-card-content>
+      <div *ngIf="loadingLogs">Loading logs, please wait...</div>
+      <div *ngIf="!loadingLogs && dataSource.data.length === 0">
+        No logs found for the selected date or matching the filters.
+      </div>
+      <!-- Paginator at the TOP -->
+      <mat-paginator #paginatorTop
+                     [length]="dataSource.data.length"
+                     [pageSize]="25"
+                     [pageSizeOptions]="[10, 25, 50, 100]"
+                     showFirstLastButtons>
+      </mat-paginator>
+
+      <table mat-table
+             [dataSource]="dataSource"
+             class="mat-elevation-z2"
+             multiTemplateDataRows
+             *ngIf="!loadingLogs && dataSource.data.length > 0">
+        <!-- message column -->
+        <ng-container matColumnDef="message">
+          <th mat-header-cell *matHeaderCellDef style="display: none;"></th>
+          <td mat-cell
+              *matCellDef="let row"
+              [attr.colspan]="detailColumns.length">
+            {{ getFormattedMessage(row) }}
+          </td>
+        </ng-container>
+
+        <!-- timestamp column -->
+        <ng-container matColumnDef="timestamp">
+          <th mat-header-cell *matHeaderCellDef> Timestamp </th>
+          <td mat-cell *matCellDef="let row">
+            {{ (row['@t'] || row.E_Timestamp) | date: 'medium' }}
+          </td>
+        </ng-container>
+
+        <!-- requestId column -->
+        <ng-container matColumnDef="requestId">
+          <th mat-header-cell *matHeaderCellDef>RequestId</th>
+          <td mat-cell *matCellDef="let row">{{ row.RequestId }}</td>
+        </ng-container>
+
+        <!-- connectionId column -->
+        <ng-container matColumnDef="connectionId">
+          <th mat-header-cell *matHeaderCellDef>ConnectionId</th>
+          <td mat-cell *matCellDef="let row">{{ row.ConnectionId }}</td>
+        </ng-container>
+
+        <!-- correlationId column -->
+        <ng-container matColumnDef="correlationId">
+          <th mat-header-cell *matHeaderCellDef>CorrelationId</th>
+          <td mat-cell *matCellDef="let row">{{ row.CorrelationId }}</td>
+        </ng-container>
+
+        <!-- userId column -->
+        <ng-container matColumnDef="userId">
+          <th mat-header-cell *matHeaderCellDef>User Id</th>
+          <td mat-cell *matCellDef="let row">{{ row.UserId || row.E_UserId }}</td>
+        </ng-container>
+
+        <!-- chainHash column -->
+        <ng-container matColumnDef="chainHash">
+          <th mat-header-cell *matHeaderCellDef>Chain Hash</th>
+          <td mat-cell *matCellDef="let row">{{ row.ChainHash }}</td>
+        </ng-container>
+
+        <!-- Table row definitions -->
+        <tr mat-header-row *matHeaderRowDef="detailColumns"></tr>
+        <tr mat-row
+            *matRowDef="
+          let row;
+          let i = dataIndex;
+          columns: messageRow
+        "
+            [ngClass]="{
+          'odd-record': i % 2 !== 0,
+          'even-record': i % 2 === 0
+        }"></tr>
+        <tr mat-row
+            *matRowDef="
+          let row;
+          let i = dataIndex;
+          columns: detailColumns
+        "
+            [ngClass]="{
+          'odd-record': i % 2 !== 0,
+          'even-record': i % 2 === 0
+        }"></tr>
+      </table>
+
+      <!-- Add the paginator below the table -->
+      <mat-paginator #paginatorBottom
+                     [length]="dataSource.data.length"
+                     [pageSize]="25"
+                     [pageSizeOptions]="[10, 25, 50, 100]"
+                     showFirstLastButtons>
+      </mat-paginator>
+    </mat-card-content>
+  </mat-card>
+
+</div>

@@ -102,8 +102,8 @@
 
   <!-- Section: Notification Log / Activity -->
   <mat-card>
-    <mat-card-title>Notifications Log</mat-card-title>
-    <mat-card-content>
+    <mat-card-title style="margin-left:16px;">Notifications Log</mat-card-title>
+    <mat-card-content style="margin-left:16px;">
       <div *ngIf="loadingNotifications">Loading notifications...</div>
       <table mat-table [dataSource]="notificationLog" class="mat-elevation-z2" *ngIf="!loadingNotifications">
 

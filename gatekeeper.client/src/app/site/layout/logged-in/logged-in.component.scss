@@ -6,9 +6,9 @@
   width: 200px;
 }
 
-  .sidenav .mat-toolbar {
-    background: inherit;
-  }
+.sidenav .mat-toolbar {
+  background: inherit;
+}
 
 .mat-toolbar.mat-primary {
   position: sticky;
@@ -20,4 +20,3 @@
   min-height: calc(100vh - 120px);
   padding: 2rem;
 }
-

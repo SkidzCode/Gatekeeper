@@ -19,6 +19,10 @@ export class UserLoginComponent {
       identifier: ['', [Validators.required]],
       password: ['', [Validators.required, Validators.minLength(4)]],
     });
+    this.authService.currentUser$.subscribe((user) => {
+      if (!!user)
+        this.router.navigate(['/portal']);
+    });
   }
 
   onSubmit(): void {
@@ -29,7 +33,7 @@ export class UserLoginComponent {
         next: (response) => {
           console.log('Login successful:', response);
           // Navigate to protected page now that we have a token
-          this.router.navigate(['/resources']);
+          this.router.navigate(['/portal']);
         },
         error: (error) => {
           console.error('Login failed:', error);

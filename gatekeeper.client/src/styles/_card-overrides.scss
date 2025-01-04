@@ -1,0 +1,10 @@
+// src/styles/_card-overrides.scss
+
+@use '@angular/material' as mat;
+
+@mixin card-content-margin($theme) {
+  .mat-mdc-card-title,
+  .mat-mdc-card-content {
+    margin-left: 16px;
+  }
+}

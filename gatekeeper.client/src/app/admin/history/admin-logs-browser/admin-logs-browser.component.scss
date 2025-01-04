@@ -1,0 +1,65 @@
+@use '@angular/material' as mat;
+@use '../../../../styles.scss' as app-theme;
+@use 'sass:color';
+@use 'sass:map';
+
+.admin-logs-browser-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .filters-form {
+    padding: 0 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  // Remove .full-width class
+
+  .actions-row {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .odd-record {
+    background-color: mat.m2-get-color-from-palette(map.get(app-theme.$myapp-theme, 'primary'), 300);
+
+    $even-color: mat.m2-get-color-from-palette(map.get(app-theme.$myapp-theme, 'primary'), 300);
+    background-color: color.mix($even-color, white, 10%);
+  }
+
+  .even-record {
+    $odd-color: mat.m2-get-color-from-palette(map.get(app-theme.$myapp-theme, 'primary'), 300);
+    background-color: color.mix($odd-color, white, 25%);
+  }
+
+  .form-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap; // Add flex-wrap here by default
+  }
+
+  .form-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+  }
+
+  .form-field {
+    flex: 0 0 100%; // Default to full width
+  }
+  /* Responsive Design */
+  @media (min-width: 601px) and (max-width: 800px) {
+    .form-field {
+      flex: 0 0 calc(50% - 1rem); /* 2 columns */
+    }
+  }
+
+  @media (min-width: 801px) {
+    .form-field {
+      flex: 0 0 calc(33% - 1rem); /* 3 columns */
+    }
+  }
+}

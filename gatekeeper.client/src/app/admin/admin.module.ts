@@ -17,7 +17,10 @@ import { MatListModule } from '@angular/material/list';
 import { MatNativeDateModule } from '@angular/material/core'; // <-- Import here
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinner } from '@angular/material/progress-spinner';
 
+
+import { ResourcesEditorComponent } from '../resources/resources-editor/resources-editor.component';
 import { AdminRoutingModule } from './admin-routing.module';
 import { UserListComponent } from './user/user-list/user-list.component';
 import { UserEditComponent } from './user/user-edit/user-edit.component';
@@ -25,6 +28,7 @@ import { NotificationComponent } from './notification/notification/notification.
 import { NotificationPreviewDialogComponent } from './notification/notification-preview-dialog/notification-preview-dialog.component';
 import { NotificationTemplatesComponent } from './notification/notification-templates/notification-templates.component';
 import { TemplatePreviewIframeComponent } from './notification/template-preview-iframe/template-preview-iframe.component';
+import { AdminLogsBrowserComponent } from './history/admin-logs-browser/admin-logs-browser.component';
 
 @NgModule({
   declarations: [
@@ -34,6 +38,9 @@ import { TemplatePreviewIframeComponent } from './notification/template-preview-
     NotificationPreviewDialogComponent,
     NotificationTemplatesComponent,
     TemplatePreviewIframeComponent,
+    AdminLogsBrowserComponent,
+    ResourcesEditorComponent,
+    
   ],
   imports: [
     CommonModule,
@@ -55,7 +62,8 @@ import { TemplatePreviewIframeComponent } from './notification/template-preview-
     MatListModule,
     MatNativeDateModule,
     MatToolbarModule,
-    MatIconModule
+    MatIconModule,
+    MatProgressSpinner
   ],
 })
 export class AdminModule { }
