@@ -31,6 +31,7 @@ import { TemplatePreviewIframeComponent } from './notification/template-preview-
 import { AdminLogsBrowserComponent } from './history/admin-logs-browser/admin-logs-browser.component';
 import { AdminSettingsListComponent } from './settings/admin-settings-list/admin-settings-list.component';
 import { AdminSettingsEditComponent } from './settings/admin-settings-edit/admin-settings-edit.component';
+import { HomeComponent } from './home/home/home.component';
 
 @NgModule({
   declarations: [
@@ -44,6 +45,7 @@ import { AdminSettingsEditComponent } from './settings/admin-settings-edit/admin
     ResourcesEditorComponent,
     AdminSettingsListComponent,
     AdminSettingsEditComponent,
+    HomeComponent,
     
   ],
   imports: [

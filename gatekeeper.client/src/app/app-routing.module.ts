@@ -14,6 +14,7 @@ import { ForgotPasswordComponent } from './user/passwords/forgot-password/forgot
 import { ResetPasswordComponent } from './user/passwords/reset-password/reset-password.component';
 import { UserRegisterComponent } from './user/user-register/user-register.component';
 import { UserVerifyComponent } from './user/user-verify/user-verify.component';
+import { HomeComponent } from './site/home/home/home.component'; 
 
 
 
@@ -26,7 +27,7 @@ const routes: Routes = [
     path: '',
     component: MainLayoutComponent, // <-- your main layout for non-admin
     children: [
-      { path: '', redirectTo: 'login', pathMatch: 'full' },
+      { path: '', component: HomeComponent, canActivate: [DisabledGuardService] },
       { path: 'disabled', component: DisabledComponent }, 
       { path: 'login', component: UserLoginComponent, canActivate: [DisabledGuardService] },
       { path: 'forgot', component: ForgotPasswordComponent, canActivate: [DisabledGuardService] },

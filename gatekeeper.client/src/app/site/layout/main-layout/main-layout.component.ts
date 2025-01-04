@@ -17,7 +17,7 @@ export class MainLayoutComponent implements AfterViewInit {
 
   private breakpointObserver = inject(BreakpointObserver);
   isLoggedIn = false;
-  isAdmim = false;
+  isAdmin = false;
   username: string | null = null;
 
   opened: boolean = true;
@@ -32,7 +32,7 @@ export class MainLayoutComponent implements AfterViewInit {
     this.authService.currentUser$.subscribe((user) => {
       this.isLoggedIn = !!user; // True if user is logged in
       this.username = user?.username || null; // Get username if user exists
-      this.isAdmim = user?.roles.includes('Admin') || false; // Check if user is admin
+      this.isAdmin = user?.roles.includes('Admin') || false; // Check if user is admin
       console.log(`User Roles: ${user?.roles}`);
     });
   }

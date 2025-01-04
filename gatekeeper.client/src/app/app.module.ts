@@ -29,6 +29,7 @@ import { LoggedInComponent } from './site/layout/logged-in/logged-in.component';
 
 import { AuthInterceptor } from './services/user/auth.interceptor.service';
 import { DisabledComponent } from './site/disabled/disabled.component';
+import { HomeComponent } from './site/home/home/home.component';
 
 @NgModule({
   declarations: [
@@ -41,7 +42,8 @@ import { DisabledComponent } from './site/disabled/disabled.component';
     MainLayoutComponent,
     DisabledComponent,
     LoggedInComponent,
-    AdminLayoutComponent
+    AdminLayoutComponent,
+    HomeComponent
   ],
   imports: [
     ReactiveFormsModule,

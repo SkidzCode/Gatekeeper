@@ -17,11 +17,13 @@ import { MatRadioModule } from '@angular/material/radio';
 import { UserProfileComponent } from './user/user-profile/user-profile.component';
 import { UserSettingsComponent } from './user/user-settings/user-settings.component';
 import { PortalRoutingModule } from './portal-routing.module';
+import { HomeComponent } from './home/home/home.component';
 
 @NgModule({
   declarations: [
     UserProfileComponent,
-    UserSettingsComponent
+    UserSettingsComponent,
+    HomeComponent
   ],
   imports: [
     CommonModule,

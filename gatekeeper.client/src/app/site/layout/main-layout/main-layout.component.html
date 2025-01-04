@@ -8,6 +8,8 @@
       <a mat-list-item href="/">Home</a>
       <a mat-list-item href="/login" *ngIf="!isLoggedIn">Login</a>
       <a mat-list-item href="/register" *ngIf="!isLoggedIn">Register</a>
+      <a mat-list-item href="/portal" *ngIf="isLoggedIn">Portal</a>
+      <a mat-list-item href="/admin" *ngIf="isAdmin">Admin</a>
     </mat-nav-list>
   </mat-sidenav>
   <mat-sidenav-content>

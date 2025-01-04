@@ -5,6 +5,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { AdminLayoutComponent } from '../site/layout/admin-layout/admin-layout.component';
 
 // Components
+import { HomeComponent } from './home/home/home.component'; 
 import { UserListComponent } from './user/user-list/user-list.component';
 import { UserEditComponent } from './user/user-edit/user-edit.component';
 import { UserLoginComponent } from '../user/user-login/user-login.component';
@@ -23,6 +24,7 @@ const routes: Routes = [
     path: '',
     component: AdminLayoutComponent, // <--- Admin layout wrapper
     children: [
+      { path: '', component: HomeComponent, canActivate: [AdminGuard] },
       { path: 'users', component: UserListComponent, canActivate: [AdminGuard] },
       { path: 'users/edit/:id', component: UserEditComponent, canActivate: [AdminGuard] },
       { path: 'notifications/send', component: NotificationComponent, canActivate: [AdminGuard] },
