@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using GateKeeper.Server.Models.Attributes;
 
 namespace GateKeeper.Server.Models.Account;
 
@@ -32,4 +33,11 @@ public class RegisterRequest
 
     [Required]
     public string Website { get; set; } = string.Empty;
+
+    [Required]
+    [MustBeTrue(ErrorMessage = "You must agree to the user license agreement.")]
+    public bool UserLicAgreement { get; set; } = false;
+
+    [Required]
+    public bool ReceiveEmails { get; set; } = false;
 }

@@ -1,8 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors, AsyncValidatorFn } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { AuthService } from '../../services/user/auth.service';
-import { Observable, of } from 'rxjs';
+import { AuthService } from '../../../services/user/auth.service';
+import { Observable, of, Subscription } from 'rxjs';
 import { map, catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 
 interface RegisterRequest {
@@ -21,10 +21,12 @@ interface RegisterRequest {
   styleUrls: ['./user-register.component.scss'],
   standalone: false,
 })
-export class UserRegisterComponent implements OnInit {
+export class UserRegisterComponent implements OnInit, OnDestroy {
+  //passwordSubscription: Subscription;
   registerForm!: FormGroup;
   errorMessage: string = '';
   successMessage: string = '';
+  passwordSubscription!: Subscription | undefined;
 
   constructor(
     private fb: FormBuilder,
@@ -37,13 +39,17 @@ export class UserRegisterComponent implements OnInit {
     this.registerForm = this.fb.group({
       firstName: ['', [Validators.required, Validators.minLength(2)]],
       lastName: ['', [Validators.required, Validators.minLength(2)]],
-      email: ['', [Validators.required, Validators.email],
-        [this.emailTakenValidator()]
+      email: [
+        '',
+        [Validators.required, Validators.email],
+        [this.checkIfTaken(this.authService.checkEmailTaken.bind(this.authService), 'emailTaken')]
       ],
-      username: ['',
+      username: [
+        '',
         [Validators.required, Validators.minLength(4)],
-        [this.usernameTakenValidator()]
+        [this.checkIfTaken(this.authService.checkUsernameTaken.bind(this.authService), 'usernameTaken')]
       ],
+
       phone: ['', [Validators.required, Validators.pattern(/^[0-9]{10,15}$/)]],
       newPassword: ['',
         [Validators.required, Validators.minLength(8)],
@@ -52,13 +58,20 @@ export class UserRegisterComponent implements OnInit {
       confirmPassword: ['', [Validators.required]]
     }, { validators: [this.passwordMatchValidator] });
 
-    // Optionally, subscribe to password changes to display strength messages
-    this.registerForm.get('newPassword')?.valueChanges.pipe(
+    // Subscribe to newPassword value changes
+    this.passwordSubscription = this.registerForm.get('newPassword')?.valueChanges.pipe(
       debounceTime(500),
       distinctUntilChanged()
     ).subscribe(password => {
-      // Password strength is handled by the validator
+      // Optional: Handle password changes
     });
+  }
+
+  ngOnDestroy(): void {
+    // Unsubscribe to prevent memory leaks
+    if (this.passwordSubscription) {
+      this.passwordSubscription.unsubscribe();
+    }
   }
 
   /**
@@ -86,58 +99,22 @@ export class UserRegisterComponent implements OnInit {
   }
 
 
-  /**
-   * Asynchronous validator to check if the username is already taken.
-   */
-  // user-register.component.ts
-
-  usernameTakenValidator(): AsyncValidatorFn {
-    return (control: AbstractControl): Observable<ValidationErrors | null> => {
-      const username = control.value;
-
-      if (!username || username.length < 4) {
-        // If username is empty or too short, no need to check
-        return of(null);
-      }
-
-      return of(username).pipe(
-        debounceTime(500),
-        distinctUntilChanged(),
-        switchMap((uname) => this.authService.checkUsernameTaken(uname)),
-        map(isTaken => {
-          return isTaken ? { usernameTaken: true } : null;
-        }),
-        catchError(() => of(null)) // In case of error, don't block the user
-      );
-    };
-  }
-
-  /**
- * Asynchronous validator to check if the username is already taken.
- */
-  // user-register.component.ts
-
-  emailTakenValidator(): AsyncValidatorFn {
-    return (control: AbstractControl): Observable<ValidationErrors | null> => {
-      const email = control.value;
-
-      if (!email || email.length < 4) {
-        // If email is empty or too short, no need to check
-        return of(null);
-      }
-
-      return of(email).pipe(
-        debounceTime(500),
-        distinctUntilChanged(),
-        switchMap((uname) => this.authService.checkEmailTaken(uname)),
-        map(isTaken => {
-          return isTaken ? { emailTaken: true } : null;
-        }),
-        catchError(() => of(null)) // In case of error, don't block the user
-      );
-    };
-  }
-
+  checkIfTaken(serviceMethod: (value: string) => Observable<boolean>, errorKey: string): AsyncValidatorFn {
+  return (control: AbstractControl): Observable<ValidationErrors | null> => {
+    const value = control.value;
+    if (!value || value.length < 4) {
+      // If email/username is empty or too short, no need to check
+      return of(null);
+    }
+    return of(value).pipe(
+      debounceTime(500),
+      distinctUntilChanged(),
+      switchMap(serviceMethod),
+      map(isTaken => (isTaken ? { [errorKey]: true } : null)),
+      catchError(() => of(null))
+    );
+  };
+}
 
   /**
    * Validator to ensure that newPassword and confirmPassword match.

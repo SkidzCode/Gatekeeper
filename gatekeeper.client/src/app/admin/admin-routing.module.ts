@@ -8,7 +8,7 @@ import { AdminLayoutComponent } from './layout/admin-layout/admin-layout.compone
 import { HomeComponent } from './home/home/home.component'; 
 import { UserListComponent } from './user/user-list/user-list.component';
 import { UserEditComponent } from './user/user-edit/user-edit.component';
-import { UserLoginComponent } from '../user/user-login/user-login.component';
+import { UserLoginComponent } from '../site/user/user-login/user-login.component';
 import { NotificationComponent } from './notification/notification/notification.component';
 import { NotificationTemplatesComponent } from './notification/notification-templates/notification-templates.component';
 import { AdminLogsBrowserComponent } from './history/admin-logs-browser/admin-logs-browser.component'

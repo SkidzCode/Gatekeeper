@@ -1,6 +1,7 @@
 ﻿using GateKeeper.Server.Models.Account;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using Serilog.Context;
 
 namespace GateKeeper.Server.Middleware;
 
@@ -11,13 +12,21 @@ public class LogEnrichmentMiddleware(RequestDelegate next, ILogger<LogEnrichment
 
     public async Task InvokeAsync(HttpContext context)
     {
-        Serilog.Context.LogContext.PushProperty("E_Timestamp", DateTime.UtcNow);
-        // Generate or fetch correlation ID
-        var correlationId = context.TraceIdentifier;
-        Serilog.Context.LogContext.PushProperty("CorrelationId", correlationId);
-        var userId = int.Parse(context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        if (userId > 0)
-            Serilog.Context.LogContext.PushProperty("E_UserId", userId);
-        await _next(context);
+        using (LogContext.PushProperty("E_Timestamp", DateTime.UtcNow))
+        using (LogContext.PushProperty("CorrelationId", context.TraceIdentifier))
+        {
+            var userIdClaim = context.User?.FindFirst(ClaimTypes.NameIdentifier);
+            if (int.TryParse(userIdClaim?.Value, out int userId) && userId > 0)
+            {
+                using (LogContext.PushProperty("E_UserId", userId))
+                {
+                    await _next(context);
+                }
+            }
+            else
+            {
+                await _next(context);
+            }
+        }
     }
 }

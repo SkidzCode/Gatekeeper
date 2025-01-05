@@ -47,6 +47,9 @@ namespace GateKeeper.Server.Controllers
         {
             RegistrationResponse response = new();
             if (!ModelState.IsValid) return BadRequest(ModelState);
+            string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+            string userAgent = Request.Headers["User-Agent"].ToString();
+
             try
             {
                 response = await _authService.RegisterUserAsync(registerRequest);
@@ -56,6 +59,9 @@ namespace GateKeeper.Server.Controllers
                         message = string.Format(DialogRegister.RegisterSucess, registerRequest.Username,
                             registerRequest.Email)
                     });
+
+                if (registerRequest.UserLicAgreement)
+                    _logger.LogInformation("User agreed to the User License Agreement: {UserId}, Proof: {Proof}, IP: {IpAdress}", response.User?.Id, userIp, registerRequest.UserLicAgreement);
 
                 return BadRequest(new { error = response.FailureReason });
             }
@@ -67,8 +73,6 @@ namespace GateKeeper.Server.Controllers
             }
             finally
             {
-                string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
-                string userAgent = Request.Headers["User-Agent"].ToString();
                 if (response.IsSuccessful)
                 {
                     _logger.LogInformation("User registered: {UserId}, IP: {IpAddress}, Device: {UserAgent}",

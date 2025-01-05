@@ -17,11 +17,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 
-import { UserLoginComponent } from './user/user-login/user-login.component';
-import { ForgotPasswordComponent } from './user/passwords/forgot-password/forgot-password.component';
-import { ResetPasswordComponent } from './user/passwords/reset-password/reset-password.component';
-import { UserRegisterComponent } from './user/user-register/user-register.component';
-import { UserVerifyComponent } from './user/user-verify/user-verify.component';
+import { UserLoginComponent } from './site/user/user-login/user-login.component';
+import { ForgotPasswordComponent } from './site/user/passwords/forgot-password/forgot-password.component';
+import { ResetPasswordComponent } from './site/user/passwords/reset-password/reset-password.component';
+import { UserRegisterComponent } from './site/user/user-register/user-register.component';
+import { UserVerifyComponent } from './site/user/user-verify/user-verify.component';
 import { MainLayoutComponent } from './site/layout/main-layout/main-layout.component';
 
 import { AdminLayoutComponent } from './admin/layout/admin-layout/admin-layout.component';

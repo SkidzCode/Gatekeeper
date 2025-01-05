@@ -3,7 +3,6 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: #f3e5f5; /* Light Magenta Background */
 }
 
 mat-card {
@@ -20,10 +19,6 @@ mat-card-header {
   align-items: center;
   text-align: center;
   padding-bottom: 10px;
-}
-
-mat-card-subtitle {
-  color: #ab47bc; /* Light Violet */
 }
 
 .full-width {
@@ -52,4 +47,12 @@ mat-card-subtitle {
 mat-form-field .mat-error {
   font-size: 0.85em;
   margin-top: 4px;
+}
+
+/* Styling for User License Agreement Section */
+.ula-section {
+  margin-bottom: 16px;
+  p {
+    margin: 0 0 8px 0;
+  }
 }
