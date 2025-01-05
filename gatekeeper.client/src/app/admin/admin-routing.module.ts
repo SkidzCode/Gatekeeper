@@ -2,7 +2,7 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 
 // Layout
-import { AdminLayoutComponent } from '../site/layout/admin-layout/admin-layout.component';
+import { AdminLayoutComponent } from './layout/admin-layout/admin-layout.component';
 
 // Components
 import { HomeComponent } from './home/home/home.component'; 

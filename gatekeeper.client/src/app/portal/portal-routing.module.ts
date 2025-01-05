@@ -2,7 +2,7 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 
 // Layout
-import { LoggedInComponent } from '../site/layout/logged-in/logged-in.component';
+import { PortalLayoutComponent } from './layout/portal-layout/portal-layout.component';
 
 // Components
 import { HomeComponent } from './home/home/home.component'; 
@@ -17,7 +17,7 @@ import { AuthGuard } from '../services/guard/auth-guard.service';
 const routes: Routes = [
   {
     path: '',
-    component: LoggedInComponent, 
+    component: PortalLayoutComponent, 
     children: [
       { path: '', component: HomeComponent, canActivate: [DisabledGuardService, AuthGuard] },
       { path: 'user/profile', component: UserProfileComponent, canActivate: [DisabledGuardService, AuthGuard] },

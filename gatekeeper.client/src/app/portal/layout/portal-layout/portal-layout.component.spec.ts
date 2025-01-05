@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { LoggedInComponent } from './logged-in.component';
+import { LoggedInComponent } from './portal-layout.component';
 
 describe('LoggedInComponent', () => {
   let component: LoggedInComponent;

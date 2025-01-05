@@ -24,8 +24,8 @@ import { UserRegisterComponent } from './user/user-register/user-register.compon
 import { UserVerifyComponent } from './user/user-verify/user-verify.component';
 import { MainLayoutComponent } from './site/layout/main-layout/main-layout.component';
 
-import { AdminLayoutComponent } from './site/layout/admin-layout/admin-layout.component';
-import { LoggedInComponent } from './site/layout/logged-in/logged-in.component';
+import { AdminLayoutComponent } from './admin/layout/admin-layout/admin-layout.component';
+import { PortalLayoutComponent } from './portal/layout/portal-layout/portal-layout.component';
 
 import { AuthInterceptor } from './services/user/auth.interceptor.service';
 import { DisabledComponent } from './site/disabled/disabled.component';
@@ -41,7 +41,7 @@ import { HomeComponent } from './site/home/home/home.component';
     UserVerifyComponent,
     MainLayoutComponent,
     DisabledComponent,
-    LoggedInComponent,
+    PortalLayoutComponent,
     AdminLayoutComponent,
     HomeComponent
   ],

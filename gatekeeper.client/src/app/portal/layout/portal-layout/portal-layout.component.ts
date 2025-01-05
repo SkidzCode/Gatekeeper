@@ -7,13 +7,13 @@ import { AuthService } from '../../../services/user/auth.service'; // Adjust the
 import { Router } from '@angular/router';
 
 @Component({
-  selector: 'app-logged-in',
+  selector: 'app-portal-layout',
   standalone: false,
 
-  templateUrl: './logged-in.component.html',
-  styleUrl: './logged-in.component.scss'
+  templateUrl: './portal-layout.component.html',
+  styleUrl: './portal-layout.component.scss'
 })
-export class LoggedInComponent implements AfterViewInit {
+export class PortalLayoutComponent implements AfterViewInit {
   @ViewChild(MatSidenavContainer) sidenavContainer!: MatSidenavContainer;
 
   private breakpointObserver = inject(BreakpointObserver);
