@@ -13,6 +13,7 @@ import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -60,7 +61,8 @@ import { HomeComponent } from './site/home/home/home.component';
     MatListModule,
     FormsModule,
     MatDialogModule,
-    MatOptionModule
+    MatOptionModule,
+    MatCheckboxModule
   ],
   providers: [
     provideAnimationsAsync(),
