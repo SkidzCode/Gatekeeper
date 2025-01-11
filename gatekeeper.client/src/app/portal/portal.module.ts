@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormsModule } from '@angular/forms';  // or ReactiveFormsModule
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -10,9 +10,9 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinner } from '@angular/material/progress-spinner';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
-
+import { MatSnackBarModule } from '@angular/material/snack-bar'; // Add this import
 
 import { UserProfileComponent } from './user/user-profile/user-profile.component';
 import { UserSettingsComponent } from './user/user-settings/user-settings.component';
@@ -32,15 +32,16 @@ import { HomeComponent } from './home/home/home.component';
     FormsModule,
     MatTableModule,
     MatButtonModule,
-    MatFormFieldModule, 
+    MatFormFieldModule,
     MatInputModule,
     MatCardModule,
     MatDividerModule,
     MatCheckboxModule,
     MatListModule,
     MatIconModule,
-    MatProgressSpinner,
-    MatRadioModule
+    MatProgressSpinnerModule,
+    MatRadioModule,
+    MatSnackBarModule // Add this module
   ],
 })
 export class PortalModule { }

@@ -10,6 +10,9 @@ using System.IdentityModel.Tokens.Jwt;
 using GateKeeper.Server.Models.Account;
 using GateKeeper.Server.Resources;
 using GateKeeper.Server.Models.Account.UserModels;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 
 namespace GateKeeper.Server.Controllers
 {
@@ -168,5 +171,105 @@ namespace GateKeeper.Server.Controllers
                 return StatusCode(500, new { error = errorMessage });
             }
         }
+
+        // Existing dependencies and constructors...
+
+        [HttpPost("UpdateWithImage")]
+        [Authorize]
+        public async Task<IActionResult> UpdateUserWithImage([FromForm] UpdateUserDto updateUserDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                // Map the DTO to your User model
+                var user = new User
+                {
+                    Id = updateUserDto.Id,
+                    FirstName = updateUserDto.FirstName,
+                    LastName = updateUserDto.LastName,
+                    Email = updateUserDto.Email,
+                    Username = updateUserDto.Username,
+                    Phone = updateUserDto.Phone
+                    // Other properties as needed
+                };
+
+                if (updateUserDto.ProfilePicture != null)
+                {
+                    // Validate the image
+                    var validImageTypes = new[] { "image/jpeg", "image/png" };
+                    if (!validImageTypes.Contains(updateUserDto.ProfilePicture.ContentType))
+                    {
+                        return BadRequest(new { error = "Only JPEG and PNG images are allowed." });
+                    }
+
+                    if (updateUserDto.ProfilePicture.Length > 5 * 1024 * 1024)
+                    {
+                        return BadRequest(new { error = "File size should not exceed 5MB." });
+                    }
+
+                    // Read the image into a byte array
+                    using var memoryStream = new MemoryStream();
+                    await updateUserDto.ProfilePicture.CopyToAsync(memoryStream);
+                    using var originalImage = Image.FromStream(memoryStream);
+
+                    // Calculate the new dimensions while maintaining the aspect ratio
+                    int newWidth = 200;
+                    int newHeight = (int)(originalImage.Height * (200.0 / originalImage.Width));
+
+                    // Create a new bitmap with the new dimensions
+                    using var resizedImage = new Bitmap(newWidth, newHeight);
+                    using (var graphics = Graphics.FromImage(resizedImage))
+                    {
+                        graphics.CompositingQuality = CompositingQuality.HighQuality;
+                        graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                        graphics.SmoothingMode = SmoothingMode.HighQuality;
+                        graphics.DrawImage(originalImage, 0, 0, newWidth, newHeight);
+                    }
+
+                    // Save the resized image to a byte array
+                    using var outputMemoryStream = new MemoryStream();
+                    resizedImage.Save(outputMemoryStream, ImageFormat.Jpeg);
+                    user.ProfilePicture = outputMemoryStream.ToArray();
+                }
+
+                var updatedUser = await _userService.UpdateUser(user);
+
+                return Ok(new { message = "User updated successfully.", user = updatedUser });
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = $"An error occurred while updating the user: {ex.Message}";
+                _logger.LogError(ex, errorMessage);
+                return StatusCode(500, new { error = errorMessage });
+            }
+        }
+
+
+        [HttpGet("ProfilePicture/{userId}")]
+        public async Task<IActionResult> GetProfilePicture(int userId)
+        {
+            try
+            {
+                var user = await _userService.GetUser(userId);
+
+                if (user == null || user.ProfilePicture == null)
+                {
+                    return NotFound();
+                }
+
+                return File(user.ProfilePicture, "image/jpeg");
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = $"An error occurred while retrieving the profile picture: {ex.Message}";
+                _logger.LogError(ex, errorMessage);
+                return StatusCode(500, new { error = errorMessage });
+            }
+        }
+
     }
 }

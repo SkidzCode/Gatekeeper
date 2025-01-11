@@ -1,3 +1,17 @@
+.profile-avatar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.profile-picture {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .user-profile-card {
   max-width: 600px;
   margin: 40px auto;

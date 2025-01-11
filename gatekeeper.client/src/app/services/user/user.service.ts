@@ -126,4 +126,8 @@ export class UserService {
     }
     return throwError(() => errorMsg);
   }
+
+  updateUserWithImage(formData: FormData): Observable<{ user: User }> {
+    return this.http.post<{ user: User }>(`${this.baseUrl}/UpdateWithImage`, formData);
+  }
 }

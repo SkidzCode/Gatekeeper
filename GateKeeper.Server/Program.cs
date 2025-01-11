@@ -116,6 +116,7 @@ builder.Services.AddSwaggerGen(options =>
         In = ParameterLocation.Header,
         Description = "Enter 'Bearer' [space] and then your valid JWT token.\r\n\r\nExample: `Bearer abc123def456`",
     });
+    options.EnableAnnotations();
 
     // Apply the security rule (requirement) globally to your API
     options.AddSecurityRequirement(new OpenApiSecurityRequirement

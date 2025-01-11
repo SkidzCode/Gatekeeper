@@ -15,17 +15,25 @@ public class LogEnrichmentMiddleware(RequestDelegate next, ILogger<LogEnrichment
         using (LogContext.PushProperty("E_Timestamp", DateTime.UtcNow))
         using (LogContext.PushProperty("CorrelationId", context.TraceIdentifier))
         {
-            var userIdClaim = context.User?.FindFirst(ClaimTypes.NameIdentifier);
-            if (int.TryParse(userIdClaim?.Value, out int userId) && userId > 0)
+            try
             {
-                using (LogContext.PushProperty("E_UserId", userId))
+                var userIdClaim = context.User?.FindFirst(ClaimTypes.NameIdentifier);
+                if (int.TryParse(userIdClaim?.Value, out int userId) && userId > 0)
+                {
+                    using (LogContext.PushProperty("E_UserId", userId))
+                    {
+                        await _next(context);
+                    }
+                }
+                else
                 {
                     await _next(context);
                 }
             }
-            else
+            catch (Exception ex)
             {
-                await _next(context);
+                _logger.LogError(ex, "An unhandled exception occurred in LogEnrichmentMiddleware.");
+                throw; // Re-throw the exception to ensure it's not swallowed
             }
         }
     }

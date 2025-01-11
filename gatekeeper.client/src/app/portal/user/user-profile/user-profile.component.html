@@ -1,7 +1,10 @@
 <mat-card class="user-profile-card" *ngIf="user; else noUser">
   <div class="profile-header">
     <div class="profile-avatar" aria-label="User Profile Picture">
-      <mat-icon>person</mat-icon>
+      <img *ngIf="profileImageUrl; else defaultAvatar" [src]="profileImageUrl" alt="Profile Picture" class="profile-picture" />
+      <ng-template #defaultAvatar>
+        <mat-icon>person</mat-icon>
+      </ng-template>
     </div>
     <mat-card-title class="profile-name">{{ user.firstName }} {{ user.lastName }}</mat-card-title>
     <mat-card-subtitle class="profile-email">{{ user.email }}</mat-card-subtitle>
@@ -11,6 +14,15 @@
 
   <mat-card-content>
     <form [formGroup]="profileForm" class="profile-form">
+      <!-- Profile Picture Field -->
+      <div style="padding-top:20px;">
+        <label>Profile Picture</label><br>
+        <input type="file" accept="image/*" (change)="onFileSelected($event)">
+      </div>
+
+
+
+      <!-- Existing form fields -->
       <!-- First Name Field -->
       <mat-form-field appearance="outline" class="full-width" style="padding-top:20px;">
         <mat-label>First Name</mat-label>
@@ -66,6 +78,8 @@
           Please enter a valid phone number
         </mat-error>
       </mat-form-field>
+
+
 
       <!-- Add other form fields as necessary -->
     </form>

@@ -13,7 +13,7 @@ public class User
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public List<string> Roles { get; set; } = new List<string>();
-
+    public byte[]? ProfilePicture { get; set; }
     public Task ClearPHIAsync()
     {
         FirstName = string.Empty;

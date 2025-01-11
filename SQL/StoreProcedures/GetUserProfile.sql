@@ -13,7 +13,8 @@ BEGIN
         LastName,
         Email,
         Username,
-        Phone
+        Phone,
+        ProfilePicture
     FROM Users
     WHERE Id = p_UserId AND IsActive = 1;
 	
@@ -22,7 +23,7 @@ BEGIN
     FROM UserRoles ur
     JOIN Roles r ON ur.RoleId = r.Id
     JOIN Users u ON ur.UserId = u.Id
-    WHERE Id = p_UserId AND u.IsActive = 1;
+    WHERE ur.UserId = p_UserId AND u.IsActive = 1;
 END //
 DELIMITER ;
 
@@ -43,7 +44,8 @@ BEGIN
         LastName,
         Email,
         Username,
-        Phone
+        Phone,
+        ProfilePicture
     FROM Users
     WHERE (Username = p_Identifier OR Email = p_Identifier) AND IsActive = 1;
 

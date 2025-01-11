@@ -128,7 +128,8 @@ public class UserService : IUserService
                 Salt = userReader["Salt"].ToString() ?? string.Empty,
                 Password = userReader["Password"].ToString() ?? string.Empty,
                 Username = userReader["Username"].ToString() ?? string.Empty,
-                Roles = new List<string>() // Initialize the Roles property
+                Roles = new List<string>(), 
+                ProfilePicture = userReader["ProfilePicture"] as byte[]
             };
             if (!await userReader.NextResultAsync()) return user;
             while (await userReader.ReadAsync())
@@ -163,7 +164,8 @@ public class UserService : IUserService
                 Salt = userReader["Salt"].ToString() ?? string.Empty,
                 Password = userReader["Password"].ToString() ?? string.Empty,
                 Username = userReader["Username"].ToString() ?? string.Empty,
-                Roles = new List<string>() // Initialize the Roles property
+                Roles = new List<string>(),
+                ProfilePicture = userReader["ProfilePicture"] as byte[]
             };
             if (!await userReader.NextResultAsync()) return user;
             while (await userReader.ReadAsync())
@@ -184,16 +186,26 @@ public class UserService : IUserService
     {
         await using var connection = await _dbHelper.GetWrapperAsync();
 
-        await connection.ExecuteNonQueryAsync("UpdateUser", CommandType.StoredProcedure,
+        var parameters = new List<MySqlParameter>
+        {
             new MySqlParameter("@p_Id", MySqlDbType.Int32) { Value = user.Id },
             new MySqlParameter("@p_FirstName", MySqlDbType.VarChar, 50) { Value = user.FirstName },
             new MySqlParameter("@p_LastName", MySqlDbType.VarChar, 50) { Value = user.LastName },
             new MySqlParameter("@p_Email", MySqlDbType.VarChar, 100) { Value = user.Email },
             new MySqlParameter("@p_Username", MySqlDbType.VarChar, 50) { Value = user.Username },
-            new MySqlParameter("@p_Phone", MySqlDbType.VarChar, 15) { Value = user.Phone });
+            new MySqlParameter("@p_Phone", MySqlDbType.VarChar, 15) { Value = user.Phone }
+        };
+
+        parameters.Add(new MySqlParameter("@p_ProfilePicture", MySqlDbType.Blob) 
+            { Value = user.ProfilePicture != null ? 
+                user.ProfilePicture : 
+                DBNull.Value });
+
+        await connection.ExecuteNonQueryAsync("UpdateUserPic", CommandType.StoredProcedure, parameters.ToArray());
 
         return user;
     }
+
 
     public async Task<bool> UsernameExistsAsync(string username)
     {
@@ -246,10 +258,13 @@ public class UserService : IUserService
                 IsActive = Convert.ToBoolean(reader["IsActive"]),
                 CreatedAt = reader["CreatedAt"] as DateTime?,
                 UpdatedAt = reader["UpdatedAt"] as DateTime?,
-                Roles = new List<string>() // Initialize the Roles property
+                Roles = new List<string>(), // Initialize the Roles property
+                ProfilePicture = reader["ProfilePicture"] as byte[]
             };
             users.Add(user);
         }
         return users;
     }
+
+
 }
