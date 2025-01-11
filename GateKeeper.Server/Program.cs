@@ -8,6 +8,7 @@ using Hangfire;
 using Hangfire.MySql;
 using Serilog;
 using GateKeeper.Server.Middleware;
+using Serilog.Formatting.Compact;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,24 +20,43 @@ if (builder.Environment.IsDevelopment())
 
 #region Add Serilog
 
-// 1) Configure Serilog from appsettings.json
-Log.Logger = new LoggerConfiguration()
+// Read the EnableHashing setting
+bool enableHashing = builder.Configuration.GetValue<bool>("Serilog:EnableHashing");
+
+// Configure Serilog
+var loggerConfiguration = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
-    // 2) Add the tamper-proof, chained file sink:
     .Filter.ByExcluding(logEvent =>
     {
         // Example: exclude logs that may contain full user data
-        // if (logEvent.Properties.ContainsKey("PHI")) ...
-        return false; // Return true if you want to exclude the event
-    })
-    .WriteTo.ChainedFile(
-        mainLogDirectory: "Logs",
-        hashesOnlyDirectory: "Logs",
-        fileNamePrefix: "chained-log-rotating" // or anything you prefer
-    )
-    .CreateLogger();
+        return false; // Modify filter as needed
+    });
 
-// 3) Use Serilog as the logging provider
+if (enableHashing)
+{
+    // Use the custom ChainedFileSink
+    loggerConfiguration = loggerConfiguration
+        .WriteTo.ChainedFile(
+            mainLogDirectory: "Logs",
+            hashesOnlyDirectory: "Logs",
+            fileNamePrefix: "chained-log-rotating"
+        );
+}
+else
+{
+    // Use Serilog's default rolling file sink
+    loggerConfiguration = loggerConfiguration
+        .WriteTo.File(
+            formatter: new CompactJsonFormatter(),
+            path: "Logs/log-.txt",
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: null // Adjust as needed
+        );
+}
+
+Log.Logger = loggerConfiguration.CreateLogger();
+
+// Use Serilog as the logging provider
 builder.Host.UseSerilog(Log.Logger);
 
 #endregion

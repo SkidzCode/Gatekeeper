@@ -10,6 +10,7 @@ namespace GateKeeper.Server.Controllers
     {
         private readonly ILogger<LogsController> _logger;
         private readonly IConfiguration _configuration;
+        private readonly bool _enableHashing = false;
 
         // For convenience, define a maximum we want to return
         private const int MaxLogEntries = 2000;
@@ -20,6 +21,7 @@ namespace GateKeeper.Server.Controllers
         {
             _logger = logger;
             _configuration = configuration;
+            _enableHashing = _configuration.GetValue<bool>("Serilog:EnableHashing");
         }
 
         /// <summary>
@@ -50,6 +52,12 @@ namespace GateKeeper.Server.Controllers
                 var fileName = $"chained-log-rotating-{targetDateTime:yyyy-MM-dd}.txt";
                 var filePath = Path.Combine(logsPath, fileName);
 
+                if (!_enableHashing)
+                {
+                    fileName = $"log-{targetDateTime:yyyyMMdd}.txt";
+                    filePath = Path.Combine(logsPath, fileName);
+                }
+                
                 if (!System.IO.File.Exists(filePath))
                 {
                     return NotFound(new
@@ -178,7 +186,6 @@ namespace GateKeeper.Server.Controllers
                 { "@mt", message },
                 { "EnvironmentName", "Development" }, // Or fetch from configuration
                 { "ProcessName", "GateKeeper.Server" },
-                { "ChainHash", "FAKE_CHAIN_HASH" },
                 { "IsFake", true },
                 { "SkippedLineNumber", lineNumber },
                 { "OriginalContent", "[Content Skipped]" }
