@@ -13,7 +13,7 @@ import { User } from '../../../models/user.model';
   standalone: false,
 })
 export class UserListComponent implements OnInit, AfterViewInit {
-  displayedColumns: string[] = ['id', 'username', 'email', 'actions'];
+  displayedColumns: string[] = ['pic', 'id', 'username', 'email', 'actions'];
   dataSource = new MatTableDataSource<User>([]);
 
   @ViewChild(MatSort) sort!: MatSort;
@@ -56,5 +56,10 @@ export class UserListComponent implements OnInit, AfterViewInit {
   editUser(user: User): void {
     // Navigate to the user-edit route: /admin/users/edit/:id
     this.router.navigate(['/admin', 'users', 'edit', user.id]);
+  }
+
+  onImageError(event: Event): void {
+    const element = event.target as HTMLImageElement;
+    element.style.display = 'none'; // Hide the image
   }
 }

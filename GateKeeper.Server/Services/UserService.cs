@@ -258,8 +258,7 @@ public class UserService : IUserService
                 IsActive = Convert.ToBoolean(reader["IsActive"]),
                 CreatedAt = reader["CreatedAt"] as DateTime?,
                 UpdatedAt = reader["UpdatedAt"] as DateTime?,
-                Roles = new List<string>(), // Initialize the Roles property
-                ProfilePicture = reader["ProfilePicture"] as byte[]
+                Roles = new List<string>()
             };
             users.Add(user);
         }

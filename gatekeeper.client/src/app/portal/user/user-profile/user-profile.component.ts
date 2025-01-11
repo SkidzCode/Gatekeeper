@@ -57,7 +57,7 @@ export class UserProfileComponent implements OnInit {
 
     if (fileInput.files && fileInput.files.length > 0) {
       const file = fileInput.files[0];
-
+      var isSet: boolean = false;
       if (this.validateImage(file)) {
         const reader = new FileReader();
         reader.onload = (e: any) => {
@@ -77,8 +77,12 @@ export class UserProfileComponent implements OnInit {
               }
             }, file.type);
           };
+          isSet = true;
           img.src = e.target.result;
         };
+        if (!isSet) {
+          this.snackBar.open("Image is not valid", 'Close', { duration: 3000 });
+        }
         reader.readAsDataURL(file);
       }
     }

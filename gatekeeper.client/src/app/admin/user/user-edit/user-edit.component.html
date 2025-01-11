@@ -1,6 +1,12 @@
 
   <mat-card class="user-profile-card">
     <div class="profile-header">
+      <div class="profile-avatar" aria-label="User Profile Picture">
+        <img *ngIf="profileImageUrl; else defaultAvatar" [src]="profileImageUrl" alt="Profile Picture" class="profile-picture" />
+        <ng-template #defaultAvatar>
+          <mat-icon>person</mat-icon>
+        </ng-template>
+      </div>
       <mat-card-title style="margin-left:16px;">Admin user list</mat-card-title>
       <mat-card-subtitle style="margin-left: 16px;">Edit User</mat-card-subtitle>
     </div>

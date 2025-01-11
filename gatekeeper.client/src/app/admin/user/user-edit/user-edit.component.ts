@@ -22,7 +22,7 @@ export class UserEditComponent implements OnInit {
     roles: [],
     isActive: false
   };
-
+  profileImageUrl: string | null = null;
   // This will hold all possible roles from the backend
   userRoles: Role[] = []; // e.g. [{ id: 1, name: 'ADMIN' }, { id: 2, name: 'USER' }]
 
@@ -47,6 +47,7 @@ export class UserEditComponent implements OnInit {
         this.user = data.user;
         // data.roles is your list of all possible roles
         this.userRoles = data.roles;
+        this.refreshProfileImageUrl();
       },
       error: (err) => console.error('Error loading user', err),
     });
@@ -69,5 +70,11 @@ export class UserEditComponent implements OnInit {
 
   cancel(): void {
     this.router.navigate(['/admin', 'users']);
+  }
+
+  private refreshProfileImageUrl(): void {
+    if (this.user) {
+      this.profileImageUrl = `/api/User/ProfilePicture/${this.user.id}?timestamp=${new Date().getTime()}`;
+    }
   }
 }
