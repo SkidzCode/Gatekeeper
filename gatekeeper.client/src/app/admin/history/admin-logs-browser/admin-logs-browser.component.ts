@@ -178,6 +178,10 @@ export class AdminLogsBrowserComponent implements OnInit, AfterViewInit {
     this.dataSource.data = filtered;
   }
 
+  filterOutLogs(mtValue: string): void {
+    this.dataSource.data = this.dataSource.data.filter(log => log['@mt'] !== mtValue);
+  }
+
   getFormattedMessage(log: ChainedLogEntry): string {
     const originalMessage = log['@mt'] || '';
     if (!originalMessage) {

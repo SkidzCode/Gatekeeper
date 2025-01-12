@@ -17,27 +17,26 @@ using System.Drawing.Imaging;
 namespace GateKeeper.Server.Controllers
 {
     /// <summary>
-    /// API controller for handling user-related operations such as registration, login, token refresh, and profile retrieval.
+    /// API controller for handling user-related operations.
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class UserController : ControllerBase
     {
         private readonly IDbHelper _dbHelper;
-        // Service for handling JSON Web Token (JWT) operations
         private readonly IUserService _userService;
         private readonly IRoleService _roleService;
         private readonly ILogger<UserController> _logger;
-
+        
         /// <summary>
         /// Constructor for the UserController.
         /// </summary>
         /// <param name="configuration">Application configuration dependency.</param>
         /// <param name="jwtService">JWT service dependency.</param>
         public UserController(
-            IConfiguration configuration, 
-            IDbHelper dbHelper, 
-            IUserService userService, 
+            IConfiguration configuration,
+            IDbHelper dbHelper,
+            IUserService userService,
             ILogger<UserController> logger,
             IRoleService roleService)
         {
@@ -48,10 +47,10 @@ namespace GateKeeper.Server.Controllers
         }
 
         /// <summary>
-        /// API endpoint to revoke tokens (e.g., logout).
+        /// Updates user information.
         /// </summary>
-        /// <param name="token">Optional specific token to revoke, otherwise, all tokens for the user will be revoked.</param>
-        /// <returns>HTTP response indicating success or failure.</returns>
+        /// <param name="user">User object containing updated details.</param>
+        /// <returns>Action result indicating success or failure.</returns>
         [HttpPost("Update")]
         [Authorize]
         public async Task<IActionResult> UpdateUser([FromBody] User user)
@@ -61,6 +60,10 @@ namespace GateKeeper.Server.Controllers
                 return BadRequest(ModelState);
             }
 
+            int userId = GetUserIdFromClaims();
+            string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+            string userAgent = Request.Headers["User-Agent"].ToString();
+
             try
             {
                 await _userService.UpdateUser(user);
@@ -68,112 +71,156 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = string.Format(DialogPassword.UserPasswordResetTokenError, ex.Message) ?? "";
-                _logger.LogError(ex, errorMessage);
+                var errorMessage = $"An error occurred while updating the user.";
+                _logger.LogError(ex, "Error updating user: {UserId}, IP: {IpAddress}, Device: {UserAgent}", userId, userIp, userAgent);
                 return StatusCode(500, new { error = errorMessage });
+            }
+            finally
+            {
+                _logger.LogInformation("User update attempted: {UserId}, IP: {IpAddress}, Device: {UserAgent}", userId, userIp, userAgent);
             }
         }
 
         /// <summary>
-        /// API endpoint to retrieve profile information of the authenticated user.
+        /// Retrieves profile information of the authenticated user.
         /// </summary>
         /// <returns>User profile details if successful or error if not.</returns>
         [HttpGet("profile")]
         [Authorize]
         public async Task<IActionResult> GetProfile()
         {
+            int userId = GetUserIdFromClaims();
+            string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+
             try
             {
-                int userId = 0;
-                // Retrieve the user's email from JWT claims
-                if (!int.TryParse(User.FindFirst("Id")?.Value, out userId) || userId == 0)
-                {
-                    return Unauthorized("Invalid token");
-                }
-
                 User? user = await _userService.GetUser(userId);
 
                 if (user == null)
+                {
+                    _logger.LogWarning("User not found: {UserId}, IP: {IpAddress}", userId, userIp);
                     return NotFound("User not found.");
+                }
 
                 return Ok(user);
             }
             catch (Exception ex)
             {
-                var errorMessage = string.Format(DialogLogin.ProfileLoadError, ex.Message) ?? "";
-                _logger.LogError(ex, errorMessage);
+                var errorMessage = $"An error occurred while retrieving the user profile.";
+                _logger.LogError(ex, "Error retrieving profile: {UserId}, IP: {IpAddress}", userId, userIp);
                 return StatusCode(500, new { error = errorMessage });
+            }
+            finally
+            {
+                _logger.LogInformation("User profile retrieval attempted: {UserId}, IP: {IpAddress}", userId, userIp);
             }
         }
 
         /// <summary>
-        /// API endpoint to retrieve list of users.
+        /// Retrieves a list of all users.
         /// </summary>
-        /// <returns>List of users</returns>
+        /// <returns>List of users.</returns>
         [HttpGet("users")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetUsers()
         {
+            int adminUserId = GetUserIdFromClaims();
+            string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+
             try
             {
-                int userId = 0;
                 List<User?> users = await _userService.GetUsers();
-
                 return Ok(users);
             }
             catch (Exception ex)
             {
-                var errorMessage = string.Format(DialogLogin.ProfileLoadError, ex.Message) ?? "";
-                _logger.LogError(ex, errorMessage);
+                var errorMessage = $"An error occurred while retrieving users.";
+                _logger.LogError(ex, "Error retrieving users: AdminUserId: {AdminUserId}, IP: {IpAddress}", adminUserId, userIp);
                 return StatusCode(500, new { error = errorMessage });
+            }
+            finally
+            {
+                _logger.LogInformation("User list retrieval attempted by Admin: {AdminUserId}, IP: {IpAddress}", adminUserId, userIp);
             }
         }
 
         /// <summary>
-        /// API endpoint to retrieve list of users.
+        /// Retrieves user information by user ID.
         /// </summary>
-        /// <returns>List of users</returns>
+        /// <param name="userId">ID of the user to retrieve.</param>
+        /// <returns>User details.</returns>
         [HttpGet("user/{userId}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetUsers(int userId)
         {
+            int adminUserId = GetUserIdFromClaims();
+            string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+
             try
             {
                 User? user = await _userService.GetUser(userId);
+
+                if (user == null)
+                {
+                    _logger.LogWarning("User not found: RequestedUserId: {UserId}, AdminUserId: {AdminUserId}, IP: {IpAddress}", userId, adminUserId, userIp);
+                    return NotFound("User not found.");
+                }
+
                 return Ok(user);
             }
             catch (Exception ex)
             {
-                var errorMessage = string.Format(DialogLogin.ProfileLoadError, ex.Message) ?? "";
-                _logger.LogError(ex, errorMessage);
+                var errorMessage = $"An error occurred while retrieving the user.";
+                _logger.LogError(ex, "Error retrieving user: RequestedUserId: {UserId}, AdminUserId: {AdminUserId}, IP: {IpAddress}", userId, adminUserId, userIp);
                 return StatusCode(500, new { error = errorMessage });
+            }
+            finally
+            {
+                _logger.LogInformation("User retrieval attempted: RequestedUserId: {UserId}, AdminUserId: {AdminUserId}, IP: {IpAddress}", userId, adminUserId, userIp);
             }
         }
 
         /// <summary>
-        /// API endpoint to retrieve list of users.
+        /// Retrieves user information and roles for editing by admin.
         /// </summary>
-        /// <returns>List of users</returns>
+        /// <param name="userId">ID of the user to edit.</param>
+        /// <returns>User and roles information.</returns>
         [HttpGet("user/edit/{userId}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetUsersEdit(int userId)
         {
+            int adminUserId = GetUserIdFromClaims();
+            string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+
             try
             {
                 User? user = await _userService.GetUser(userId);
+                if (user == null)
+                {
+                    _logger.LogWarning("User not found for edit: RequestedUserId: {UserId}, AdminUserId: {AdminUserId}, IP: {IpAddress}", userId, adminUserId, userIp);
+                    return NotFound("User not found.");
+                }
+
                 List<Role> roles = await _roleService.GetAllRoles();
                 return Ok(new { user, roles });
             }
             catch (Exception ex)
             {
-                var errorMessage = string.Format(DialogLogin.ProfileLoadError, ex.Message) ?? "";
-                _logger.LogError(ex, errorMessage);
+                var errorMessage = $"An error occurred while retrieving the user for edit.";
+                _logger.LogError(ex, "Error retrieving user for edit: RequestedUserId: {UserId}, AdminUserId: {AdminUserId}, IP: {IpAddress}", userId, adminUserId, userIp);
                 return StatusCode(500, new { error = errorMessage });
+            }
+            finally
+            {
+                _logger.LogInformation("User edit retrieval attempted: RequestedUserId: {UserId}, AdminUserId: {AdminUserId}, IP: {IpAddress}", userId, adminUserId, userIp);
             }
         }
 
-        // Existing dependencies and constructors...
-
+        /// <summary>
+        /// Updates user information, including profile picture.
+        /// </summary>
+        /// <param name="updateUserDto">User update data transfer object.</param>
+        /// <returns>Action result indicating success or failure.</returns>
         [HttpPost("UpdateWithImage")]
         [Authorize]
         public async Task<IActionResult> UpdateUserWithImage([FromForm] UpdateUserDto updateUserDto)
@@ -182,6 +229,10 @@ namespace GateKeeper.Server.Controllers
             {
                 return BadRequest(ModelState);
             }
+
+            int userId = GetUserIdFromClaims();
+            string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+            string userAgent = Request.Headers["User-Agent"].ToString();
 
             try
             {
@@ -194,7 +245,6 @@ namespace GateKeeper.Server.Controllers
                     Email = updateUserDto.Email,
                     Username = updateUserDto.Username,
                     Phone = updateUserDto.Phone
-                    // Other properties as needed
                 };
 
                 if (updateUserDto.ProfilePicture != null)
@@ -242,22 +292,33 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"An error occurred while updating the user: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
+                var errorMessage = $"An error occurred while updating the user.";
+                _logger.LogError(ex, "Error updating user with image: {UserId}, IP: {IpAddress}, Device: {UserAgent}", userId, userIp, userAgent);
                 return StatusCode(500, new { error = errorMessage });
+            }
+            finally
+            {
+                _logger.LogInformation("User update with image attempted: {UserId}, IP: {IpAddress}, Device: {UserAgent}", userId, userIp, userAgent);
             }
         }
 
-
+        /// <summary>
+        /// Retrieves the profile picture of a user.
+        /// </summary>
+        /// <param name="userId">ID of the user.</param>
+        /// <returns>Profile picture as an image file.</returns>
         [HttpGet("ProfilePicture/{userId}")]
         public async Task<IActionResult> GetProfilePicture(int userId)
         {
+            string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+
             try
             {
                 var user = await _userService.GetUser(userId);
 
                 if (user == null || user.ProfilePicture == null)
                 {
+                    // _logger.LogWarning("Profile picture not found: RequestedUserId: {UserId}, IP: {IpAddress}", userId, userIp);
                     return NotFound();
                 }
 
@@ -265,11 +326,23 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"An error occurred while retrieving the profile picture: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
+                var errorMessage = $"An error occurred while retrieving the profile picture.";
+                _logger.LogError(ex, "Error retrieving profile picture: RequestedUserId: {UserId}, IP: {IpAddress}", userId, userIp);
                 return StatusCode(500, new { error = errorMessage });
+            }
+            finally
+            {
+                _logger.LogInformation("Profile picture retrieval attempted: RequestedUserId: {UserId}, IP: {IpAddress}", userId, userIp);
             }
         }
 
+        #region Private Functions
+
+        private int GetUserIdFromClaims()
+        {
+            return int.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out int userId) ? userId : 0;
+        }
+
+        #endregion
     }
 }

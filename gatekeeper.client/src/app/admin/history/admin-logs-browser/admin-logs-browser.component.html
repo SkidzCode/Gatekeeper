@@ -95,13 +95,17 @@
              class="mat-elevation-z2"
              multiTemplateDataRows
              *ngIf="!loadingLogs && dataSource.data.length > 0">
-        <!-- message column -->
+
+
+
+        <!-- Add this button to the message column -->
         <ng-container matColumnDef="message">
           <th mat-header-cell *matHeaderCellDef style="display: none;"></th>
-          <td mat-cell
-              *matCellDef="let row"
-              [attr.colspan]="detailColumns.length">
+          <td mat-cell *matCellDef="let row" [attr.colspan]="detailColumns.length">
             {{ getFormattedMessage(row) }}
+            <button mat-icon-button (click)="filterOutLogs(row['@mt'])" aria-label="Filter out logs">
+              <mat-icon>filter_alt_off</mat-icon>
+            </button>
           </td>
         </ng-container>
 
