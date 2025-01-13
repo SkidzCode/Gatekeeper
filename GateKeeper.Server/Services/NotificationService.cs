@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using GateKeeper.Server.Interface; // For IDBHelper, IMySqlConnectorWrapper, etc.
 using GateKeeper.Server.Models;
+using GateKeeper.Server.Models.Account.UserModels;
 using GateKeeper.Server.Models.Site; // For Notification model
 
 namespace GateKeeper.Server.Services
@@ -12,10 +13,16 @@ namespace GateKeeper.Server.Services
     public class NotificationService : INotificationService
     {
         private readonly IDbHelper _dbHelper;
+        private readonly IEmailService _emailService;
+        private readonly IConfiguration _configuration;
+        private readonly IUserService _userService;
 
-        public NotificationService(IDbHelper dbHelper)
+        public NotificationService(IDbHelper dbHelper, IEmailService emailService, IConfiguration configuration, IUserService userService)
         {
             _dbHelper = dbHelper;
+            _emailService = emailService;
+            _configuration = configuration;
+            _userService = userService;
         }
 
         /// <summary>
@@ -31,7 +38,7 @@ namespace GateKeeper.Server.Services
 
             // Call the stored procedure
             await using var reader = await wrapper.ExecuteReaderAsync(
-                "sp_list_all_notifications",
+                "NotificationsGetAll",
                 CommandType.StoredProcedure
             );
 
@@ -55,13 +62,13 @@ namespace GateKeeper.Server.Services
 
             await using var wrapper = await _dbHelper.GetWrapperAsync();
 
-            var param = new MySqlParameter("@p_recipient_id", MySqlDbType.Int32)
+            var param = new MySqlParameter("@p_RecipientId", MySqlDbType.Int32)
             {
                 Value = recipientId
             };
 
             await using var reader = await wrapper.ExecuteReaderAsync(
-                "sp_list_notifications_by_user",
+                "NotificationsGetUser",
                 CommandType.StoredProcedure,
                 param
             );
@@ -92,7 +99,7 @@ namespace GateKeeper.Server.Services
             };
 
             await using var reader = await wrapper.ExecuteReaderAsync(
-                "sp_list_notifications_not_sent",
+                "NotificationsGetNotSent",
                 CommandType.StoredProcedure,
                 param
             );
@@ -119,19 +126,23 @@ namespace GateKeeper.Server.Services
 
             var parameters = new List<MySqlParameter>
             {
-                new MySqlParameter("@p_recipient_id", MySqlDbType.Int32)
+                new MySqlParameter("@p_RecipientId", MySqlDbType.Int32)
                 {
                     Value = notification.RecipientId
                 },
-                new MySqlParameter("@p_channel", MySqlDbType.VarChar, 10)
+                new MySqlParameter("@p_Channel", MySqlDbType.VarChar, 10)
                 {
                     Value = notification.Channel
                 },
-                new MySqlParameter("@p_message", MySqlDbType.Text)
+                new MySqlParameter("@p_Subject", MySqlDbType.Text)
+                {
+                    Value = notification.Subject
+                },
+                new MySqlParameter("@p_Message", MySqlDbType.Text)
                 {
                     Value = notification.Message
                 },
-                new MySqlParameter("@p_scheduled_at", MySqlDbType.DateTime)
+                new MySqlParameter("@p_ScheduledAt", MySqlDbType.DateTime)
                 {
                     Value = (object?)notification.ScheduledAt ?? DBNull.Value
                 }
@@ -139,7 +150,7 @@ namespace GateKeeper.Server.Services
 
             // We expect a result set with a single row containing `new_id`.
             await using var reader = await wrapper.ExecuteReaderAsync(
-                "sp_insert_notification",
+                "NotificationInsert",
                 CommandType.StoredProcedure,
                 parameters.ToArray()
             );
@@ -161,19 +172,20 @@ namespace GateKeeper.Server.Services
         {
             var notification = new Notification
             {
-                Id = reader.GetInt32("id"),
-                RecipientId = reader.GetInt32("recipient_id"),
-                Channel = reader.GetString("channel"),
-                Message = reader.GetString("message"),
-                IsSent = Convert.ToBoolean(reader["is_sent"]),
-                CreatedAt = reader.GetDateTime("created_at"),
-                UpdatedAt = reader.GetDateTime("updated_at")
+                Id = reader.GetInt32("Id"),
+                RecipientId = reader.GetInt32("RecipientId"),
+                Channel = reader.GetString("Channel"),
+                Subject = reader.GetString("Subject"),
+                Message = reader.GetString("Message"),
+                IsSent = Convert.ToBoolean(reader["IsSent"]),
+                CreatedAt = reader.GetDateTime("CreatedAt"),
+                UpdatedAt = reader.GetDateTime("UpdatedAt")
             };
 
-            int scheduledAtOrdinal = reader.GetOrdinal("scheduled_at");
+            int scheduledAtOrdinal = reader.GetOrdinal("ScheduledAt");
             if (!reader.IsDBNull(scheduledAtOrdinal))
             {
-                notification.ScheduledAt = reader.GetDateTime("scheduled_at");
+                notification.ScheduledAt = reader.GetDateTime("ScheduledAt");
             }
             else
             {
@@ -181,6 +193,47 @@ namespace GateKeeper.Server.Services
             }
 
             return notification;
+        }
+
+        public async Task ProcessPendingNotificationsAsync()
+        {
+            var currentTime = DateTime.UtcNow;
+            var pendingNotifications = await GetNotSentNotificationsAsync(currentTime);
+
+            foreach (var notification in pendingNotifications)
+            {
+                if (notification.Channel != "email") continue;
+                var user = await _userService.GetUser(notification.RecipientId);
+                if (user == null) continue;
+                await _emailService.SendEmailAsync(
+                    user.Email, 
+                    notification.Subject,
+                    notification.Message
+                );
+
+                // Mark the notification as sent
+                notification.IsSent = true;
+                notification.UpdatedAt = DateTime.UtcNow;
+                await UpdateNotificationAsync(notification);
+            }
+        }
+
+        private async Task UpdateNotificationAsync(Notification notification)
+        {
+            await using var wrapper = await _dbHelper.GetWrapperAsync();
+
+            var parameters = new MySqlParameter[]
+            {
+                new MySqlParameter("@p_NotificationId", notification.Id),
+                new MySqlParameter("@p_IsSent", notification.IsSent),
+                new MySqlParameter("@p_UpdatedAt", notification.UpdatedAt)
+            };
+
+            await wrapper.ExecuteNonQueryAsync(
+                commandText: "NotificationUpdate",
+                commandType: CommandType.StoredProcedure,
+                parameters: parameters
+            );
         }
     }
 }

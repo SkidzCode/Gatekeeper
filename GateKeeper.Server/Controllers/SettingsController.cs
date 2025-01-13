@@ -283,6 +283,7 @@ namespace GateKeeper.Server.Controllers
             try
             {
                 var userId = GetUserIdFromClaims();
+                setting.UserId = userId;
                 setting.UpdatedBy = userId;
                 if (setting.Id == 0) setting.CreatedBy = userId;
 

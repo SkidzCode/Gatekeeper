@@ -6,6 +6,7 @@ import { BehaviorSubject } from 'rxjs';
 import { ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser'; // Corrected Import
 import { SecurityContext } from '@angular/core'; // Corrected Import
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-notification-templates',
@@ -30,8 +31,10 @@ export class NotificationTemplatesComponent implements OnInit {
     private fb: FormBuilder,
     private notificationTemplateService: NotificationTemplateService,
     private cdRef: ChangeDetectorRef,
-    private sanitizer: DomSanitizer // Inject DomSanitizer
+    private sanitizer: DomSanitizer, // Inject DomSanitizer
+    private snackBar: MatSnackBar // Inject MatSnackBar
   ) { }
+
 
   ngOnInit(): void {
     this.loadTemplates();
@@ -147,13 +150,27 @@ export class NotificationTemplatesComponent implements OnInit {
     this.notificationTemplateService.updateNotificationTemplate(updatedTemplate).subscribe({
       next: (res) => {
         console.log('Template updated successfully:', res);
-        // Refresh list or show a success message
+
+        // Update the cached template in the templates array
+        const index = this.templates.findIndex(t => t.templateId === updatedTemplate.templateId);
+        if (index !== -1) {
+          this.templates[index] = updatedTemplate;
+        }
+
+        // Show success message
+        this.snackBar.open('Template saved successfully', 'Close', {
+          duration: 3000, // Duration in milliseconds
+        });
+
+        // Optionally, you can refresh the list or show a success message
       },
       error: (err) => {
         console.error('Error updating template:', err);
       }
     });
   }
+
+
 
   /**
    * Utility helper to check if a form control has an error and is touched/dirty.

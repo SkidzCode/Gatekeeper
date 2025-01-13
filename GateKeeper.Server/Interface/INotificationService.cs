@@ -31,5 +31,10 @@ namespace GateKeeper.Server.Interface
         /// </summary>
         /// <param name="notification">Notification object to insert.</param>
         Task<int> InsertNotificationAsync(Notification notification);
+
+        /// <summary>
+        /// Looks up notifications that need to be sent and sends them.
+        /// </summary>
+        Task ProcessPendingNotificationsAsync();
     }
 }

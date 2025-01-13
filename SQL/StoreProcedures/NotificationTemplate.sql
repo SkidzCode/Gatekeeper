@@ -1,87 +1,88 @@
-DROP PROCEDURE IF EXISTS spInsertNotificationTemplate;
+DROP PROCEDURE IF EXISTS NotificationTemplateInsert;
 DELIMITER //
 
 /* =====================
    1) INSERT
    ===================== */
-CREATE PROCEDURE spInsertNotificationTemplate(
-    IN  p_template_name VARCHAR(100),
-    IN  p_channel ENUM('email', 'sms', 'push', 'inapp'),
-    IN  p_subject VARCHAR(255),
-    IN  p_body TEXT,
-    IN  p_is_active TINYINT(1)
+CREATE PROCEDURE NotificationTemplateInsert(
+    IN  p_TemplateName VARCHAR(100),
+    IN  p_Channel ENUM('email', 'sms', 'push', 'inapp'),
+    IN  p_Subject VARCHAR(255),
+    IN  p_Body TEXT,
+    IN  p_IsActive TINYINT(1)
 )
 BEGIN
-    INSERT INTO notification_templates(template_name, channel, subject, body, is_active)
-    VALUES (p_template_name, p_channel, p_subject, p_body, p_is_active);
+    INSERT INTO NotificationTemplates(TemplateName, Channel, Subject, Body, IsActive)
+    VALUES (p_TemplateName, p_Channel, p_Subject, p_Body, p_IsActive);
 
     /* Return the newly created Template ID */
     SELECT LAST_INSERT_ID() AS NewTemplateId;
 END //
 DELIMITER ;
 
-DROP PROCEDURE IF EXISTS spUpdateNotificationTemplate;
+DROP PROCEDURE IF EXISTS NotificationTemplateUpdate;
 /* =====================
    2) UPDATE
    ===================== */
 DELIMITER //
-CREATE PROCEDURE spUpdateNotificationTemplate(
-    IN  p_template_id INT,
-    IN  p_template_name VARCHAR(100),
-    IN  p_channel ENUM('email', 'sms', 'push', 'inapp'),
-    IN  p_subject VARCHAR(255),
-    IN  p_body TEXT,
-    IN  p_is_active TINYINT(1)
+CREATE PROCEDURE NotificationTemplateUpdate(
+    IN  p_TemplateId INT,
+    IN  p_TemplateName VARCHAR(100),
+    IN  p_Channel ENUM('email', 'sms', 'push', 'inapp'),
+    IN  p_Subject VARCHAR(255),
+    IN  p_Body TEXT,
+    IN  p_IsActive TINYINT(1)
 )
 BEGIN
-    UPDATE notification_templates
+    UPDATE NotificationTemplates
     SET 
-        template_name = p_template_name,
-        channel       = p_channel,
-        subject       = p_subject,
-        body          = p_body,
-        is_active     = p_is_active,
-        updated_at    = CURRENT_TIMESTAMP
-    WHERE template_id = p_template_id;
+        TemplateName = p_TemplateName,
+        Channel       = p_Channel,
+        Subject       = p_Subject,
+        Body          = p_Body,
+        IsActive     = p_IsActive,
+        UpdatedAt    = CURRENT_TIMESTAMP
+    WHERE TemplateId = p_TemplateId;
 END //
 DELIMITER ;
 
 /* =====================
    3) DELETE
    ===================== */
-DROP PROCEDURE IF EXISTS spDeleteNotificationTemplate;
+DROP PROCEDURE IF EXISTS NotificationTemplateDelete;
 DELIMITER //
-CREATE PROCEDURE spDeleteNotificationTemplate(
-    IN p_template_id INT
+CREATE PROCEDURE NotificationTemplateDelete(
+    IN p_TemplateId INT
 )
 BEGIN
-    DELETE FROM notification_templates
-    WHERE template_id = p_template_id;
+    DELETE FROM NotificationTemplates
+    WHERE TemplateId = p_TemplateId;
 END //
 DELIMITER ;
 
 /* =====================
    4) GET BY ID
    ===================== */
-DROP PROCEDURE IF EXISTS spGetNotificationTemplateById;
+DROP PROCEDURE IF EXISTS NotificationTemplateGet;
 DELIMITER //
-CREATE PROCEDURE spGetNotificationTemplateById(
-    IN p_template_id INT
+CREATE PROCEDURE NotificationTemplateGet(
+    IN p_TemplateId INT
 )
 BEGIN
     SELECT *
-    FROM notification_templates
-    WHERE template_id = p_template_id;
+    FROM NotificationTemplates
+    WHERE TemplateId = p_TemplateId;
 END //
 DELIMITER ;
 
 /* =====================
    5) GET ALL
    ===================== */
+DROP PROCEDURE IF EXISTS NotificationTemplateGetAll;
 DELIMITER //
-CREATE PROCEDURE spGetAllNotificationTemplates()
+CREATE PROCEDURE NotificationTemplateGetAll()
 BEGIN
     SELECT *
-    FROM notification_templates;
+    FROM NotificationTemplates;
 END //
 DELIMITER ;

@@ -196,9 +196,10 @@ export class NotificationComponent implements OnInit {
     const formValue = this.notificationForm.value;
 
     // Instead of Partial<Notification>...
-    const newNotification: Pick<Notification, 'recipientId' | 'channel' | 'message' | 'scheduledAt'> = {
+    const newNotification: Pick<Notification, 'recipientId' | 'channel' | 'subject' | 'message' | 'scheduledAt'> = {
       recipientId: formValue.recipientId, // Must be a number
-      channel: formValue.channel,         // e.g., 'email'
+      channel: formValue.channel,
+      subject: formValue.subject,// e.g., 'email'
       message: formValue.message,
       scheduledAt: formValue.scheduledAt
         ? formValue.scheduledAt.toISOString()

@@ -27,7 +27,7 @@ namespace GateKeeper.Server.Services
         }
 
         /// <summary>
-        /// Calls spInsertNotificationTemplate and returns the newly inserted Template ID.
+        /// Calls NotificationTemplateInsert and returns the newly inserted Template ID.
         /// </summary>
         public async Task<int> InsertNotificationTemplateAsync(NotificationTemplate template)
         {
@@ -35,16 +35,16 @@ namespace GateKeeper.Server.Services
 
             var parameters = new MySqlParameter[]
             {
-                new MySqlParameter("@p_template_name", template.TemplateName),
-                new MySqlParameter("@p_channel",       template.Channel),
-                new MySqlParameter("@p_subject",       template.Subject),
-                new MySqlParameter("@p_body",          template.Body),
-                new MySqlParameter("@p_is_active",     template.IsActive)
+                new MySqlParameter("@p_TemplateName", template.TemplateName),
+                new MySqlParameter("@p_Channel",       template.Channel),
+                new MySqlParameter("@p_Subject",       template.Subject),
+                new MySqlParameter("@p_Body",          template.Body),
+                new MySqlParameter("@p_IsActive",     template.IsActive)
             };
 
             // We'll use ExecuteNonQueryWithOutputAsync to grab the returned "NewTemplateId"
             var output = await wrapper.ExecuteNonQueryWithOutputAsync(
-                commandText: "spInsertNotificationTemplate",
+                commandText: "NotificationTemplateInsert",
                 commandType: CommandType.StoredProcedure,
                 parameters: parameters
             );
@@ -63,7 +63,7 @@ namespace GateKeeper.Server.Services
         }
 
         /// <summary>
-        /// Calls spUpdateNotificationTemplate to update an existing record.
+        /// Calls NotificationTemplateUpdate to update an existing record.
         /// </summary>
         public async Task UpdateNotificationTemplateAsync(NotificationTemplate template)
         {
@@ -71,23 +71,23 @@ namespace GateKeeper.Server.Services
 
             var parameters = new MySqlParameter[]
             {
-                new MySqlParameter("@p_template_id",   template.TemplateId),
-                new MySqlParameter("@p_template_name", template.TemplateName),
-                new MySqlParameter("@p_channel",       template.Channel),
-                new MySqlParameter("@p_subject",       template.Subject),
-                new MySqlParameter("@p_body",          template.Body),
-                new MySqlParameter("@p_is_active",     template.IsActive)
+                new MySqlParameter("@p_TemplateId",   template.TemplateId),
+                new MySqlParameter("@p_TemplateName", template.TemplateName),
+                new MySqlParameter("@p_Channel",       template.Channel),
+                new MySqlParameter("@p_Subject",       template.Subject),
+                new MySqlParameter("@p_Body",          template.Body),
+                new MySqlParameter("@p_IsActive",     template.IsActive)
             };
 
             await wrapper.ExecuteNonQueryAsync(
-                commandText: "spUpdateNotificationTemplate",
+                commandText: "NotificationTemplateUpdate",
                 commandType: CommandType.StoredProcedure,
                 parameters: parameters
             );
         }
 
         /// <summary>
-        /// Calls spDeleteNotificationTemplate to delete an existing record by ID.
+        /// Calls NotificationTemplateDelete to delete an existing record by ID.
         /// </summary>
         public async Task DeleteNotificationTemplateAsync(int templateId)
         {
@@ -95,18 +95,18 @@ namespace GateKeeper.Server.Services
 
             var parameters = new MySqlParameter[]
             {
-                new MySqlParameter("@p_template_id", templateId)
+                new MySqlParameter("@p_TemplateId", templateId)
             };
 
             await wrapper.ExecuteNonQueryAsync(
-                commandText: "spDeleteNotificationTemplate",
+                commandText: "NotificationTemplateDelete",
                 commandType: CommandType.StoredProcedure,
                 parameters: parameters
             );
         }
 
         /// <summary>
-        /// Calls spGetNotificationTemplateById to fetch a single record by ID.
+        /// Calls NotificationTemplateGet to fetch a single record by ID.
         /// </summary>
         public async Task<NotificationTemplate?> GetNotificationTemplateByIdAsync(int templateId)
         {
@@ -114,11 +114,11 @@ namespace GateKeeper.Server.Services
 
             var parameters = new MySqlParameter[]
             {
-                new MySqlParameter("@p_template_id", templateId)
+                new MySqlParameter("@p_TemplateId", templateId)
             };
 
             await using var reader = await wrapper.ExecuteReaderAsync(
-                commandText: "spGetNotificationTemplateById",
+                commandText: "NotificationTemplateGet",
                 commandType: CommandType.StoredProcedure,
                 parameters: parameters
             );
@@ -127,14 +127,14 @@ namespace GateKeeper.Server.Services
             {
                 return new NotificationTemplate
                 {
-                    TemplateId = reader.GetInt32("template_id"),
-                    TemplateName = reader.GetString("template_name"),
+                    TemplateId = reader.GetInt32("TemplateId"),
+                    TemplateName = reader.GetString("TemplateName"),
                     Channel = reader.GetString("channel"),
                     Subject = reader.GetString("subject"),
                     Body = reader.GetString("body"),
-                    IsActive = reader.GetInt32("is_active") == 1,
-                    CreatedAt = reader.GetDateTime("created_at"),
-                    UpdatedAt = reader.GetDateTime("updated_at")
+                    IsActive = reader.GetInt32("IsActive") == 1,
+                    CreatedAt = reader.GetDateTime("CreatedAt"),
+                    UpdatedAt = reader.GetDateTime("UpdatedAt")
                 };
             }
 
@@ -142,7 +142,7 @@ namespace GateKeeper.Server.Services
         }
 
         /// <summary>
-        /// Calls spGetAllNotificationTemplates to fetch all templates.
+        /// Calls NotificationTemplateGetAll to fetch all templates.
         /// </summary>
         public async Task<List<NotificationTemplate>> GetAllNotificationTemplatesAsync()
         {
@@ -150,7 +150,7 @@ namespace GateKeeper.Server.Services
 
             await using var wrapper = await _dbHelper.GetWrapperAsync();
             await using var reader = await wrapper.ExecuteReaderAsync(
-                commandText: "spGetAllNotificationTemplates",
+                commandText: "NotificationTemplateGetAll",
                 commandType: CommandType.StoredProcedure
             );
 
@@ -158,14 +158,14 @@ namespace GateKeeper.Server.Services
             {
                 var template = new NotificationTemplate
                 {
-                    TemplateId = reader.GetInt32("template_id"),
-                    TemplateName = reader.GetString("template_name"),
+                    TemplateId = reader.GetInt32("TemplateId"),
+                    TemplateName = reader.GetString("TemplateName"),
                     Channel = reader.GetString("channel"),
                     Subject = reader.GetString("subject"),
                     Body = reader.GetString("body"),
-                    IsActive = reader.GetInt32("is_active") == 1,
-                    CreatedAt = reader.GetDateTime("created_at"),
-                    UpdatedAt = reader.GetDateTime("updated_at")
+                    IsActive = reader.GetInt32("IsActive") == 1,
+                    CreatedAt = reader.GetDateTime("CreatedAt"),
+                    UpdatedAt = reader.GetDateTime("UpdatedAt")
                 };
 
                 results.Add(template);

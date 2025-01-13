@@ -61,6 +61,8 @@ builder.Host.UseSerilog(Log.Logger);
 
 #endregion
 
+#region Gatekeeper
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddDataProtection();
@@ -76,6 +78,8 @@ builder.Services.AddScoped<IVerifyTokenService, VerifyTokenService>();
 builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService>();
 builder.Services.AddScoped<INotificationTemplateService, NotificationTemplateService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+
+#endregion
 
 #region Hangfire
 
@@ -237,12 +241,25 @@ app.MapControllers();
 
 app.MapFallbackToFile("/index.html");
 
+#region Hangfire Scheduled Tasks
+
 // Schedule recurring job: RotateKeyAsync once every 24 hours
 RecurringJob.AddOrUpdate<IKeyManagementService>(
     "rotate-keys-every-24hrs",
     service => service.RotateKeyAsync(DateTime.UtcNow.AddHours(24)),
     Cron.Daily // Runs every day at 00:00
 );
+
+// Schedule recurring job: ProcessPendingNotificationsAsync every 5 minutes
+RecurringJob.AddOrUpdate<INotificationService>(
+    "process-pending-notifications",
+    service => service.ProcessPendingNotificationsAsync(),
+    Cron.MinuteInterval(5) // Runs every 5 minutes
+);
+
+#endregion
+
+
 
 try
 {
