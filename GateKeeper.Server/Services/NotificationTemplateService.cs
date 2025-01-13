@@ -37,6 +37,7 @@ namespace GateKeeper.Server.Services
             {
                 new MySqlParameter("@p_TemplateName", template.TemplateName),
                 new MySqlParameter("@p_Channel",       template.Channel),
+                new MySqlParameter("@p_TokenType",     template.TokenType),
                 new MySqlParameter("@p_Subject",       template.Subject),
                 new MySqlParameter("@p_Body",          template.Body),
                 new MySqlParameter("@p_IsActive",     template.IsActive)
@@ -74,6 +75,7 @@ namespace GateKeeper.Server.Services
                 new MySqlParameter("@p_TemplateId",   template.TemplateId),
                 new MySqlParameter("@p_TemplateName", template.TemplateName),
                 new MySqlParameter("@p_Channel",       template.Channel),
+                new MySqlParameter("@p_TokenType",    template.TokenType),
                 new MySqlParameter("@p_Subject",       template.Subject),
                 new MySqlParameter("@p_Body",          template.Body),
                 new MySqlParameter("@p_IsActive",     template.IsActive)
@@ -130,6 +132,7 @@ namespace GateKeeper.Server.Services
                     TemplateId = reader.GetInt32("TemplateId"),
                     TemplateName = reader.GetString("TemplateName"),
                     Channel = reader.GetString("channel"),
+                    TokenType = reader.GetString("TokenType"),
                     Subject = reader.GetString("subject"),
                     Body = reader.GetString("body"),
                     IsActive = reader.GetInt32("IsActive") == 1,
@@ -162,6 +165,7 @@ namespace GateKeeper.Server.Services
                     TemplateName = reader.GetString("TemplateName"),
                     Channel = reader.GetString("channel"),
                     Subject = reader.GetString("subject"),
+                    TokenType = reader.GetString("TokenType"),
                     Body = reader.GetString("body"),
                     IsActive = reader.GetInt32("IsActive") == 1,
                     CreatedAt = reader.GetDateTime("CreatedAt"),

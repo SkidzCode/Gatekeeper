@@ -112,17 +112,10 @@ namespace GateKeeper.Server.Services
                 return response;
 
             await AssignRoleToUser(response.User.Id, "NewUser");
-            string results = await _verificationService.GenerateTokenAsync(response.User.Id, "NewUser");
+            string token = await _verificationService.GenerateTokenAsync(response.User.Id, "NewUser");
 
             string emailBody = await File.ReadAllTextAsync("Documents/EmailVerificationTemplate.html");
-            emailBody = emailBody.Replace("UNIQUE_VERIFICATION_TOKEN", WebUtility.UrlEncode(results));
-            emailBody = emailBody.Replace("FIRST_NAME", response.User.FirstName);
-            emailBody = emailBody.Replace("LAST_NAME", response.User.LastName);
-            emailBody = emailBody.Replace("EMAIL", response.User.Email);
-            emailBody = emailBody.Replace("USERNAME", response.User.Username);
-            emailBody = emailBody.Replace("REPLACE_URL", registerRequest.Website);
-
-            await _emailService.SendEmailAsync(response.User.Email, "Your verification token", emailBody);
+            await _emailService.SendEmailAsync(response.User, registerRequest.Website, WebUtility.UrlEncode(token), "Your verification token", emailBody);
 
             return response;
         }
@@ -272,19 +265,10 @@ namespace GateKeeper.Server.Services
         {
             try
             {
-
-
                 string token = await _verificationService.GenerateTokenAsync(user.Id, "ForgotPassword");
-
                 string emailBody = await File.ReadAllTextAsync("Documents/EmailPasswordChange.html");
-                emailBody = emailBody.Replace("UNIQUE_VERIFICATION_TOKEN", WebUtility.UrlEncode(token));
-                emailBody = emailBody.Replace("FIRST_NAME", user.FirstName);
-                emailBody = emailBody.Replace("LAST_NAME", user.LastName);
-                emailBody = emailBody.Replace("EMAIL", user.Email);
-                emailBody = emailBody.Replace("USERNAME", user.Username);
-                emailBody = emailBody.Replace("REPLACE_URL", initiateRequest.Website);
-
-                await _emailService.SendEmailAsync(user.Email, "Password Reset", emailBody);
+                await _emailService.SendEmailAsync(user, initiateRequest.Website, WebUtility.UrlEncode(token), "Password Reset", emailBody);
+                
             }
             catch (Exception ex)
             {

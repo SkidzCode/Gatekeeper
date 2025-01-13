@@ -2,6 +2,7 @@ CREATE TABLE NotificationTemplates (
     TemplateId INT AUTO_INCREMENT PRIMARY KEY,
     TemplateName VARCHAR(100) NOT NULL,
     Channel ENUM('email', 'sms', 'push', 'inapp') NOT NULL DEFAULT 'email',
+    TokenType VARCHAR(255) NULL,
     Subject VARCHAR(255) NOT NULL,
     Body TEXT NOT NULL,
     IsActive TINYINT(1) NOT NULL DEFAULT 1,

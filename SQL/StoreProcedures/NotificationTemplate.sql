@@ -7,13 +7,14 @@ DELIMITER //
 CREATE PROCEDURE NotificationTemplateInsert(
     IN  p_TemplateName VARCHAR(100),
     IN  p_Channel ENUM('email', 'sms', 'push', 'inapp'),
+    IN  p_TokenType VARCHAR(255),
     IN  p_Subject VARCHAR(255),
     IN  p_Body TEXT,
     IN  p_IsActive TINYINT(1)
 )
 BEGIN
-    INSERT INTO NotificationTemplates(TemplateName, Channel, Subject, Body, IsActive)
-    VALUES (p_TemplateName, p_Channel, p_Subject, p_Body, p_IsActive);
+    INSERT INTO NotificationTemplates(TemplateName, Channel, TokenType, Subject, Body, IsActive)
+    VALUES (p_TemplateName, p_Channel, p_TokenType, p_Subject, p_Body, p_IsActive);
 
     /* Return the newly created Template ID */
     SELECT LAST_INSERT_ID() AS NewTemplateId;
@@ -29,6 +30,7 @@ CREATE PROCEDURE NotificationTemplateUpdate(
     IN  p_TemplateId INT,
     IN  p_TemplateName VARCHAR(100),
     IN  p_Channel ENUM('email', 'sms', 'push', 'inapp'),
+    IN  p_TokenType VARCHAR(255),
     IN  p_Subject VARCHAR(255),
     IN  p_Body TEXT,
     IN  p_IsActive TINYINT(1)
@@ -38,6 +40,7 @@ BEGIN
     SET 
         TemplateName = p_TemplateName,
         Channel       = p_Channel,
+        TokenType     = p_TokenType,
         Subject       = p_Subject,
         Body          = p_Body,
         IsActive     = p_IsActive,

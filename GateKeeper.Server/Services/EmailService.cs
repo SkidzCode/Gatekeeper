@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Mail;
 using GateKeeper.Server.Interface;
+using GateKeeper.Server.Models.Account.UserModels;
 using Microsoft.Extensions.Configuration;
 
 namespace GateKeeper.Server.Services
@@ -45,6 +46,19 @@ namespace GateKeeper.Server.Services
 
             // Send the email
             smtpClient.Send(mailMessage);
+        }
+
+        public async Task SendEmailAsync(User user, string url, string verificationCode, string subject, string message)
+        {
+            string email = user.Email;
+            message = message.Replace("{{First_Name}}", user.FirstName);
+            message = message.Replace("{{Last_Name}}", user.LastName);
+            message = message.Replace("{{Email}}", user.Email);
+            message = message.Replace("{{Username}}", user.Username);
+            message = message.Replace("{{URL}}", url);
+            message = message.Replace("{{Verification_Code}}", verificationCode);
+
+            await SendEmailAsync(user.Email, subject, message);
         }
     }
 }

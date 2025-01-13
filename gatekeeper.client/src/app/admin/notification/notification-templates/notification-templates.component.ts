@@ -49,6 +49,7 @@ export class NotificationTemplatesComponent implements OnInit {
         [Validators.required, Validators.maxLength(100)]
       ],
       channel: ['email', Validators.required],
+      tokenType: [''],
       subject: [''], // We will add conditional validation in setChannelValidation()
       body: ['', Validators.required],
       isActive: [false]
@@ -108,6 +109,7 @@ export class NotificationTemplatesComponent implements OnInit {
     this.templateForm.patchValue({
       templateName: template.templateName,
       channel: template.channel,
+      tokenType: template.tokenType,
       subject: template.subject,
       body: template.body,
       isActive: template.isActive
