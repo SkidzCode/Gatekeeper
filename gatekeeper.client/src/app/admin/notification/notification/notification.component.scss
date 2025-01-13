@@ -4,6 +4,20 @@
   gap: 16px;
 }
 
+.notification-row {
+  display: flex;
+  gap: 16px;
+}
+
+/* Grow the left column more, keep right column narrower if desired */
+.left-column {
+  flex: 2;
+}
+
+.right-column {
+  flex: 1;
+}
+
 .full-width {
   width: 100%;
 }

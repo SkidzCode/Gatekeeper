@@ -27,6 +27,9 @@ export class NotificationTemplatesComponent implements OnInit {
   // Reactive form
   templateForm!: FormGroup;
 
+  // Variables extracted from the template body
+  templateVariables: string[] = [];
+
   constructor(
     private fb: FormBuilder,
     private notificationTemplateService: NotificationTemplateService,
@@ -34,7 +37,6 @@ export class NotificationTemplatesComponent implements OnInit {
     private sanitizer: DomSanitizer, // Inject DomSanitizer
     private snackBar: MatSnackBar // Inject MatSnackBar
   ) { }
-
 
   ngOnInit(): void {
     this.loadTemplates();
@@ -56,6 +58,21 @@ export class NotificationTemplatesComponent implements OnInit {
     this.templateForm.get('channel')?.valueChanges.subscribe((channel) => {
       this.setChannelValidation(channel);
     });
+
+    // Watch for changes to body to extract variables
+    this.templateForm.get('body')?.valueChanges.subscribe((body) => {
+      this.templateVariables = this.extractVariables(body);
+    });
+  }
+
+  /**
+   * Extracts variables from the template body.
+   * Variables are denoted by {{VARIABLE_NAME}}.
+   */
+  extractVariables(body: string): string[] {
+    const variablePattern = /{{(.*?)}}/g;
+    const matches = body.match(variablePattern);
+    return matches ? matches.map(match => match.slice(2, -2)) : [];
   }
 
   /**
@@ -209,5 +226,10 @@ export class NotificationTemplatesComponent implements OnInit {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  insertVariable(variable: string) {
+    const currentMessage = this.templateForm.get('body')?.value || '';
+    this.templateForm.get('body')?.setValue(currentMessage + ' ' + variable);
   }
 }
