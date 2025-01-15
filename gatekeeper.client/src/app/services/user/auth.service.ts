@@ -268,9 +268,14 @@ export class AuthService {
         this.clearTokens();
         this.clearUser();
       }),
-      catchError(this.handleError)
+      catchError(error => {
+        this.clearTokens();
+        this.clearUser();
+        return this.handleError(error);
+      })
     );
   }
+
 
   // User Management (Optional)
   public setUser(user: User): void {
