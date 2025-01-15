@@ -36,16 +36,46 @@ CREATE PROCEDURE UpdateUserPic(
     IN p_ProfilePicture LONGBLOB
 )
 BEGIN
+    -- All DECLAREs must come first
+    DECLARE v_AssetTypeId INT;
+
+    -- 1) Update core user data
     UPDATE Users
     SET 
-        FirstName      = p_FirstName,
-        LastName       = p_LastName,
-        Email          = p_Email,
-        Username       = p_Username,
-        Phone          = p_Phone,
-        ProfilePicture = COALESCE(p_ProfilePicture, ProfilePicture),
-        UpdatedAt      = NOW()
+        FirstName = p_FirstName,
+        LastName  = p_LastName,
+        Email     = p_Email,
+        Username  = p_Username,
+        Phone     = p_Phone,
+        UpdatedAt = NOW()
     WHERE Id = p_Id;
+
+    -- 2) Get the AssetType Id for "ProfilePicture"
+    SELECT Id 
+      INTO v_AssetTypeId
+      FROM AssetTypes
+     WHERE Name = 'ProfilePicture'
+     LIMIT 1;
+
+    -- 3) If p_ProfilePicture is NOT NULL, update or insert into Assets
+    IF p_ProfilePicture IS NOT NULL THEN
+        IF EXISTS (
+            SELECT 1 
+              FROM Assets 
+             WHERE UserId = p_Id 
+               AND AssetType = v_AssetTypeId
+        ) THEN
+            UPDATE Assets
+               SET Asset     = p_ProfilePicture,
+                   UpdatedAt = NOW()
+             WHERE UserId    = p_Id
+               AND AssetType = v_AssetTypeId;
+        ELSE
+            INSERT INTO Assets (UserId, AssetType, Asset)
+            VALUES (p_Id, v_AssetTypeId, p_ProfilePicture);
+        END IF;
+    END IF;
 END //
 
 DELIMITER ;
+

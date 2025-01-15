@@ -1,0 +1,1 @@
+INSERT INTO AssetTypes (Name) Value ('ProfilePicture');
