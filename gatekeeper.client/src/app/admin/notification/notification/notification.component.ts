@@ -50,7 +50,8 @@ export class NotificationComponent implements OnInit {
       channel: ['email', Validators.required],
       subject: ['', Validators.required],
       message: ['', Validators.required],
-      scheduledAt: [null]
+      scheduledAt: [null],
+      tokenType: [''] // Add tokenType field
     });
     this.templateSearchForm = this.fb.group({
       searchValue: ['']
@@ -159,7 +160,8 @@ export class NotificationComponent implements OnInit {
     this.notificationForm.patchValue({
       channel: template.channel,
       subject: template.subject,
-      message: template.body
+      message: template.body,
+      tokenType: template.tokenType // Set tokenType when applying template
     });
     this.showSnackBar(`Template "${template.templateName}" applied to form`);
   }
@@ -189,20 +191,22 @@ export class NotificationComponent implements OnInit {
       return;
     }
     const formValue = this.notificationForm.value;
-    const newNotification: Pick<Notification, 'recipientId' | 'channel' | 'subject' | 'message' | 'scheduledAt'> = {
+    const newNotification: Pick<Notification, 'recipientId' | 'channel' | 'subject' | 'message' | 'scheduledAt' | 'tokenType' | 'url'> = {
       recipientId: formValue.recipientId,
       channel: formValue.channel,
       subject: formValue.subject,
       message: formValue.message,
       scheduledAt: formValue.scheduledAt
         ? formValue.scheduledAt.toISOString()
-        : null
+        : null,
+      tokenType: formValue.tokenType || '', // Include tokenType in the request
+      url: window.location.origin // Include the current URL
     };
     this.notificationService.addNotification(newNotification).subscribe({
       next: () => {
         this.showSnackBar('Notification created successfully');
         this.fetchNotificationLog();
-        this.notificationForm.reset({ channel: 'email' });
+        this.notificationForm.reset({ channel: 'email', tokenType: '' }); // Reset tokenType
       },
       error: (err) => {
         console.error('Error creating notification:', err);

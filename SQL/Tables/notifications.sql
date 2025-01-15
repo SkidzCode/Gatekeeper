@@ -2,6 +2,8 @@ CREATE TABLE Notifications (
     Id INT AUTO_INCREMENT PRIMARY KEY, -- Unique identifier for each notification
     RecipientId INT NOT NULL,         -- Identifier for the recipient of the notification
     Channel ENUM('email', 'sms', 'push', 'inapp') NOT NULL DEFAULT 'email', -- Notification channel
+    URL VARCHAR(255) NOT NULL,     -- NOT Optional: URL for which the notification is intended
+    TokenType VARCHAR(255) NULL,       -- Used to generate tokens for validation
     Subject TEXT NOT NULL,             -- Content of the notification
     Message TEXT NOT NULL,             -- Content of the notification
     IsSent BOOLEAN NOT NULL DEFAULT FALSE, -- Whether the notification has been sent

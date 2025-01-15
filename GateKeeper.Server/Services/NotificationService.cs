@@ -16,13 +16,18 @@ namespace GateKeeper.Server.Services
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
         private readonly IUserService _userService;
+        private readonly IVerifyTokenService _verifyTokenService;
 
-        public NotificationService(IDbHelper dbHelper, IEmailService emailService, IConfiguration configuration, IUserService userService)
+        public NotificationService(
+            IDbHelper dbHelper, IEmailService emailService, 
+            IConfiguration configuration, IUserService userService,
+            IVerifyTokenService verifyTokenService)
         {
             _dbHelper = dbHelper;
             _emailService = emailService;
             _configuration = configuration;
             _userService = userService;
+            _verifyTokenService = verifyTokenService;
         }
 
         /// <summary>
@@ -134,6 +139,14 @@ namespace GateKeeper.Server.Services
                 {
                     Value = notification.Channel
                 },
+                new MySqlParameter("@p_URL", MySqlDbType.VarChar, 10)
+                {
+                    Value = notification.URL
+                },
+                new MySqlParameter("@p_TokenType", MySqlDbType.VarChar, 10)
+                {
+                    Value = notification.TokenType
+                },
                 new MySqlParameter("@p_Subject", MySqlDbType.Text)
                 {
                     Value = notification.Subject
@@ -175,6 +188,8 @@ namespace GateKeeper.Server.Services
                 Id = reader.GetInt32("Id"),
                 RecipientId = reader.GetInt32("RecipientId"),
                 Channel = reader.GetString("Channel"),
+                URL = reader.GetString("URL"),
+                TokenType = reader.GetString("TokenType"),
                 Subject = reader.GetString("Subject"),
                 Message = reader.GetString("Message"),
                 IsSent = Convert.ToBoolean(reader["IsSent"]),
@@ -205,8 +220,17 @@ namespace GateKeeper.Server.Services
                 if (notification.Channel != "email") continue;
                 var user = await _userService.GetUser(notification.RecipientId);
                 if (user == null) continue;
+
+                string verificationCode = string.Empty;
+                if (!string.IsNullOrEmpty(notification.TokenType))
+                {
+                    verificationCode = await _verifyTokenService.GenerateTokenAsync(user.Id, notification.TokenType);
+                }
+
                 await _emailService.SendEmailAsync(
-                    user.Email, 
+                    user,
+                    notification.URL,
+                    verificationCode,
                     notification.Subject,
                     notification.Message
                 );

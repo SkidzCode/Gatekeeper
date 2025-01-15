@@ -2,6 +2,8 @@ export interface Notification {
   id?: number;            // For new notifications, the server will generate the Id
   recipientId: number;
   channel: 'email' | 'sms' | 'push' | 'inapp';
+  url?: string;
+  tokenType: string;
   subject: string;
   message: string;
   isSent?: boolean;       // The server might handle sent status

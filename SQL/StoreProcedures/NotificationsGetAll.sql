@@ -6,6 +6,8 @@ BEGIN
         Id,
         RecipientId,
         Channel,
+        URL,
+        TokenType,
         Subject,
         Message,
         IsSent,
