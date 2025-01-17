@@ -6,7 +6,7 @@
     </mat-card-header>
 
     <mat-card-content>
-      <div class="register-content">
+      <div class="register-content" *ngIf="!inviteOnly; else inviteOnlyMessage">
         <!-- Registration Form -->
         <form [formGroup]="registerForm"
               (ngSubmit)="onSubmit()"
@@ -132,6 +132,7 @@
 
             <button mat-button
                     color="primary"
+                    type="button"
                     (click)="toggleEULA()"
                     style="margin-left: 16px;">
               {{ showEULA ? 'Hide Agreement' : 'View Agreement' }}
@@ -179,6 +180,22 @@
           </div>
         </div>
       </div>
+
+      <ng-template #inviteOnlyMessage>
+        <p class="invite-only-message">
+          Registration is currently invite-only. Please provide a valid invite token to register.
+        </p>
+        <form (ngSubmit)="onTokenSubmit()">
+          <mat-form-field appearance="outline">
+            <mat-label>Invite Token</mat-label>
+            <input matInput [(ngModel)]="tokenInput" name="tokenInput" required />
+            <mat-icon matSuffix>vpn_key</mat-icon>
+          </mat-form-field>
+          <button mat-raised-button color="primary" type="submit">
+            Submit Token
+          </button>
+        </form>
+      </ng-template>
     </mat-card-content>
   </mat-card>
 

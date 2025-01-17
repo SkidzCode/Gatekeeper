@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Net;
 using System.Threading.Tasks;
 using MySqlConnector;
 using GateKeeper.Server.Interface; // For IDBHelper, IMySqlConnectorWrapper, etc.
@@ -127,6 +128,70 @@ namespace GateKeeper.Server.Services
             if (notification == null)
                 throw new ArgumentNullException(nameof(notification));
 
+            notification.Message = notification.Message.Replace("{{URL}}", notification.URL);
+            notification.Subject = notification.Subject.Replace("{{URL}}", notification.URL);
+
+            User userFrom = await _userService.GetUser(notification.FromId);
+            notification.Message = notification.Message.Replace("{{From_First_Name}}", userFrom.FirstName);
+            notification.Message = notification.Message.Replace("{{From_Last_Name}}", userFrom.LastName);
+            notification.Message = notification.Message.Replace("{{From_Email}}", userFrom.Email);
+            notification.Message = notification.Message.Replace("{{From_Username}}", userFrom.Username);
+
+
+            notification.Message = notification.Message.Replace("{{Email}}", notification.ToEmail);
+
+            User? userTo = null;
+            if (notification.RecipientId > 0)
+            {
+                userTo = await _userService.GetUser(notification.RecipientId);
+                if (userTo != null)
+                {
+                    if (string.IsNullOrEmpty(notification.ToName))
+                        notification.ToName = userTo.FirstName + " " + userTo.LastName;
+                    if (string.IsNullOrEmpty(notification.ToEmail))
+                        notification.ToEmail = userTo.Email;
+                }
+            }
+
+
+            if (notification.ToName.Contains(" "))
+            {
+                string fristName = notification.ToName.Split(" ")[0];
+                string lastName = notification.ToName.Split(" ")[1];
+                notification.Message = notification.Message.Replace("{{First_Name}}", fristName);
+                notification.Message = notification.Message.Replace("{{Last_Name}}", lastName);
+                notification.Subject = notification.Subject.Replace("{{First_Name}}", fristName);
+                notification.Subject = notification.Subject.Replace("{{Last_Name}}", lastName);
+            }
+            else
+            {
+                notification.Message = notification.Message.Replace("{{First_Name}}", notification.ToName);
+                notification.Message = notification.Message.Replace("{{Last_Name}}", "");
+                notification.Subject = notification.Subject.Replace("{{First_Name}}", notification.ToName);
+                notification.Subject = notification.Subject.Replace("{{Last_Name}}", "");
+            }
+
+            string verificationCode = string.Empty;
+            if (userTo != null)
+            {
+                notification.Subject = notification.Subject.Replace("{{Username}}", userTo.Username);
+
+                if (!string.IsNullOrEmpty(notification.TokenType) &&
+                    notification.Message.Contains("{{Verification_Code}}"))
+                {
+                    verificationCode = await _verifyTokenService.GenerateTokenAsync(userTo.Id, notification.TokenType);
+                }
+            }
+            else if (!string.IsNullOrEmpty(notification.TokenType) && notification.Message.Contains("{{Verification_Code}}"))
+            {
+                verificationCode = await _verifyTokenService.GenerateTokenAsync(userFrom.Id, notification.TokenType);
+            }
+
+            notification.Message = notification.Message.Replace("{{Verification_Code}}", WebUtility.UrlEncode(verificationCode));
+
+
+            
+            
             await using var wrapper = await _dbHelper.GetWrapperAsync();
 
             var parameters = new List<MySqlParameter>
@@ -134,6 +199,18 @@ namespace GateKeeper.Server.Services
                 new MySqlParameter("@p_RecipientId", MySqlDbType.Int32)
                 {
                     Value = notification.RecipientId
+                },
+                new MySqlParameter("@p_FromId", MySqlDbType.Int32)
+                {
+                    Value = notification.FromId
+                },
+                new MySqlParameter("@p_ToName", MySqlDbType.Int32)
+                {
+                    Value = notification.ToName
+                },
+                new MySqlParameter("@p_ToEmail", MySqlDbType.Int32)
+                {
+                    Value = notification.ToEmail
                 },
                 new MySqlParameter("@p_Channel", MySqlDbType.VarChar, 10)
                 {
@@ -187,6 +264,9 @@ namespace GateKeeper.Server.Services
             {
                 Id = reader.GetInt32("Id"),
                 RecipientId = reader.GetInt32("RecipientId"),
+                FromId = reader.GetInt32("FromId"),
+                ToEmail = reader.GetString("ToEmail"),
+                ToName  = reader.GetString("ToName"),
                 Channel = reader.GetString("Channel"),
                 URL = reader.GetString("URL"),
                 TokenType = reader.GetString("TokenType"),
@@ -218,22 +298,9 @@ namespace GateKeeper.Server.Services
             foreach (var notification in pendingNotifications)
             {
                 if (notification.Channel != "email") continue;
-                var user = await _userService.GetUser(notification.RecipientId);
-                if (user == null) continue;
-
-                string verificationCode = string.Empty;
-                if (!string.IsNullOrEmpty(notification.TokenType))
-                {
-                    verificationCode = await _verifyTokenService.GenerateTokenAsync(user.Id, notification.TokenType);
-                }
-
-                await _emailService.SendEmailAsync(
-                    user,
-                    notification.URL,
-                    verificationCode,
-                    notification.Subject,
-                    notification.Message
-                );
+                
+                var fromUser = await _userService.GetUser(notification.FromId);
+                await _emailService.SendEmailAsync(notification.ToEmail, notification.ToName, fromUser.Username, notification.Subject, notification.Message);
 
                 // Mark the notification as sent
                 notification.IsSent = true;

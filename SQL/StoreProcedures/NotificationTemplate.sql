@@ -79,6 +79,21 @@ END //
 DELIMITER ;
 
 /* =====================
+   4) GET BY Name
+   ===================== */
+DROP PROCEDURE IF EXISTS NotificationTemplateGetByName;
+DELIMITER //
+CREATE PROCEDURE NotificationTemplateGetByName(
+    IN p_TemplateName VARCHAR(255)
+)
+BEGIN
+    SELECT *
+    FROM NotificationTemplates
+    WHERE TemplateName = p_TemplateName;
+END //
+DELIMITER ;
+
+/* =====================
    5) GET ALL
    ===================== */
 DROP PROCEDURE IF EXISTS NotificationTemplateGetAll;

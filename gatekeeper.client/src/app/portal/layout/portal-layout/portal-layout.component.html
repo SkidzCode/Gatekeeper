@@ -9,6 +9,7 @@
       <a mat-list-item href="/admin" *ngIf="isAdmin">Admin</a>
       <a mat-list-item href="/portal/user/profile" *ngIf="isLoggedIn">Profile</a>
       <a mat-list-item href="/portal/user/settings" *ngIf="isLoggedIn">Settings</a>
+      <a mat-list-item href="/portal/user/invite" *ngIf="isLoggedIn">Invite</a>
       <a mat-list-item (click)="logout()" *ngIf="isLoggedIn">Logout</a>
     </mat-nav-list>
   </mat-sidenav>

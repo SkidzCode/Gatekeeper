@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using GateKeeper.Server.Models.Attributes;
 
-namespace GateKeeper.Server.Models.Account;
+namespace GateKeeper.Server.Models.Account.UserModels;
 
 /// <summary>
 /// Request model for user registration.
@@ -40,4 +40,5 @@ public class RegisterRequest
 
     [Required]
     public bool ReceiveEmails { get; set; } = false;
+    public string Token { get; set; } = string.Empty;
 }

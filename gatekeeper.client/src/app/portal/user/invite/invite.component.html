@@ -1,0 +1,128 @@
+<!-- Wrap everything in a container -->
+<div class="invite-container" *ngIf="currentUser; else noUser">
+
+  <!-- Card for sending invites -->
+  <mat-card class="invite-card">
+    <mat-card-title>Send an Invite</mat-card-title>
+    <mat-card-content>
+      <form [formGroup]="inviteForm" class="invite-form">
+        <!-- To Name -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Recipient Name</mat-label>
+          <input matInput formControlName="toName" placeholder="John Doe">
+          <mat-error *ngIf="inviteForm.get('toName')?.hasError('required')">
+            Name is required
+          </mat-error>
+        </mat-form-field>
+
+        <!-- To Email -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Recipient Email</mat-label>
+          <input matInput formControlName="toEmail" placeholder="john@example.com">
+          <mat-icon matSuffix>email</mat-icon>
+          <mat-error *ngIf="inviteForm.get('toEmail')?.hasError('required')">
+            Email is required
+          </mat-error>
+          <mat-error *ngIf="inviteForm.get('toEmail')?.hasError('email')">
+            Invalid email address
+          </mat-error>
+        </mat-form-field>
+
+        <div class="button-row">
+          <button mat-raised-button
+                  color="primary"
+                  (click)="sendInvite()"
+                  [disabled]="inviteForm.invalid">
+            Send Invite
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+
+  <!-- Card to list existing invites -->
+  <mat-card class="invite-card">
+    <mat-card-title>Your Invites</mat-card-title>
+    <mat-card-content>
+      <div *ngIf="myInvites.length > 0; else noInvites">
+        <table mat-table [dataSource]="myInvites" class="mat-elevation-z2 full-width">
+
+          <!-- ToName Column -->
+          <ng-container matColumnDef="toName">
+            <th mat-header-cell *matHeaderCellDef>Recipient</th>
+            <td mat-cell *matCellDef="let invite">{{ invite.toName }}</td>
+          </ng-container>
+
+          <!-- ToEmail Column -->
+          <ng-container matColumnDef="toEmail">
+            <th mat-header-cell *matHeaderCellDef>Email</th>
+            <td mat-cell *matCellDef="let invite">{{ invite.toEmail }}</td>
+          </ng-container>
+
+          <!-- IsExpired Column -->
+          <ng-container matColumnDef="isExpired">
+            <th mat-header-cell *matHeaderCellDef>Expired?</th>
+            <td mat-cell *matCellDef="let invite">
+              <mat-icon class="status-icon"
+                        [ngClass]="invite.isExpired ? 'red' : 'green'">
+                {{ invite.isExpired ? 'highlight_off' : 'check_circle' }}
+              </mat-icon>
+            </td>
+          </ng-container>
+
+          <!-- IsRevoked Column -->
+          <ng-container matColumnDef="isRevoked">
+            <th mat-header-cell *matHeaderCellDef>Revoked?</th>
+            <td mat-cell *matCellDef="let invite">
+              <mat-icon class="status-icon"
+                        [ngClass]="invite.isRevoked ? 'red' : 'green'">
+                {{ invite.isRevoked ? 'highlight_off' : 'check_circle' }}
+              </mat-icon>
+            </td>
+          </ng-container>
+
+          <!-- IsComplete Column -->
+          <ng-container matColumnDef="isComplete">
+            <th mat-header-cell *matHeaderCellDef>Complete?</th>
+            <td mat-cell *matCellDef="let invite">
+              <mat-icon class="status-icon"
+                        [ngClass]="invite.isComplete ? 'green' : 'red'">
+                {{ invite.isComplete ? 'check_circle' : 'highlight_off' }}
+              </mat-icon>
+            </td>
+          </ng-container>
+
+          <!-- IsSent Column -->
+          <ng-container matColumnDef="isSent">
+            <th mat-header-cell *matHeaderCellDef>Sent?</th>
+            <td mat-cell *matCellDef="let invite">
+              <mat-icon class="status-icon"
+                        [ngClass]="invite.isSent ? 'green' : 'red'">
+                {{ invite.isSent ? 'check_circle' : 'highlight_off' }}
+              </mat-icon>
+            </td>
+          </ng-container>
+
+          <!-- Table Headers / Rows -->
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+      </div>
+
+      <ng-template #noInvites>
+        <p>You have not sent any invites yet.</p>
+      </ng-template>
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<!-- If no user is logged in -->
+<ng-template #noUser>
+  <mat-card>
+    <mat-card-title>No User Logged In</mat-card-title>
+    <mat-card-content>
+      <p>Please log in to send invites.</p>
+    </mat-card-content>
+  </mat-card>
+</ng-template>

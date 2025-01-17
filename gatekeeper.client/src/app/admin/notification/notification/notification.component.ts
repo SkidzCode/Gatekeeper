@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { NotificationService } from '../../../../../src/app/services/site/notification.service';
@@ -9,6 +9,9 @@ import { NotificationTemplate } from '../../../../../src/app/models/notification
 import { User } from '../../../../../src/app/models/user.model';
 import { NotificationPreviewDialogComponent } from '../notification-preview-dialog/notification-preview-dialog.component';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { AuthService } from '../../../../../src/app/services/user/auth.service'; // Import AuthService
+import { MatPaginator, PageEvent } from '@angular/material/paginator';
+import { MatTableDataSource } from '@angular/material/table';
 
 @Component({
   selector: 'app-notification',
@@ -16,8 +19,12 @@ import { MatSnackBar } from '@angular/material/snack-bar';
   styleUrls: ['./notification.component.scss'],
   standalone: false,
 })
-export class NotificationComponent implements OnInit {
+export class NotificationComponent implements OnInit, AfterViewInit {
+  dataSource = new MatTableDataSource<Notification>([]);
+  @ViewChild('paginatorTop') paginatorTop!: MatPaginator;
+  @ViewChild('paginatorBottom') paginatorBottom!: MatPaginator;
 
+  @ViewChild('messageInput') messageInput!: ElementRef;
   notificationForm!: FormGroup;
   templateSearchForm!: FormGroup;
   templates: NotificationTemplate[] = [];
@@ -27,6 +34,8 @@ export class NotificationComponent implements OnInit {
   loadingTemplates = false;
   loadingUsers = false;
   loadingNotifications = false;
+  currentUser: User | null = null; // Add currentUser property
+  selectedTabIndex = 0; // Add selectedTabIndex property
 
   constructor(
     private fb: FormBuilder,
@@ -34,14 +43,34 @@ export class NotificationComponent implements OnInit {
     private snackBar: MatSnackBar,
     private notificationService: NotificationService,
     private notificationTemplateService: NotificationTemplateService,
-    private userService: UserService
+    private userService: UserService,
+    private authService: AuthService // Inject AuthService
   ) { }
 
   ngOnInit(): void {
     this.initializeForms();
     this.fetchTemplates();
     this.fetchUsers();
+    this.loadCurrentUser(); // Load the current user
     this.fetchNotificationLog();
+  }
+
+  ngAfterViewInit() {
+    // Use the TOP paginator as the "primary" for the dataSource
+    this.dataSource.paginator = this.paginatorTop;
+
+    // 1) When the top paginator changes, mirror that on the bottom
+    this.paginatorTop.page.subscribe((event: PageEvent) => {
+      this.paginatorBottom.pageIndex = event.pageIndex;
+      this.paginatorBottom.pageSize = event.pageSize;
+    });
+
+    // 2) When the bottom paginator changes, mirror that on the top
+    this.paginatorBottom.page.subscribe((event: PageEvent) => {
+      this.paginatorTop.pageIndex = event.pageIndex;
+      this.paginatorTop.pageSize = event.pageSize;
+      this.paginatorTop._changePageSize(event.pageSize);
+    });
   }
 
   initializeForms(): void {
@@ -74,6 +103,18 @@ export class NotificationComponent implements OnInit {
       return replacements;
     }
 
+    if (msg.includes('{{From_First_Name}}') && user) {
+      replacements.push({ key: '{{From_First_Name}}', value: this.currentUser?.firstName || "Your first name" });
+    }
+    if (msg.includes('{{From_Last_Name}}') && user) {
+      replacements.push({ key: '{{From_Last_Name}}', value: this.currentUser?.lastName || "Your last name" });
+    }
+    if (msg.includes('{{From_Email}}') && user) {
+      replacements.push({ key: '{{From_Email}}', value: this.currentUser?.email || "Your email" });
+    }
+    if (msg.includes('{{From_Username}}') && user) {
+      replacements.push({ key: '{{From_Username}}', value: this.currentUser?.username || '' });
+    }
     if (msg.includes('{{First_Name}}') && user) {
       replacements.push({ key: '{{First_Name}}', value: user.firstName });
     }
@@ -133,6 +174,7 @@ export class NotificationComponent implements OnInit {
     this.notificationService.getAllNotifications().subscribe({
       next: (notifications) => {
         this.notificationLog = notifications;
+        this.dataSource.data = notifications; // Update the data source
         this.loadingNotifications = false;
       },
       error: (err) => {
@@ -224,4 +266,18 @@ export class NotificationComponent implements OnInit {
     this.notificationForm.get('message')?.setValue(currentMessage + ' ' + variable);
   }
 
+  // New Method to load the current user
+  private loadCurrentUser(): void {
+    this.authService.currentUser$.subscribe(user => {
+      this.currentUser = user;
+    });
+  }
+
+  // New Method to handle tab change
+  onTabChange(event: any): void {
+    this.selectedTabIndex = event.index;
+    if (this.selectedTabIndex === 1 && this.notificationLog.length === 0) {
+      this.fetchNotificationLog();
+    }
+  }
 }

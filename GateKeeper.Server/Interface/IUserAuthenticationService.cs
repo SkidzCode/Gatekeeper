@@ -2,7 +2,6 @@
 using GateKeeper.Server.Models.Account;
 using GateKeeper.Server.Models.Account.Login;
 using GateKeeper.Server.Models.Account.UserModels;
-using GateKeeper.Server.Models.Account.UserModels;
 using GateKeeper.Server.Models.Site;
 
 namespace GateKeeper.Server.Interface

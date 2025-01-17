@@ -18,7 +18,7 @@ using GateKeeper.Server.Models.Account;
 using System.Net;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Identity.Data;
-using RegisterRequest = GateKeeper.Server.Models.Account.RegisterRequest;
+using RegisterRequest = GateKeeper.Server.Models.Account.UserModels.RegisterRequest;
 using GateKeeper.Server.Models.Site;
 using System.Runtime.InteropServices;
 using System.Security;
@@ -39,13 +39,16 @@ namespace GateKeeper.Server.Services
         private readonly IDbHelper _dbHelper;
         private readonly ILogger<UserAuthenticationService> _logger;
         private readonly IConfiguration _configuration;
-        private readonly IEmailService _emailService;
         private readonly IVerifyTokenService _verificationService;
         private readonly IUserService _userService;
         private readonly ISettingsService _settingsService;
         private readonly IKeyManagementService _keyManagementService;
+        private readonly INotificationTemplateService _notificationTemplateService;
+        private readonly INotificationService _notificationService;
+        private readonly bool _requiresInvite;
 
         private const string cookieName = "LoginAttempts";
+
 
         /// <summary>
         /// Constructor for UserAuthenticationService.
@@ -55,33 +58,37 @@ namespace GateKeeper.Server.Services
         /// <param name="configuration">App configuration (used for time-based configs, etc.).</param>
         /// <param name="dbHelper">Database wrapper for DB access.</param>
         /// <param name="logger">Logger for logging information and errors.</param>
-        /// <param name="emailService">Service to handle email communications.</param>
         /// <param name="settingsService">Service to retrieve settings for users.</param>
         /// <param name="keyManagementService">Key Management Service for retrieving rotating JWT keys.</param>
         /// <param name="protector"></param>
         /// <param name="httpContextAccessor"></param>
+        /// <param name="notification"></param>
+        /// <param name="notificationTemplateService"></param>
         public UserAuthenticationService(
             IUserService userService,
             IVerifyTokenService verificationService,
             IConfiguration configuration,
             IDbHelper dbHelper,
             ILogger<UserAuthenticationService> logger,
-            IEmailService emailService,
             ISettingsService settingsService,
             IKeyManagementService keyManagementService,
             IDataProtectionProvider protector, 
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor, 
+            INotificationService notification,
+            INotificationTemplateService notificationTemplateService)
         {
             _configuration = configuration;
             _dbHelper = dbHelper;
             _logger = logger;
-            _emailService = emailService;
             _verificationService = verificationService;
             _userService = userService;
             _settingsService = settingsService;
             _keyManagementService = keyManagementService;
             _protector = protector.CreateProtector("SecureCookies"); ;
             _httpContextAccessor = httpContextAccessor;
+            _requiresInvite = _configuration.GetValue<bool>("RegisterSettings:RequireInvite");
+            _notificationService = notification;
+            _notificationTemplateService = notificationTemplateService;
         }
 
         /// <inheritdoc />
@@ -89,6 +96,7 @@ namespace GateKeeper.Server.Services
         {
             RegistrationResponse response = new RegistrationResponse();
 
+            registerRequest.Token = registerRequest.Token.Replace(" ", "+");
             response.User = new User()
             {
                 FirstName = registerRequest.FirstName,
@@ -99,6 +107,24 @@ namespace GateKeeper.Server.Services
                 Phone = registerRequest.Phone
             };
 
+            TokenVerificationResponse tokenResponse = new TokenVerificationResponse();
+            if (_requiresInvite)
+            {
+                if (registerRequest.Token.Length > 0)
+                {
+                    tokenResponse = await _verificationService.VerifyTokenAsync(new VerifyTokenRequest()
+                    {
+                        TokenType = "Invite",
+                        VerificationCode = registerRequest.Token
+                    });
+
+                    if (!tokenResponse.IsVerified)
+                    {
+                        response.FailureReason = tokenResponse.FailureReason;
+                        return response;
+                    }
+                }
+            }
 
             if (!await ValidatePasswordStrengthAsync(registerRequest.Password))
             {
@@ -114,8 +140,24 @@ namespace GateKeeper.Server.Services
             await AssignRoleToUser(response.User.Id, "NewUser");
             string token = await _verificationService.GenerateTokenAsync(response.User.Id, "NewUser");
 
-            string emailBody = await File.ReadAllTextAsync("Documents/EmailVerificationTemplate.html");
-            await _emailService.SendEmailAsync(response.User, registerRequest.Website, WebUtility.UrlEncode(token), "Your verification token", emailBody);
+            var template = await _notificationTemplateService.GetNotificationTemplateByNameAsync("Verify Email Template");
+            int noticeId = await _notificationService.InsertNotificationAsync(new Notification()
+            {
+                Channel = "Email",
+                Message = template.Body,
+                Subject = template.Subject,
+                RecipientId = response.User.Id,
+                TokenType = "Verification",
+                URL = registerRequest.Website,
+                FromId = response.User.Id,
+                ToEmail = registerRequest.Email,
+                ToName = $"{registerRequest.FirstName} {registerRequest.LastName}"
+            });
+            
+            if (_requiresInvite)
+            {
+                await _verificationService.RevokeTokensAsync(tokenResponse.User.Id, "Invite", registerRequest.Token);
+            }
 
             return response;
         }
@@ -265,10 +307,20 @@ namespace GateKeeper.Server.Services
         {
             try
             {
-                string token = await _verificationService.GenerateTokenAsync(user.Id, "ForgotPassword");
-                string emailBody = await File.ReadAllTextAsync("Documents/EmailPasswordChange.html");
-                await _emailService.SendEmailAsync(user, initiateRequest.Website, WebUtility.UrlEncode(token), "Password Reset", emailBody);
-                
+                var template = await _notificationTemplateService.GetNotificationTemplateByNameAsync("Reset Password");
+                int noticeId = await _notificationService.InsertNotificationAsync(new Notification()
+                {
+                    Channel = "Email",
+                    Message = template.Body,
+                    Subject = template.Subject,
+                    RecipientId = user.Id,
+                    TokenType = "ForgotPassword",
+                    URL = initiateRequest.Website,
+                    FromId = user.Id,
+                    ToEmail = user.Email,
+                    ToName = $"{user.FirstName} {user.LastName}"
+                });
+
             }
             catch (Exception ex)
             {

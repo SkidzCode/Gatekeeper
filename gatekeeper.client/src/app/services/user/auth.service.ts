@@ -80,6 +80,10 @@ interface CheckEmailResponse {
   isValid: boolean;
 }
 
+interface CheckInviteRequiredResponse {
+  _requiresInvite: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private baseUrl = '/api/Authentication';
@@ -179,6 +183,23 @@ export class AuthService {
       catchError(() => of(false)) // In case of error, assume username is not taken
     );
   }
+
+  checkInviteRequired(): Observable<boolean> {
+    return this.http.get<CheckInviteRequiredResponse>(`${this.baseUrl}/is-invite-only`).pipe(
+      map(response => {
+        console.log('Response from is-invite-only:', response); // Add logging
+        return response._requiresInvite;
+      }),
+      catchError((error) => {
+        console.error('Error in checkInviteRequired:', error); // Add logging
+        return of(true); // In case of error, assume invite is required
+      })
+    );
+  }
+
+
+
+  
 
   /**
  * Checks if a username is already taken.

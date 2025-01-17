@@ -78,6 +78,7 @@ builder.Services.AddScoped<IVerifyTokenService, VerifyTokenService>();
 builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService>();
 builder.Services.AddScoped<INotificationTemplateService, NotificationTemplateService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IInviteService, InviteService>();
 
 #endregion
 

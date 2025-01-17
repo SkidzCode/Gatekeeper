@@ -13,17 +13,20 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatSnackBarModule } from '@angular/material/snack-bar'; // Add this import
+import { MatTabsModule } from '@angular/material/tabs'; // Add this import
 
 import { UserProfileComponent } from './user/user-profile/user-profile.component';
 import { UserSettingsComponent } from './user/user-settings/user-settings.component';
 import { PortalRoutingModule } from './portal-routing.module';
 import { HomeComponent } from './home/home/home.component';
+import { InviteComponent } from './user/invite/invite.component';
 
 @NgModule({
   declarations: [
     UserProfileComponent,
     UserSettingsComponent,
-    HomeComponent
+    HomeComponent,
+    InviteComponent
   ],
   imports: [
     CommonModule,
@@ -41,7 +44,8 @@ import { HomeComponent } from './home/home/home.component';
     MatIconModule,
     MatProgressSpinnerModule,
     MatRadioModule,
-    MatSnackBarModule // Add this module
+    MatSnackBarModule, 
+    MatTabsModule
   ],
 })
 export class PortalModule { }

@@ -48,17 +48,36 @@ namespace GateKeeper.Server.Services
             smtpClient.Send(mailMessage);
         }
 
-        public async Task SendEmailAsync(User user, string url, string verificationCode, string subject, string message)
+        public async Task SendEmailAsync(string toEmail, string toName, string fromName2, string subject, string message)
         {
-            string email = user.Email;
-            message = message.Replace("{{First_Name}}", user.FirstName);
-            message = message.Replace("{{Last_Name}}", user.LastName);
-            message = message.Replace("{{Email}}", user.Email);
-            message = message.Replace("{{Username}}", user.Username);
-            message = message.Replace("{{URL}}", url);
-            message = message.Replace("{{Verification_Code}}", verificationCode);
+            // Get all SMTP/email settings from user secrets
+            var smtpHost = _configuration["EmailSettings:SmtpHost"];
+            var smtpPort = int.Parse(_configuration["EmailSettings:Port"] ?? "587");
+            var userName = _configuration["EmailSettings:UserName"];
+            var password = _configuration["EmailSettings:Password"];
+            var useSsl = bool.Parse(_configuration["EmailSettings:UseSsl"] ?? "true");
+            
+            // Configure the email client
+            using var smtpClient = new SmtpClient(smtpHost)
+            {
+                Port = smtpPort,
+                Credentials = new NetworkCredential(userName, password),
+                EnableSsl = useSsl
+            };
 
-            await SendEmailAsync(user.Email, subject, message);
+            // Create the email message
+            var mailMessage = new MailMessage
+            {
+                From = new MailAddress(userName, fromName2),
+                Subject = subject,
+                Body = message,
+                IsBodyHtml = true, // Change to true if sending HTML content
+            };
+
+            mailMessage.To.Add(new MailAddress(toEmail, toName));
+
+            // Send the email
+            smtpClient.Send(mailMessage);
         }
     }
 }

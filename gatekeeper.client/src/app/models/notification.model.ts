@@ -1,6 +1,9 @@
 export interface Notification {
   id?: number;            // For new notifications, the server will generate the Id
   recipientId: number;
+  fromId?: number;
+  toName?: string;
+  toEmail?: string;
   channel: 'email' | 'sms' | 'push' | 'inapp';
   url?: string;
   tokenType: string;

@@ -13,6 +13,7 @@ namespace GateKeeper.Server.Services
         Task<int> InsertNotificationTemplateAsync(NotificationTemplate template);
         Task UpdateNotificationTemplateAsync(NotificationTemplate template);
         Task DeleteNotificationTemplateAsync(int templateId);
+        Task<NotificationTemplate?> GetNotificationTemplateByNameAsync(string templateName);
         Task<NotificationTemplate?> GetNotificationTemplateByIdAsync(int templateId);
         Task<List<NotificationTemplate>> GetAllNotificationTemplatesAsync();
     }
@@ -142,6 +143,36 @@ namespace GateKeeper.Server.Services
             }
 
             return null;
+        }
+
+        public async Task<NotificationTemplate?> GetNotificationTemplateByNameAsync(string templateName)
+        {
+            await using var wrapper = await _dbHelper.GetWrapperAsync();
+
+            var parameters = new MySqlParameter[]
+            {
+                new MySqlParameter("@p_TemplateName", templateName)
+            };
+
+            await using var reader = await wrapper.ExecuteReaderAsync(
+                commandText: "NotificationTemplateGetByName",
+                commandType: CommandType.StoredProcedure,
+                parameters: parameters
+            );
+
+            if (!await reader.ReadAsync()) return null;
+            return new NotificationTemplate
+            {
+                TemplateId = reader.GetInt32("TemplateId"),
+                TemplateName = reader.GetString("TemplateName"),
+                Channel = reader.GetString("channel"),
+                TokenType = reader.GetString("TokenType"),
+                Subject = reader.GetString("subject"),
+                Body = reader.GetString("body"),
+                IsActive = reader.GetInt32("IsActive") == 1,
+                CreatedAt = reader.GetDateTime("CreatedAt"),
+                UpdatedAt = reader.GetDateTime("UpdatedAt")
+            };
         }
 
         /// <summary>

@@ -135,11 +135,20 @@ namespace GateKeeper.Server.Services
         public async Task<string> GenerateTokenAsync(int userId, string verifyType)
         {
             var verifyToken = GenerateVerifyToken();
+            
+            _logger.LogInformation("Generating token: {Token} for {UserId}", userId, verifyToken);
+            
             await using var connection = await _dbHelper.GetWrapperAsync();
             // Generate Refresh Token
             var salt = PasswordHelper.GenerateSalt();
+
+            _logger.LogInformation("Generating salt: {Salt}", salt);
+
             var hashedVerifyToken = PasswordHelper.HashPassword(verifyToken, salt);
             var tokenId = Guid.NewGuid().ToString(); // Unique identifier for the refresh token
+
+            _logger.LogInformation("Generating Hashed Token: {Hashed}", hashedVerifyToken);
+
 
             // Store Refresh Token in DB
             await connection.ExecuteNonQueryAsync("VerificationInsert", CommandType.StoredProcedure,

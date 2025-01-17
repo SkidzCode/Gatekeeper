@@ -5,6 +5,9 @@ BEGIN
     SELECT
         Id,
         RecipientId,
+        FromId,
+        ToName,
+        ToEmail,
         Channel,
         URL,
         TokenType,

@@ -19,6 +19,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
+import { MatTabsModule } from '@angular/material/tabs'; 
 
 import { ResourcesEditorComponent } from '../resources/resources-editor/resources-editor.component';
 import { AdminRoutingModule } from './admin-routing.module';
@@ -70,7 +71,8 @@ import { HomeComponent } from './home/home/home.component';
     MatToolbarModule,
     MatIconModule,
     MatProgressSpinner,
-    MatRadioModule
+    MatRadioModule,
+    MatTabsModule
   ],
 })
 export class AdminModule { }

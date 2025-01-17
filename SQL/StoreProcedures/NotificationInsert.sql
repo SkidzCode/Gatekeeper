@@ -2,6 +2,9 @@ DROP PROCEDURE IF EXISTS NotificationInsert ;
 DELIMITER //
 CREATE PROCEDURE NotificationInsert(
     IN p_RecipientId INT,
+    IN p_FromId INT,
+    IN p_ToName VARCHAR(255),
+    IN p_ToEmail VARCHAR(255),
     IN p_Channel VARCHAR(10),
     IN p_URL VARCHAR(255),
     IN p_TokenType VARCHAR(255),
@@ -12,6 +15,9 @@ CREATE PROCEDURE NotificationInsert(
 BEGIN
     INSERT INTO Notifications (
         RecipientId,
+        FromId,
+        ToName,
+        ToEmail,
         Channel,
         URL,
         TokenType,
@@ -21,6 +27,9 @@ BEGIN
     )
     VALUES (
         p_RecipientId,
+        p_FromId,
+        p_ToName,
+        p_ToEmail,
         p_Channel,
         p_URL,
         p_TokenType,

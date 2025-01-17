@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Security.Claims;
 using GateKeeper.Server.Interface;  // For INotificationService
 using GateKeeper.Server.Models;
 using GateKeeper.Server.Models.Site; // For Notification model
@@ -112,6 +113,7 @@ namespace GateKeeper.Server.Controllers
 
             try
             {
+                notification.FromId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 var newId = await _notificationService.InsertNotificationAsync(notification);
                 return Ok(new
                 {

@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors, AsyncValidatorFn } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../services/user/auth.service';
 import { Observable, of, Subscription } from 'rxjs';
 import { map, catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
@@ -15,13 +15,14 @@ interface RegisterRequest {
   website: string;
   userLicAgreement: boolean;
   receiveEmails: boolean;
+  token: string;
 }
 
 @Component({
   selector: 'app-user-register',
   templateUrl: './user-register.component.html',
   styleUrls: ['./user-register.component.scss'],
-  standalone:false
+  standalone: false
 })
 export class UserRegisterComponent implements OnInit, OnDestroy {
   registerForm!: FormGroup;
@@ -29,14 +30,32 @@ export class UserRegisterComponent implements OnInit, OnDestroy {
   successMessage: string = '';
   passwordSubscription!: Subscription | undefined;
   showEULA: boolean = false; // Controls EULA visibility
+  token: string = '';
+  inviteOnly: boolean = false;
+  tokenInput: string = ''; // New property for token input
 
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
-    private router: Router
-  ) { }
+    private router: Router,
+    private route: ActivatedRoute
+  ) {
+    this.route.queryParams.subscribe(params => {
+      this.token = params['token'] ? decodeURIComponent(params['token']) : '';
+    });
+  }
 
   ngOnInit(): void {
+    // Check if invite is required
+    this.authService.checkInviteRequired().subscribe({
+      next: (inviteRequired) => {
+        this.inviteOnly = inviteRequired && !this.token;
+      },
+      error: () => {
+        this.inviteOnly = true; // Assume invite is required if there's an error
+      }
+    });
+
     // Initialize the registration form with validators
     this.registerForm = this.fb.group(
       {
@@ -174,6 +193,7 @@ export class UserRegisterComponent implements OnInit, OnDestroy {
       website: window.location.origin,
       userLicAgreement: this.registerForm.get('userLicAgreement')?.value,
       receiveEmails: this.registerForm.get('receiveEmails')?.value,
+      token: this.token
     };
 
     this.authService.register(registerData).subscribe({
@@ -187,6 +207,19 @@ export class UserRegisterComponent implements OnInit, OnDestroy {
         this.successMessage = '';
       },
     });
+  }
+
+  /**
+   * Handle token submission.
+   */
+  onTokenSubmit(): void {
+    if (this.tokenInput) {
+      this.inviteOnly = false;
+      this.router.navigate([], {
+        queryParams: { token: this.tokenInput },
+        queryParamsHandling: 'merge',
+      });
+    }
   }
 
   /**

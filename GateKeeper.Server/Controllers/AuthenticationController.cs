@@ -19,6 +19,8 @@ namespace GateKeeper.Server.Controllers
         private readonly IUserAuthenticationService _authService;
         private readonly ILogger<AuthenticationController> _logger;
         private readonly IUserService _userService;
+        private readonly IConfiguration _configuration;
+        private readonly bool _requiresInvite;
 
         /// <summary>
         /// Constructor for AuthenticationController.
@@ -29,11 +31,14 @@ namespace GateKeeper.Server.Controllers
         public AuthenticationController(
             IUserAuthenticationService authService, 
             ILogger<AuthenticationController> logger, 
-            IUserService userService)
+            IUserService userService,
+            IConfiguration configuration)
         {
             _authService = authService;
             _logger = logger;
             _userService = userService;
+            _configuration = configuration;
+            _requiresInvite = _configuration.GetValue<bool>("RegisterSettings:RequireInvite");
         }
 
         /// <summary>
@@ -477,6 +482,27 @@ namespace GateKeeper.Server.Controllers
                 return HandleInternalError(ex, DialogLogin.LogoutDeviceError);
             }
         }
+
+        /// <summary>
+        /// Checks if the registration requires an invite.
+        /// </summary>
+        /// <returns>Action result indicating if the registration requires an invite.</returns>
+        [HttpGet("is-invite-only")]
+        [AllowAnonymous]
+        public IActionResult IsInviteOnly()
+        {
+            try
+            {
+                return Ok(new { _requiresInvite });
+            }
+            catch (Exception ex)
+            {
+                return HandleInternalError(ex, "An error occurred while checking if registration requires an invite.");
+            }
+        }
+
+
+
 
         #region private Functions
 
