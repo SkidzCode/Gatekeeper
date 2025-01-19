@@ -52,7 +52,7 @@ namespace GateKeeper.Server.Controllers
         /// <param name="user">User object containing updated details.</param>
         /// <returns>Action result indicating success or failure.</returns>
         [HttpPost("Update")]
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateUser([FromBody] User user)
         {
             if (!ModelState.IsValid)
@@ -67,6 +67,7 @@ namespace GateKeeper.Server.Controllers
             try
             {
                 await _userService.UpdateUser(user);
+                await _userService.UpdateUserRoles(user.Id, user.Roles);
                 return Ok(new { message = "User updated successfully." });
             }
             catch (Exception ex)

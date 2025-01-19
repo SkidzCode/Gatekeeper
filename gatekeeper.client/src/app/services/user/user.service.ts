@@ -61,6 +61,7 @@ export class UserService {
       email: user.email,
       username: user.username,
       phone: user.phone,
+      roles: user.roles
     };
 
     return this.http.post<{ message: string }>(`${this.baseUrl}/Update`, payload).pipe(
