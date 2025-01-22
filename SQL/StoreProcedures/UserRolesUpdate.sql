@@ -3,41 +3,50 @@ DELIMITER $$
 
 CREATE PROCEDURE UserRolesUpdate(
     IN pUserId INT,
-    IN pRoleIds VARCHAR(1000)
+    IN pRoleNames VARCHAR(1000)  -- comma-separated role names, e.g. 'Admin,SuperUser,PowerUser'
 )
 BEGIN
-    -- 1) Remove roles that are not in the new list.
-    DELETE FROM UserRoles
-    WHERE UserId = pUserId
-      AND (FIND_IN_SET(RoleId, pRoleIds) = 0 OR pRoleIds = '');
+    DECLARE currentRoleName VARCHAR(50);
+    DECLARE commaPos INT;
+    DECLARE roleId INT;
 
-    -- 2) Loop through the pRoleIds string and insert if missing.
-    WHILE (LENGTH(pRoleIds) > 0) DO
+    -- 1) Remove roles that are not in the new list
+    DELETE ur
+    FROM UserRoles ur
+    JOIN Roles r ON ur.RoleId = r.Id
+    WHERE ur.UserId = pUserId
+      AND (FIND_IN_SET(r.RoleName, pRoleNames) = 0 OR pRoleNames = '');
 
-        INSERT IGNORE INTO UserRoles (UserId, RoleId)
-        VALUES (
-            pUserId, 
-            CAST(SUBSTRING_INDEX(pRoleIds, ',', 1) AS UNSIGNED)
-        );
+    -- 2) Loop over the role names string
+    WHILE LENGTH(pRoleNames) > 0 DO
 
-        -- Remove the first RoleId from the comma-separated list.
-        SET pRoleIds = SUBSTRING(
-            pRoleIds, 
-            INSTR(pRoleIds, ',') + 1
-        );
-
-        -- If there is no comma left, process the last value and exit loop.
-        IF (INSTR(pRoleIds, ',') = 0) THEN
-            IF (LENGTH(pRoleIds) > 0) THEN
-                INSERT IGNORE INTO UserRoles (UserId, RoleId)
-                VALUES (
-                    pUserId, 
-                    CAST(pRoleIds AS UNSIGNED)
-                );
-            END IF;
-
-            SET pRoleIds = '';
+        -- Grab the next role name
+        SET commaPos = INSTR(pRoleNames, ',');
+        IF commaPos > 0 THEN
+            SET currentRoleName = SUBSTRING(pRoleNames, 1, commaPos - 1);
+            SET pRoleNames = SUBSTRING(pRoleNames, commaPos + 1);
+        ELSE
+            SET currentRoleName = pRoleNames;
+            SET pRoleNames = '';
         END IF;
+
+        -- Trim spaces just in case
+        SET currentRoleName = TRIM(currentRoleName);
+
+        IF LENGTH(currentRoleName) > 0 THEN
+            -- Look up the role's ID
+            SELECT Id INTO roleId
+            FROM Roles
+            WHERE RoleName = currentRoleName
+            LIMIT 1;
+
+            -- If the role exists, insert (ignore duplicates)
+            IF roleId IS NOT NULL THEN
+                INSERT IGNORE INTO UserRoles (UserId, RoleId)
+                VALUES (pUserId, roleId);
+            END IF;
+        END IF;
+
     END WHILE;
 END$$
 

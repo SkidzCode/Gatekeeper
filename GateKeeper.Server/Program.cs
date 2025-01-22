@@ -79,6 +79,7 @@ builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService
 builder.Services.AddScoped<INotificationTemplateService, NotificationTemplateService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IInviteService, InviteService>();
+builder.Services.AddScoped<ISessionService, SessionService>();
 
 #endregion
 

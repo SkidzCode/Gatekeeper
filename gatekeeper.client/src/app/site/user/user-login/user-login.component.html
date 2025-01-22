@@ -9,7 +9,7 @@
         <!-- User Identifier Field -->
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>User Identifier</mat-label>
-          <input matInput formControlName="identifier" type="text" required />
+          <input matInput formControlName="identifier" type="text" required autocomplete="username" />
           <mat-icon matSuffix>person</mat-icon>
           <mat-error *ngIf="loginForm.get('identifier')?.hasError('required')">
             User Identifier is required.
@@ -19,7 +19,7 @@
         <!-- Password Field -->
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Password</mat-label>
-          <input matInput formControlName="password" type="password" required />
+          <input matInput formControlName="password" type="password" required autocomplete="current-password" />
           <mat-icon matSuffix>lock</mat-icon>
           <mat-error *ngIf="loginForm.get('password')?.hasError('required')">
             Password is required.
@@ -41,3 +41,4 @@
     </mat-card-content>
   </mat-card>
 </div>
+

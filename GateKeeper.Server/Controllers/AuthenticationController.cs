@@ -166,7 +166,8 @@ namespace GateKeeper.Server.Controllers
                     response.AccessToken,
                     response.RefreshToken,
                     response.User,
-                    response.Settings
+                    response.Settings,
+                    response.SessionId
                 });
             }
             catch (Exception ex)
@@ -218,7 +219,8 @@ namespace GateKeeper.Server.Controllers
                     accessToken = response.AccessToken,
                     refreshToken = response.RefreshToken,
                     user = response.User,
-                    settings = response.Settings
+                    settings = response.Settings,
+                    response.SessionId
                 });
             }
             catch (Exception ex)

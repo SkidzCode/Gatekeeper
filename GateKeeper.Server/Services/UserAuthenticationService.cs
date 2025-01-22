@@ -45,6 +45,7 @@ namespace GateKeeper.Server.Services
         private readonly IKeyManagementService _keyManagementService;
         private readonly INotificationTemplateService _notificationTemplateService;
         private readonly INotificationService _notificationService;
+        private readonly ISessionService _sessionService;
         private readonly bool _requiresInvite;
 
         private const string cookieName = "LoginAttempts";
@@ -75,7 +76,8 @@ namespace GateKeeper.Server.Services
             IDataProtectionProvider protector, 
             IHttpContextAccessor httpContextAccessor, 
             INotificationService notification,
-            INotificationTemplateService notificationTemplateService)
+            INotificationTemplateService notificationTemplateService,
+            ISessionService sessionService)
         {
             _configuration = configuration;
             _dbHelper = dbHelper;
@@ -89,6 +91,7 @@ namespace GateKeeper.Server.Services
             _requiresInvite = _configuration.GetValue<bool>("RegisterSettings:RequireInvite");
             _notificationService = notification;
             _notificationTemplateService = notificationTemplateService;
+            _sessionService = sessionService;
         }
 
         /// <inheritdoc />
@@ -208,10 +211,26 @@ namespace GateKeeper.Server.Services
             // Generate tokens
             response.AccessToken = await GenerateJwtToken(response.User);
             response.RefreshToken = await _verificationService.GenerateTokenAsync(response.User.Id, "Refresh");
-            response.SessionId = response.RefreshToken.Split('.')[0];
+            response.VerificationId = response.RefreshToken.Split('.')[0];
             response.IsSuccessful = true;
             response.Settings = userSettings;
             await DeleteCookie();
+
+            var currentSession = new SessionModel()
+            {
+                Id = Guid.NewGuid().ToString(),
+                UserId = response.User.Id,
+                VerificationId = response.VerificationId,
+                ExpiryDate = DateTime.UtcNow.AddDays(15),
+                Complete = false,
+                Revoked = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _sessionService.InsertSession(currentSession);
+            response.SessionId = currentSession.Id;
+            
             return response;
         }
 
@@ -220,7 +239,11 @@ namespace GateKeeper.Server.Services
         {
             try
             {
+                if (token == null || !token.Contains('.'))
+                    throw new Exception("Invalid token format.");
+                await _sessionService.LogoutSession(token.Split('.')[0]);
                 return await _verificationService.RevokeTokensAsync(userId, "Refresh", token);
+
             }
             catch (Exception ex)
             {
@@ -296,10 +319,12 @@ namespace GateKeeper.Server.Services
             // Generate new tokens
             response.AccessToken = await GenerateJwtToken(response.User);
             response.RefreshToken = await _verificationService.GenerateTokenAsync(response.User.Id, "Refresh");
-            response.SessionId = response.RefreshToken.Split('.')[0];
+            response.VerificationId = response.RefreshToken.Split('.')[0];
             response.IsSuccessful = true;
             response.Settings = userSettings;
             await DeleteCookie();
+
+            response.SessionId = await _sessionService.RefreshSession(response.User.Id, refreshToken.Split('.')[0], response.VerificationId);
             return response;
         }
 

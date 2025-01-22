@@ -17,6 +17,7 @@ interface AuthResponse {
   refreshToken: string;
   user: User;
   settings: Setting[];
+  sessionId: string;
 }
 
 interface RefreshRequest {
@@ -108,7 +109,7 @@ export class AuthService {
     const body: LoginRequest = { identifier, password };
     return this.http.post<AuthResponse>(`${this.baseUrl}/login`, body).pipe(
       tap((res: AuthResponse) => {
-        this.setTokens(res.accessToken, res.refreshToken);
+        this.setTokens(res.accessToken, res.refreshToken, res.sessionId);
         this.setUser(res.user);
         this.setSettings(res.settings);
       }),
@@ -125,7 +126,7 @@ export class AuthService {
     const body: RefreshRequest = { refreshToken };
     return this.http.post<AuthResponse>(`${this.baseUrl}/refresh-token`, body).pipe(
       tap((res: AuthResponse) => {
-        this.setTokens(res.accessToken, res.refreshToken);
+        this.setTokens(res.accessToken, res.refreshToken, res.sessionId);
         this.setUser(res.user);
         this.setSettings(res.settings);
       }),
@@ -147,14 +148,21 @@ export class AuthService {
     return localStorage.getItem('refreshToken');
   }
 
-  private setTokens(accessToken: string, refreshToken: string): void {
+  getSessionId(): string | null {
+    return localStorage.getItem('sessionId');
+  }
+
+  private setTokens(accessToken: string, refreshToken: string, sessionId: string): void {
+    console.log('Setting tokens:', accessToken, refreshToken, sessionId); // Add logging
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
+    localStorage.setItem('sessionId', sessionId);
     this.currentAccessTokenSubject.next(accessToken);
   }
 
   private clearTokens(): void {
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('refreshToken');
     this.currentAccessTokenSubject.next(null);
   }
