@@ -19,10 +19,12 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tables", "Tables", "{BBF4AEB7-44AB-4127-8185-7A68EDF5C4BB}"
 	ProjectSection(SolutionItems) = preProject
 		SQL\Tables\Assets.sql = SQL\Tables\Assets.sql
+		SQL\Tables\Invites.sql = SQL\Tables\Invites.sql
 		SQL\Tables\KeySecrets.sql = SQL\Tables\KeySecrets.sql
 		SQL\Tables\notifications.sql = SQL\Tables\notifications.sql
 		SQL\Tables\notification_templates.sql = SQL\Tables\notification_templates.sql
 		SQL\Tables\Roles.sql = SQL\Tables\Roles.sql
+		SQL\Tables\Session.sql = SQL\Tables\Session.sql
 		SQL\Tables\Settings.sql = SQL\Tables\Settings.sql
 		SQL\Tables\User.sql = SQL\Tables\User.sql
 		SQL\Tables\UserRoles.sql = SQL\Tables\UserRoles.sql

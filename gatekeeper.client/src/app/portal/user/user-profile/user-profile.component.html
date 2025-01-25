@@ -1,13 +1,20 @@
 <mat-card class="user-profile-card" *ngIf="user; else noUser">
   <div class="profile-header">
     <div class="profile-avatar" aria-label="User Profile Picture">
-      <img *ngIf="profileImageUrl; else defaultAvatar" [src]="profileImageUrl" alt="Profile Picture" class="profile-picture" />
+      <img *ngIf="profileImageUrl; else defaultAvatar"
+           [src]="profileImageUrl"
+           alt="Profile Picture"
+           class="profile-picture" />
       <ng-template #defaultAvatar>
         <mat-icon>person</mat-icon>
       </ng-template>
     </div>
-    <mat-card-title class="profile-name">{{ user.firstName }} {{ user.lastName }}</mat-card-title>
-    <mat-card-subtitle class="profile-email">{{ user.email }}</mat-card-subtitle>
+    <mat-card-title class="profile-name">
+      {{ user.firstName }} {{ user.lastName }}
+    </mat-card-title>
+    <mat-card-subtitle class="profile-email">
+      {{ user.email }}
+    </mat-card-subtitle>
   </div>
 
   <mat-divider></mat-divider>
@@ -15,18 +22,15 @@
   <mat-card-content>
     <form [formGroup]="profileForm" class="profile-form">
       <!-- Profile Picture Field -->
-      <div style="padding-top:20px;">
-        <label>Profile Picture</label><br>
-        <input type="file" accept="image/*" (change)="onFileSelected($event)">
+      <div class="single-row">
+        <label>Profile Picture</label><br />
+        <input type="file" accept="image/*" (change)="onFileSelected($event)" />
       </div>
 
-
-
-      <!-- Existing form fields -->
       <!-- First Name Field -->
-      <mat-form-field appearance="outline" class="full-width" style="padding-top:20px;">
+      <mat-form-field appearance="outline" class="form-field">
         <mat-label>First Name</mat-label>
-        <input matInput formControlName="firstName" placeholder="Enter your first name">
+        <input matInput formControlName="firstName" placeholder="Enter your first name" />
         <mat-icon matSuffix color="accent">person</mat-icon>
         <mat-error *ngIf="profileForm.get('firstName')?.hasError('required')">
           First name is required
@@ -34,9 +38,9 @@
       </mat-form-field>
 
       <!-- Last Name Field -->
-      <mat-form-field appearance="outline" class="full-width" style="padding-top:20px;">
+      <mat-form-field appearance="outline" class="form-field">
         <mat-label>Last Name</mat-label>
-        <input matInput formControlName="lastName" placeholder="Enter your last name">
+        <input matInput formControlName="lastName" placeholder="Enter your last name" />
         <mat-icon matSuffix color="accent">person</mat-icon>
         <mat-error *ngIf="profileForm.get('lastName')?.hasError('required')">
           Last name is required
@@ -44,9 +48,9 @@
       </mat-form-field>
 
       <!-- Username Field -->
-      <mat-form-field appearance="outline" class="full-width" style="padding-top:20px;">
+      <mat-form-field appearance="outline" class="form-field">
         <mat-label>Username</mat-label>
-        <input matInput formControlName="username" placeholder="Enter your username">
+        <input matInput formControlName="username" placeholder="Enter your username" />
         <mat-icon matSuffix color="accent">account_circle</mat-icon>
         <mat-error *ngIf="profileForm.get('username')?.hasError('required')">
           Username is required
@@ -54,22 +58,22 @@
       </mat-form-field>
 
       <!-- Email Field -->
-      <mat-form-field appearance="outline" class="full-width" style="padding-top:20px;">
+      <mat-form-field appearance="outline" class="form-field">
         <mat-label>Email</mat-label>
-        <input matInput formControlName="email" placeholder="Enter your email">
+        <input matInput formControlName="email" placeholder="Enter your email" />
         <mat-icon matSuffix color="accent">email</mat-icon>
         <mat-error *ngIf="profileForm.get('email')?.hasError('required')">
           Email is required
         </mat-error>
         <mat-error *ngIf="profileForm.get('email')?.hasError('email')">
-          Please enter a valid email address
+          Please enter a valid email
         </mat-error>
       </mat-form-field>
 
       <!-- Phone Field -->
-      <mat-form-field appearance="outline" class="full-width" style="padding-top:20px;">
+      <mat-form-field appearance="outline" class="form-field">
         <mat-label>Phone</mat-label>
-        <input matInput formControlName="phone" placeholder="Enter your phone number">
+        <input matInput formControlName="phone" placeholder="Enter your phone number" />
         <mat-icon matSuffix color="accent">phone</mat-icon>
         <mat-error *ngIf="profileForm.get('phone')?.hasError('required')">
           Phone number is required
@@ -78,15 +82,10 @@
           Please enter a valid phone number
         </mat-error>
       </mat-form-field>
-
-
-
-      <!-- Add other form fields as necessary -->
     </form>
   </mat-card-content>
 
   <mat-card-actions align="end">
-    
     <button mat-raised-button color="primary" (click)="saveUser()" [disabled]="profileForm.invalid">
       Save
     </button>

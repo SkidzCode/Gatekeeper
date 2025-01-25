@@ -20,13 +20,15 @@ import { UserSettingsComponent } from './user/user-settings/user-settings.compon
 import { PortalRoutingModule } from './portal-routing.module';
 import { HomeComponent } from './home/home/home.component';
 import { InviteComponent } from './user/invite/invite.component';
+import { SessionsComponent } from './user/sessions/sessions.component';
 
 @NgModule({
   declarations: [
     UserProfileComponent,
     UserSettingsComponent,
     HomeComponent,
-    InviteComponent
+    InviteComponent,
+    SessionsComponent
   ],
   imports: [
     CommonModule,
@@ -44,7 +46,7 @@ import { InviteComponent } from './user/invite/invite.component';
     MatIconModule,
     MatProgressSpinnerModule,
     MatRadioModule,
-    MatSnackBarModule, 
+    MatSnackBarModule,
     MatTabsModule
   ],
 })

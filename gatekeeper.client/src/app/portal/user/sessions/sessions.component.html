@@ -1,0 +1,30 @@
+<mat-card class="sessions-card" *ngIf="sessions.length > 0; else noSessions">
+  <mat-card-title>Active Sessions</mat-card-title>
+  <mat-divider></mat-divider>
+  <mat-card-content>
+    <div class="sessions-container">
+      <div class="session-item" *ngFor="let session of sessions">
+        <mat-icon class="session-icon">devices</mat-icon>
+        <div class="session-details">
+          <h4>Session ID: {{ session.id }}</h4>
+          <p>Expiry Date: {{ session.expiryDate | date:'short' }}</p>
+          <p>Created At: {{ session.createdAt | date:'short' }}</p>
+          <p>Updated At: {{ session.updatedAt | date:'short' }}</p>
+          <p>Complete: {{ session.complete ? 'Yes' : 'No' }}</p>
+          <p>Revoked: {{ session.revoked ? 'Yes' : 'No' }}</p>
+        </div>
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>
+
+<ng-template #noSessions>
+  <mat-card class="sessions-card no-sessions">
+    <mat-card-content>
+      <div class="no-sessions-content">
+        <mat-icon class="no-sessions-icon">devices_off</mat-icon>
+        <p>No active sessions found.</p>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</ng-template>

@@ -43,7 +43,7 @@ namespace GateKeeper.Server.Services
         public async Task<string> RefreshSession(int userId, string oldVerificationId, string newVerificationId)
         {
             await using var connection = await _dbHelper.GetWrapperAsync();
-            var outputParam = new MySqlParameter("@pSessionId", MySqlDbType.Int32) { Direction = ParameterDirection.Output };
+            var outputParam = new MySqlParameter("@pSessionId", MySqlDbType.VarChar, 36) { Direction = ParameterDirection.Output };
 
             await connection.ExecuteNonQueryAsync(
                 "SessionRefresh",
