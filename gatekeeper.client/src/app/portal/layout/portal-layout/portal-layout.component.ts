@@ -50,8 +50,11 @@ export class PortalLayoutComponent implements AfterViewInit {
 
   logout(): void {
     this.authService.logout();
-    this.isLoggedIn = false;
-    this.username = null;
+    
+    setTimeout(() => {
+      this.isLoggedIn = false;
+      this.username = null;
+    }, 500);
     setTimeout(() => {
       this.router.navigate(['/']);
     }, 1000);

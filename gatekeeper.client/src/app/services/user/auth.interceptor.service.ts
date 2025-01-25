@@ -46,7 +46,6 @@ export class AuthInterceptor implements HttpInterceptor {
 
     const excludedEndpoints = [
       `${apiBaseUrl}/api/Authentication/login`,
-      `${apiBaseUrl}/api/Authentication/logout`,
       `${apiBaseUrl}/api/Authentication/refresh-token`,
       `${apiBaseUrl}/api/Authentication/register`,
       `${apiBaseUrl}/api/Authentication/verify-user`,
