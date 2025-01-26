@@ -7,22 +7,27 @@ using System.Data;
 using GateKeeper.Server.Extension;
 using MySqlConnector;
 using GateKeeper.Server.Models.Account;
+using Microsoft.Extensions.Configuration;
+using GateKeeper.Server.Models.Account.UserModels;
+using GateKeeper.Server.Inherites;
 
 namespace GateKeeper.Server.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class InviteController : ControllerBase
+    public class InviteController : MyControllerBase
     {
         private readonly IInviteService _inviteService;
         private readonly ILogger<InviteController> _logger;
+        private readonly bool _requiresInvite;
 
         public InviteController(
             IInviteService inviteService,
-            ILogger<InviteController> logger)
+            ILogger<InviteController> logger, IConfiguration configuration)
         {
             _inviteService = inviteService;
             _logger = logger;
+            _requiresInvite = configuration.GetValue<bool>("RegisterSettings:RequireInvite");
         }
 
         /// <summary>
@@ -59,14 +64,16 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = "An error occurred while sending the invite.";
                 _logger.LogError(ex,
-                    "Error sending invite: FromId: {FromId}, IP: {IpAddress}, Device: {UserAgent}",
+                    "{FunctionName}('{FromId}', '{ToName}', '{ToEmail}', '{IpAddress}') Error: {ErrorMessage}",
+                    FunctionName(),
                     invite.FromId,
+                    invite.ToName.SanitizeForLogging(),
+                    invite.ToEmail.SanitizeForLogging(),
                     userIp,
-                    userAgent
+                    ex.Message
                 );
-                return StatusCode(500, new { error = errorMessage });
+                return StatusCode(500, new { error = "An error occurred while sending the invite." });
             }
             finally
             {
@@ -102,21 +109,48 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = "An error occurred while retrieving invites.";
                 _logger.LogError(ex,
-                    "Error retrieving invites: FromId: {FromId}, IP: {IpAddress}",
+                    "{FunctionName}('{FromId}', '{IpAddress}') Error: {ErrorMessage}",
+                    FunctionName(),
                     fromId,
-                    userIp
+                    userIp,
+                    ex.Message
                 );
-                return StatusCode(500, new { error = errorMessage });
+                return StatusCode(500, new { error = "An error occurred while retrieving invites." });
             }
             finally
             {
                 _logger.LogInformation(
-                    "Invite retrieval attempted: FromId: {FromId}, IP: {IpAddress}",
-                    fromId,
-                    userIp
+                    "{FunctionName} attempted: FromId: {FromId}, IP: {IpAddress}", 
+                    FunctionName(), fromId, userIp
                 );
+            }
+        }
+
+        /// <summary>
+        /// Checks if the registration requires an invitation.
+        /// </summary>
+        /// <returns>Action result indicating if the registration requires an invitation.</returns>
+        [HttpGet("is-invite-only")]
+        [AllowAnonymous]
+        public IActionResult IsInviteOnly()
+        {
+            try
+            {
+                return Ok(new { _requiresInvite });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "{FunctionName} Error: {ErrorMessage}",
+                    FunctionName(),
+                    ex.Message
+                );
+                return StatusCode(500, new { error = "Error retrieving invites required." });
+            }
+            finally
+            {
+                _logger.LogInformation("{FunctionName} attempted", FunctionName());
             }
         }
 

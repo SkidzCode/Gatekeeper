@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors, AsyncValidatorFn } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/user/auth.service';
+import { InviteService } from '../../../core/services/user/invite.service';
 import { Observable, of, Subscription } from 'rxjs';
 import { map, catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 
@@ -37,6 +38,7 @@ export class UserRegisterComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
+    private inviteService: InviteService,
     private router: Router,
     private route: ActivatedRoute
   ) {
@@ -47,7 +49,7 @@ export class UserRegisterComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // Check if invite is required
-    this.authService.checkInviteRequired().subscribe({
+    this.inviteService.checkInviteRequired().subscribe({
       next: (inviteRequired) => {
         this.inviteOnly = inviteRequired && !this.token;
       },

@@ -7,6 +7,7 @@ using GateKeeper.Server.Models.Account;
 using GateKeeper.Server.Models.Account.Login;
 using GateKeeper.Server.Models.Account.UserModels;
 using System.Runtime.CompilerServices;
+using GateKeeper.Server.Inherites;
 
 namespace GateKeeper.Server.Controllers
 {
@@ -15,7 +16,7 @@ namespace GateKeeper.Server.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    public class AuthenticationController : ControllerBase
+    public class AuthenticationController : MyControllerBase
     {
         private readonly IUserAuthenticationService _authService;
         private readonly ILogger<AuthenticationController> _logger;
@@ -90,7 +91,12 @@ namespace GateKeeper.Server.Controllers
             {
                 response.FailureReason = $"{InternalError}: {ex.Message}";
                 response.IsSuccessful = false;
-                return HandleInternalError(CurrentFunctionName(), ex);
+                _logger.LogError(ex, "{FunctionName}('{Email}','{UserName}') - Error: {ErrorMessage}",
+                    FunctionName(),
+                    registerRequest.Email.SanitizeForLogging(),
+                    registerRequest.Username.SanitizeForLogging(),
+                    ex.Message);
+                return StatusCode(500, new { error = InternalError });
             }
             finally
             {
@@ -131,7 +137,9 @@ namespace GateKeeper.Server.Controllers
                 response.FailureReason = $"{InternalError}: {ex.Message}";
                 if (response.User != null)
                     await response.User.ClearPHIAsync();
-                return HandleInternalError(CurrentFunctionName(), ex);
+                _logger.LogError(ex, "{FunctionName}() - Error: {ErrorMessage}",
+                    FunctionName(), ex.Message);
+                return StatusCode(500, new { error = InternalError });
             }
             finally
             {
@@ -191,7 +199,9 @@ namespace GateKeeper.Server.Controllers
             {
                 response.IsSuccessful = false;
                 response.FailureReason = $"{InternalError}: {ex.Message}";
-                return HandleInternalError(CurrentFunctionName(), ex);
+                _logger.LogError(ex, "{FunctionName}('{Identifier}') - Error: {ErrorMessage}",
+                    FunctionName(), loginRequest.Identifier.SanitizeForLogging(), ex.Message);
+                return StatusCode(500, new { error = InternalError });
             }
             finally
             {
@@ -240,7 +250,9 @@ namespace GateKeeper.Server.Controllers
             {
                 response.IsSuccessful = false;
                 response.FailureReason = $"{InternalError}: {ex.Message}";
-                return HandleInternalError(CurrentFunctionName(), ex);
+                _logger.LogError(ex, "{FunctionName}() - Error: {ErrorMessage}",
+                    FunctionName(), ex.Message);
+                return StatusCode(500, new { error = InternalError });
             }
             finally
             {
@@ -280,7 +292,9 @@ namespace GateKeeper.Server.Controllers
             {
                 revokedCount = 0;
                 failureReason = $"{InternalError}: {ex.Message}";
-                return HandleInternalError(CurrentFunctionName(), ex);
+                _logger.LogError(ex, "{FunctionName}('{UserId}') - Error: {ErrorMessage}",
+                    FunctionName(), userId, ex.Message);
+                return StatusCode(500, new { error = InternalError });
             }
             finally
             {
@@ -333,7 +347,9 @@ namespace GateKeeper.Server.Controllers
             catch (Exception ex)
             {
                 failureReason = $"{InternalError}: {ex.Message}";
-                return HandleInternalError(CurrentFunctionName(), ex);
+                _logger.LogError(ex, "{FunctionName}('{UserId}') - Error: {ErrorMessage}",
+                    FunctionName(), userId, ex.Message);
+                return StatusCode(500, new { error = InternalError });
             }
             finally
             {
@@ -371,7 +387,11 @@ namespace GateKeeper.Server.Controllers
                 response.FailureReason = $"{InternalError}: {ex.Message}";
                 response.IsVerified = false;
                 response.User?.ClearPHIAsync();
-                return HandleInternalError(CurrentFunctionName(), ex);
+
+                _logger.LogError(ex, "{FunctionName}() - Error: {ErrorMessage}",
+                    FunctionName(), ex.Message);
+                return StatusCode(500, new { error = InternalError });
+
             }
             finally
             {
@@ -403,7 +423,9 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                return HandleInternalError(CurrentFunctionName(), ex);
+                _logger.LogError(ex, "{FunctionName}() - Error: {ErrorMessage}",
+                    FunctionName(), ex.Message);
+                return StatusCode(500, new { error = InternalError });
             }
         }
 
@@ -424,7 +446,9 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                return HandleInternalError(CurrentFunctionName(), ex);
+                _logger.LogError(ex, "{FunctionName}() - Error: {ErrorMessage}",
+                    FunctionName(), ex.Message);
+                return StatusCode(500, new { error = InternalError });
             }
         }
 
@@ -445,7 +469,9 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                return HandleInternalError(CurrentFunctionName(), ex);
+                _logger.LogError(ex, "{FunctionName}() - Error: {ErrorMessage}",
+                    FunctionName(), ex.Message);
+                return StatusCode(500, new { error = InternalError });
             }
         }
 
@@ -474,27 +500,13 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                return HandleInternalError(CurrentFunctionName(), ex);
+                _logger.LogError(ex, "{FunctionName}('{SessionId}') - Error: {ErrorMessage}", 
+                    FunctionName(), logoutDeviceRequest.SessionId.SanitizeForLogging(), ex.Message);
+                return StatusCode(500, new { error = InternalError });
             }
         }
 
-        /// <summary>
-        /// Checks if the registration requires an invitation.
-        /// </summary>
-        /// <returns>Action result indicating if the registration requires an invitation.</returns>
-        [HttpGet("is-invite-only")]
-        [AllowAnonymous]
-        public IActionResult IsInviteOnly()
-        {
-            try
-            {
-                return Ok(new { _requiresInvite });
-            }
-            catch (Exception ex)
-            {
-                return HandleInternalError(CurrentFunctionName(), ex);
-            }
-        }
+        
 
         #region Private Functions
 
@@ -502,18 +514,6 @@ namespace GateKeeper.Server.Controllers
         {
             return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
         }
-
-        private IActionResult HandleInternalError(string functionName, Exception ex)
-        {
-            _logger.LogError(ex, "There was an error with function: {Function} of {ErrorMessage}", functionName, ex.Message);
-            return StatusCode(500, new { error = InternalError });
-        }
-
-        private static string CurrentFunctionName([CallerMemberName] string functionName = "")
-        {
-            return functionName;
-        }
-
         #endregion
     }
 }

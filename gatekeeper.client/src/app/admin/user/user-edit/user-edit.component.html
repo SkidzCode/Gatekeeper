@@ -1,99 +1,113 @@
-
-  <mat-card class="user-profile-card">
-    <div class="profile-header">
-      <div class="profile-avatar" aria-label="User Profile Picture">
-        <img *ngIf="profileImageUrl; else defaultAvatar" [src]="profileImageUrl" alt="Profile Picture" class="profile-picture" />
-        <ng-template #defaultAvatar>
-          <mat-icon>person</mat-icon>
-        </ng-template>
-      </div>
-      <mat-card-title style="margin-left:16px;">Admin user list</mat-card-title>
-      <mat-card-subtitle style="margin-left: 16px;">Edit User</mat-card-subtitle>
+<mat-card class="user-profile-card">
+  <div class="profile-header">
+    <div class="profile-avatar" aria-label="User Profile Picture">
+      <img *ngIf="profileImageUrl; else defaultAvatar"
+           [src]="profileImageUrl"
+           alt="Profile Picture"
+           class="profile-picture" />
+      <ng-template #defaultAvatar>
+        <mat-icon>person</mat-icon>
+      </ng-template>
     </div>
+    <mat-card-title style="margin-left: 16px;">Admin user list</mat-card-title>
+    <mat-card-subtitle style="margin-left: 16px;">Edit User</mat-card-subtitle>
+  </div>
 
-    <mat-divider></mat-divider>
+  <mat-divider></mat-divider>
 
-    <mat-card-content>
-      <form (ngSubmit)="saveUser()" class="user-form">
-
-
-        <!-- NAME FIELDS -->
-        <div class="form-row">
-          <mat-form-field class="form-field" appearance="fill">
-            <mat-label>First Name</mat-label>
-            <input matInput
-                   name="firstName"
-                   [(ngModel)]="user.firstName"
-                   required />
-          </mat-form-field>
-
-          <mat-form-field class="form-field" appearance="fill">
-            <mat-label>Last Name</mat-label>
-            <input matInput
-                   name="lastName"
-                   [(ngModel)]="user.lastName"
-                   required />
-          </mat-form-field>
-        </div>
-
-        <!-- USERNAME -->
+  <mat-card-content>
+    <form (ngSubmit)="saveUser()" class="user-form">
+      <!-- Existing form fields -->
+      <!-- NAME FIELDS -->
+      <div class="form-row">
         <mat-form-field class="form-field" appearance="fill">
-          <mat-label>Username</mat-label>
-          <input matInput
-                 name="username"
-                 [(ngModel)]="user.username"
-                 required />
+          <mat-label>First Name</mat-label>
+          <input matInput name="firstName" [(ngModel)]="user.firstName" required />
         </mat-form-field>
 
-        <!-- EMAIL -->
         <mat-form-field class="form-field" appearance="fill">
-          <mat-label>Email</mat-label>
-          <input matInput
-                 name="email"
-                 [(ngModel)]="user.email"
-                 required />
+          <mat-label>Last Name</mat-label>
+          <input matInput name="lastName" [(ngModel)]="user.lastName" required />
         </mat-form-field>
+      </div>
 
-        <!-- PHONE -->
-        <mat-form-field class="form-field" appearance="fill">
-          <mat-label>Phone</mat-label>
-          <input matInput
-                 name="phone"
-                 [(ngModel)]="user.phone" />
-        </mat-form-field>
+      <!-- USERNAME -->
+      <mat-form-field class="form-field" appearance="fill">
+        <mat-label>Username</mat-label>
+        <input matInput name="username" [(ngModel)]="user.username" required />
+      </mat-form-field>
 
-        <!-- ROLES -->
-        <mat-form-field class="form-field" appearance="fill">
-          <mat-label>Roles</mat-label>
-          <mat-select multiple
-                      [(ngModel)]="user.roles"
-                      name="roles">
-            <mat-option *ngFor="let role of userRoles"
-                        [value]="role.roleName">
-              {{ role.roleName }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
+      <!-- EMAIL -->
+      <mat-form-field class="form-field" appearance="fill">
+        <mat-label>Email</mat-label>
+        <input matInput name="email" [(ngModel)]="user.email" required />
+      </mat-form-field>
 
-        <!-- IS ACTIVE CHECKBOX -->
-        <div class="form-row">
-          <mat-checkbox [(ngModel)]="user.isActive"
-                        name="isActive">
-            Active
-          </mat-checkbox>
-        </div>
+      <!-- PHONE -->
+      <mat-form-field class="form-field" appearance="fill">
+        <mat-label>Phone</mat-label>
+        <input matInput name="phone" [(ngModel)]="user.phone" />
+      </mat-form-field>
 
-        <!-- ACTION BUTTONS -->
-        <div class="form-buttons">
+      <!-- ROLES -->
+      <mat-form-field class="form-field" appearance="fill">
+        <mat-label>Roles</mat-label>
+        <mat-select multiple [(ngModel)]="user.roles" name="roles">
+          <mat-option *ngFor="let role of userRoles" [value]="role.roleName">
+            {{ role.roleName }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
 
-        </div>
+      <!-- IS ACTIVE CHECKBOX -->
+      <div class="form-row">
+        <mat-checkbox [(ngModel)]="user.isActive" name="isActive"> Active </mat-checkbox>
+      </div>
+
+      <!-- ACTION BUTTONS -->
+      <div class="form-buttons">
         <button mat-raised-button color="primary" type="submit">
           Save
         </button>
         <button mat-raised-button color="accent" type="button" (click)="cancel()">
           Cancel
         </button>
-      </form>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>
+
+<!-- Sessions List -->
+<mat-card class="sessions-card" *ngIf="sessions.length > 0; else noSessions">
+  <mat-card-title>Active Sessions for User</mat-card-title>
+  <mat-divider></mat-divider>
+  <mat-card-content>
+    <div class="sessions-container">
+      <div class="session-item" *ngFor="let session of sessions">
+        <mat-icon class="session-icon">devices</mat-icon>
+        <div class="session-details">
+          <h4>Session ID: {{ session.id }}</h4>
+          <p>Expiry Date: {{ session.expiryDate | date: 'short' }}</p>
+          <p>Created At: {{ session.createdAt | date: 'short' }}</p>
+          <p>Updated At: {{ session.updatedAt | date: 'short' }}</p>
+          <p>Complete: {{ session.complete ? 'Yes' : 'No' }}</p>
+          <p>Revoked: {{ session.revoked ? 'Yes' : 'No' }}</p>
+          <button mat-button color="warn" (click)="logoutFromSession(session.id)">
+            Logout
+          </button>
+        </div>
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>
+
+<ng-template #noSessions>
+  <mat-card class="sessions-card no-sessions">
+    <mat-card-content>
+      <div class="no-sessions-content">
+        <mat-icon class="no-sessions-icon">devices_off</mat-icon>
+        <p>No active sessions found for this user.</p>
+      </div>
     </mat-card-content>
   </mat-card>
-
+</ng-template>

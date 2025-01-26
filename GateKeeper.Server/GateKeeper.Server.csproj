@@ -42,7 +42,6 @@
 
   <ItemGroup>
     <Folder Include="Logs\" />
-    <Folder Include="Extension\" />
     <Folder Include="wwwroot\" />
   </ItemGroup>
 

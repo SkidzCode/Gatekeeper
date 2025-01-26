@@ -8,7 +8,7 @@ import { SessionModel } from '../../../shared/models/session.model';
   providedIn: 'root'
 })
 export class SessionService {
-  private baseUrl = '/api/Services';
+  private baseUrl = '/api/Session';
 
   constructor(private http: HttpClient) { }
 
@@ -23,6 +23,16 @@ export class SessionService {
   }
 
   /**
+ * Retrieves a list of all active sessions for the authenticated user.
+ * @returns An observable that emits the list of active sessions.
+ */
+  getActiveSessionsUser(userId: number): Observable<SessionModel[]> {
+    return this.http.get<SessionModel[]>(`${this.baseUrl}/sessions/activeUser/${userId}`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
    * Retrieves the most recent activity sessions.
    * @returns An observable that emits the list of recent activity sessions.
    */
@@ -31,6 +41,18 @@ export class SessionService {
       catchError(this.handleError)
     );
   }
+
+  /**
+ * Revokes a session by its ID (admin action).
+ * @param sessionId The ID of the session to revoke.
+ * @returns An observable that emits the server response.
+ */
+  revokeSession(sessionId: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/sessions/revoke/${sessionId}`, {}).pipe(
+      catchError(this.handleError)
+    );
+  }
+
 
   /**
    * Handles HTTP errors from server responses.

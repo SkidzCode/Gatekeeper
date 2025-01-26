@@ -12,17 +12,17 @@ namespace GateKeeper.Server.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    public class ServicesController : ControllerBase
+    public class SessionController : ControllerBase
     {
         private readonly ISessionService _sessionService;
-        private readonly ILogger<ServicesController> _logger;
+        private readonly ILogger<SessionController> _logger;
 
         /// <summary>
         /// Constructor for the ServicesController.
         /// </summary>
         /// <param name="sessionService">Session service dependency.</param>
         /// <param name="logger">Logger dependency.</param>
-        public ServicesController(ISessionService sessionService, ILogger<ServicesController> logger)
+        public SessionController(ISessionService sessionService, ILogger<SessionController> logger)
         {
             _sessionService = sessionService;
             _logger = logger;
@@ -39,6 +39,32 @@ namespace GateKeeper.Server.Controllers
             int userId = GetUserIdFromClaims();
             string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
 
+            try
+            {
+                List<SessionModel> sessions = await _sessionService.GetActiveSessionsForUser(userId);
+                return Ok(sessions);
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = "An error occurred while retrieving active sessions.";
+                _logger.LogError(ex, "Error retrieving active sessions for UserId: {UserId}, IP: {IpAddress}", userId, userIp);
+                return StatusCode(500, new { error = errorMessage });
+            }
+            finally
+            {
+                _logger.LogInformation("Active sessions retrieval attempted for UserId: {UserId}, IP: {IpAddress}", userId, userIp);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves active sessions for the authenticated user.
+        /// </summary>
+        /// <returns>List of active sessions.</returns>
+        [HttpGet("sessions/activeUser/{userId:int}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetActiveSessions(int userId)
+        {
+            string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
             try
             {
                 List<SessionModel> sessions = await _sessionService.GetActiveSessionsForUser(userId);

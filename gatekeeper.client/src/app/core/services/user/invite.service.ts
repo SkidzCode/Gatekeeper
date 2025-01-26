@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
+import { Observable, throwError, map, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
 // Example Invite interface (adjust as needed)
@@ -21,6 +21,10 @@ export interface Invite {
   isSent?: boolean;
 
   website: string;
+}
+
+interface CheckInviteRequiredResponse {
+  _requiresInvite: boolean;
 }
 
 @Injectable({
@@ -57,6 +61,19 @@ export class InviteService {
       .pipe(
         catchError(this.handleError)
       );
+  }
+
+  checkInviteRequired(): Observable<boolean> {
+    return this.http.get<CheckInviteRequiredResponse>(`${this.baseUrl}/is-invite-only`).pipe(
+      map(response => {
+        console.log('Response from is-invite-only:', response); // Add logging
+        return response._requiresInvite;
+      }),
+      catchError((error) => {
+        console.error('Error in checkInviteRequired:', error); // Add logging
+        return of(true); // In case of error, assume invite is required
+      })
+    );
   }
 
   /**

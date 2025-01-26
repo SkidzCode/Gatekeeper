@@ -55,7 +55,7 @@ export class AuthInterceptor implements HttpInterceptor {
       `${apiBaseUrl}/api/Authentication/check-username`,
       `${apiBaseUrl}/api/Authentication/check-email`,
       `${apiBaseUrl}/api/User/ProfilePicture`,
-      `${apiBaseUrl}/api/Authentication/is-invite-only`
+      `${apiBaseUrl}/api/Invite/is-invite-only`
       // Add other public endpoints as needed
     ];
 
