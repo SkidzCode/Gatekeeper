@@ -30,8 +30,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError($"An error occurred: {ex.Message}");
-                return StatusCode(500, $"An error occurred: {ex.Message}");
+                _logger.LogError("An error occurred: {ErrorMessage}", ex.Message);
+                return StatusCode(500, "An error occurred");
             }
         }
     }

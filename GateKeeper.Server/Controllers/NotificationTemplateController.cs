@@ -48,9 +48,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error occurred while fetching all notification templates: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error occurred while fetching all notification templates: {ErrorMessage}", ex.Message);
+                return StatusCode(500, new { error = "Error occurred while fetching all notification templates" });
             }
         }
 
@@ -74,9 +73,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error retrieving notification template with ID {id}: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error retrieving notification template with ID {Id}: {ErrorMessage}", id, ex.Message);
+                return StatusCode(500, new { error = "Error retrieving notification template" });
             }
         }
 
@@ -110,9 +108,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error creating new notification template: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error creating new notification template: {ErrorMessage}", ex.Message);
+                return StatusCode(500, new { error = "Error creating new notification template" });
             }
         }
 
@@ -142,9 +139,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error updating notification template with ID {id}: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error updating notification template with ID {Id}: {ErrorMessage}", id, ex.Message);
+                return StatusCode(500, new { error = "Error updating notification template" });
             }
         }
 
@@ -164,9 +160,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error deleting notification template with ID {id}: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error deleting notification template with ID {Id}: {ErrorMessage}", id, ex.Message);
+                return StatusCode(500, new { error = "Error deleting notification template" });
             }
         }
     }

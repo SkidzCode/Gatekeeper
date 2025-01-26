@@ -57,9 +57,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error occurred while fetching all settings: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error occurred while fetching all settings: {ErrorMessage}", ex.Message);
+                return StatusCode(500, new { error = "Error occurred while fetching all settings" });
             }
         }
 
@@ -83,9 +82,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error retrieving setting with Id {id}: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error retrieving setting with Id {Id}: {ErrorMessage}", id, ex.Message);
+                return StatusCode(500, new { error = "Error retrieving setting" });
             }
         }
 
@@ -114,9 +112,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error creating new setting: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error creating new setting: {ErrorMessage}", ex.Message);
+                return StatusCode(500, new { error = "Error creating new setting" });
             }
         }
 
@@ -145,9 +142,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error creating new setting: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error creating new setting: {ErrorMessage}", ex.Message);
+                return StatusCode(500, new { error = "Error creating new setting" });
             }
         }
 
@@ -185,9 +181,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error updating setting with Id {id}: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error updating setting with Id {Id}: {ErrorMessage}", id, ex.Message);
+                return StatusCode(500, new { error = "Error updating setting" });
             }
         }
 
@@ -212,9 +207,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error deleting setting with Id {id}: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error deleting setting with Id {Id}: {ErrorMessage}", id, ex.Message);
+                return StatusCode(500, new { error = "Error deleting setting" });
             }
         }
 
@@ -235,9 +229,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error retrieving settings in category '{category}': {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error retrieving settings in category '{Category}': {ErrorMessage}", category, ex.Message);
+                return StatusCode(500, new { error = "Error retrieving settings in category" });
             }
         }
 
@@ -260,9 +253,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error searching settings with Name='{name}' and Category='{category}': {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error searching settings with Name='{Name}' and Category='{Category}': {ErrorMessage}", name, category, ex.Message);
+                return StatusCode(500, new { error = "Error searching settings" });
             }
         }
 
@@ -297,9 +289,9 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error in AddOrUpdate operation for setting '{setting.Name}': {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                var errorMessage = $;
+                _logger.LogError(ex, "Error in AddOrUpdate operation for setting '{Name}': {ErrorMessage}", setting.Name, ex.Message);
+                return StatusCode(500, new { error = "Error in AddOrUpdate operation for setting" });
             }
         }
 

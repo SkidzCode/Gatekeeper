@@ -72,9 +72,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"An error occurred while updating the user.";
                 _logger.LogError(ex, "Error updating user: {UserId}, IP: {IpAddress}, Device: {UserAgent}", userId, userIp, userAgent);
-                return StatusCode(500, new { error = errorMessage });
+                return StatusCode(500, new { error = "An error occurred while updating the user." });
             }
             finally
             {
@@ -97,19 +96,15 @@ namespace GateKeeper.Server.Controllers
             {
                 User? user = await _userService.GetUser(userId);
 
-                if (user == null)
-                {
-                    _logger.LogWarning("User not found: {UserId}, IP: {IpAddress}", userId, userIp);
-                    return NotFound("User not found.");
-                }
+                if (user != null) return Ok(user);
+                _logger.LogWarning("User not found: {UserId}, IP: {IpAddress}", userId, userIp);
+                return NotFound("User not found.");
 
-                return Ok(user);
             }
             catch (Exception ex)
             {
-                var errorMessage = $"An error occurred while retrieving the user profile.";
                 _logger.LogError(ex, "Error retrieving profile: {UserId}, IP: {IpAddress}", userId, userIp);
-                return StatusCode(500, new { error = errorMessage });
+                return StatusCode(500, new { error = "An error occurred while retrieving the user profile." });
             }
             finally
             {
@@ -135,9 +130,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"An error occurred while retrieving users.";
                 _logger.LogError(ex, "Error retrieving users: AdminUserId: {AdminUserId}, IP: {IpAddress}", adminUserId, userIp);
-                return StatusCode(500, new { error = errorMessage });
+                return StatusCode(500, new { error = "An error occurred while retrieving users." });
             }
             finally
             {
@@ -171,9 +165,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"An error occurred while retrieving the user.";
                 _logger.LogError(ex, "Error retrieving user: RequestedUserId: {UserId}, AdminUserId: {AdminUserId}, IP: {IpAddress}", userId, adminUserId, userIp);
-                return StatusCode(500, new { error = errorMessage });
+                return StatusCode(500, new { error = "An error occurred while retrieving the user." });
             }
             finally
             {
@@ -207,9 +200,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"An error occurred while retrieving the user for edit.";
                 _logger.LogError(ex, "Error retrieving user for edit: RequestedUserId: {UserId}, AdminUserId: {AdminUserId}, IP: {IpAddress}", userId, adminUserId, userIp);
-                return StatusCode(500, new { error = errorMessage });
+                return StatusCode(500, new { error = "An error occurred while retrieving the user for edit." });
             }
             finally
             {
@@ -293,9 +285,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"An error occurred while updating the user.";
                 _logger.LogError(ex, "Error updating user with image: {UserId}, IP: {IpAddress}, Device: {UserAgent}", userId, userIp, userAgent);
-                return StatusCode(500, new { error = errorMessage });
+                return StatusCode(500, new { error = "An error occurred while updating the user." });
             }
             finally
             {
@@ -327,9 +318,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"An error occurred while retrieving the profile picture.";
                 _logger.LogError(ex, "Error retrieving profile picture: RequestedUserId: {UserId}, IP: {IpAddress}", userId, userIp);
-                return StatusCode(500, new { error = errorMessage });
+                return StatusCode(500, new { error = "An error occurred while retrieving the profile picture." });
             }
             finally
             {

@@ -75,7 +75,7 @@ namespace GateKeeper.Server.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error in GetSettingByIdAsync with Id={id}");
+                _logger.LogError(ex, "Error in GetSettingByIdAsync with Id={Id}", id);
                 throw;
             }
 
@@ -148,7 +148,7 @@ namespace GateKeeper.Server.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error in UpdateSettingAsync for Id={setting.Id}");
+                _logger.LogError(ex, "Error in UpdateSettingAsync for Id={Id}", setting.Id);
                 throw;
             }
         }
@@ -170,7 +170,7 @@ namespace GateKeeper.Server.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error in DeleteSettingAsync for Id={id}");
+                _logger.LogError(ex, "Error in DeleteSettingAsync for Id={Id}", id);
                 throw;
             }
         }
@@ -199,7 +199,7 @@ namespace GateKeeper.Server.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error in GetSettingsByCategoryAsync for Category='{category}'");
+                _logger.LogError(ex, "Error in GetSettingsByCategoryAsync for Category='{Category}'", category);
                 throw;
             }
 
@@ -234,7 +234,7 @@ namespace GateKeeper.Server.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error in SearchSettingsAsync with Name='{name}', Category='{category}'");
+                _logger.LogError(ex, "Error in SearchSettingsAsync with Name='{Name}', Category='{Category}'", name, category);
                 throw;
             }
 
@@ -276,7 +276,7 @@ namespace GateKeeper.Server.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error in AddOrUpdateSettingAsync for Name='{setting.Name}'");
+                _logger.LogError(ex, "Error in AddOrUpdateSettingAsync for Name='{SettingName}'", setting.Name);
                 throw;
             }
 

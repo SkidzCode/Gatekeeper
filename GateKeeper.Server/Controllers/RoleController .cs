@@ -44,9 +44,8 @@ namespace GateKeeper.Server.Controllers
             catch (Exception ex)
             {
                 // If you have resource strings, you can use them here. Otherwise, a fixed message is fine.
-                var errorMessage = $"Error occurred while fetching all roles: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error occurred while fetching all roles: {ErrorMessage}", ex.Message);
+                return StatusCode(500, new { error = "Error occurred while fetching all roles" });
             }
         }
 
@@ -70,9 +69,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error retrieving role with Id {id}: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error retrieving role with Id {Id}: {ErrorMessage}", id, ex.Message);
+                return StatusCode(500, new { error = "Error retrieving role" });
             }
         }
 
@@ -96,9 +94,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error retrieving role with name '{roleName}': {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error retrieving role with name '{RoleName}': {ErrorMessage}", roleName, ex.Message);
+                return StatusCode(500, new { error = "Error retrieving role" });
             }
         }
 
@@ -119,9 +116,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error creating new role: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error creating new role: {ErrorMessage}", ex.Message);
+                return StatusCode(500, new { error = "Error creating new role" });
             }
         }
 
@@ -146,9 +142,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error updating role with Id {id}: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error updating role with Id {Id}: {ErrorMessage}", id, ex.Message);
+                return StatusCode(500, new { error = "Error updating role" });
             }
         }
     }

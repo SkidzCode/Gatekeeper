@@ -48,9 +48,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error occurred while fetching all notifications: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error occurred while fetching all notifications: {ErrorMessage}", ex.Message);
+                return StatusCode(500, new { error = "Error occurred while fetching all notifications" });
             }
         }
 
@@ -70,9 +69,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error retrieving notifications for user {recipientId}: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error retrieving notifications for user {RecipientId}: {ErrorMessage}", recipientId, ex.Message);
+                return StatusCode(500, new { error = "Error retrieving notifications" });
             }
         }
 
@@ -93,9 +91,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error retrieving not-sent notifications: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error retrieving not-sent notifications: {ErrorMessage}", ex.Message);
+                return StatusCode(500, new { error = "Error retrieving not-sent notifications" });
             }
         }
 
@@ -123,9 +120,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $"Error creating new notification: {ex.Message}";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "Error creating new notification: {ErrorMessage}", ex.Message);
+                return StatusCode(500, new { error = "Error creating new notification" });
             }
         }
     }

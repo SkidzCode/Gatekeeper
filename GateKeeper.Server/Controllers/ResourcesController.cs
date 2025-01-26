@@ -29,6 +29,8 @@ namespace GateKeeper.Server.Controllers
         [Authorize(Roles = "Admin")]
         public ActionResult<List<ResourceEntry>> GetEntries([FromRoute] string resourceFileName)
         {
+            if (resourceFileName.Contains("..") || resourceFileName.Contains("/") || resourceFileName.Contains("\\"))
+                return StatusCode(400, new { error = "Invalid path" });
             try
             {
                 var entries = _resourceService.ListEntries(resourceFileName);
@@ -55,7 +57,8 @@ namespace GateKeeper.Server.Controllers
             {
                 return BadRequest(request);
             }
-
+            if (resourceFileName.Contains("..") || resourceFileName.Contains("/") || resourceFileName.Contains("\\"))
+                return StatusCode(400, new { error = "Invalid path" });
             try
             {
                 _resourceService.AddEntry(resourceFileName, request);
@@ -83,7 +86,8 @@ namespace GateKeeper.Server.Controllers
             {
                 return BadRequest(request);
             }
-
+            if (resourceFileName.Contains("..") || resourceFileName.Contains("/") || resourceFileName.Contains("\\"))
+                return StatusCode(400, new { error = "Invalid path" });
             try
             {
                 _resourceService.UpdateEntry(resourceFileName, key, request);
