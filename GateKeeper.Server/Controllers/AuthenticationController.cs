@@ -38,7 +38,7 @@ namespace GateKeeper.Server.Controllers
             _logger = logger;
             _userService = userService;
             _configuration = configuration;
-            _requiresInvite = _configuration.GetValue<bool>("RegisterSettings:RequireInvite");
+            _requiresInvite = configuration.GetValue<bool>("RegisterSettings:RequireInvite");
         }
 
         /// <summary>
@@ -66,7 +66,7 @@ namespace GateKeeper.Server.Controllers
                     });
 
                 if (registerRequest.UserLicAgreement)
-                    _logger.LogInformation("User agreed to the User License Agreement: {UserId}, Proof: {Proof}, IP: {IpAdress}", response.User?.Id, userIp, registerRequest.UserLicAgreement);
+                    _logger.LogInformation("User agreed to the User License Agreement: {UserId}, Proof: {Proof}, IP: {IpAddress}", response.User?.Id, userIp, registerRequest.UserLicAgreement);
 
                 return BadRequest(new { error = response.FailureReason });
             }
@@ -437,26 +437,6 @@ namespace GateKeeper.Server.Controllers
         }
 
         /// <summary>
-        /// Retrieves active sessions for the authenticated user.
-        /// </summary>
-        /// <returns>Action result containing a list of active sessions.</returns>
-        [HttpGet("sessions")]
-        [Authorize]
-        public async Task<IActionResult> ManageActiveSessions()
-        {
-            try
-            {
-                var userId = GetUserIdFromClaims();
-                var sessions = await _authService.ManageActiveSessionsAsync(userId);
-                return Ok(sessions);
-            }
-            catch (Exception ex)
-            {
-                return HandleInternalError(ex, DialogLogin.SessionGetError);
-            }
-        }
-
-        /// <summary>
         /// Logs out the user from a specific device or all devices.
         /// </summary>
         /// <param name="logoutDeviceRequest">Logout device request containing optional session ID.</param>
@@ -486,9 +466,9 @@ namespace GateKeeper.Server.Controllers
         }
 
         /// <summary>
-        /// Checks if the registration requires an invite.
+        /// Checks if the registration requires an invitation.
         /// </summary>
-        /// <returns>Action result indicating if the registration requires an invite.</returns>
+        /// <returns>Action result indicating if the registration requires an invitation.</returns>
         [HttpGet("is-invite-only")]
         [AllowAnonymous]
         public IActionResult IsInviteOnly()

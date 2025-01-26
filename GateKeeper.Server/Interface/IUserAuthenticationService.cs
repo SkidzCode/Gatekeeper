@@ -69,13 +69,6 @@ namespace GateKeeper.Server.Interface
         Task<bool> ValidatePasswordStrengthAsync(string password);
 
         /// <summary>
-        /// Manages active sessions, such as listing or invalidating sessions.
-        /// </summary>
-        /// <param name="userId">The ID of the user to manage sessions for.</param>
-        /// <returns>A list of active sessions for the user.</returns>
-        Task<IEnumerable<SessionInfo>> ManageActiveSessionsAsync(int userId);
-
-        /// <summary>
         /// Logs out the user from specific or all devices.
         /// </summary>
         /// <param name="userId">The ID of the user logging out.</param>
