@@ -242,8 +242,7 @@ namespace GateKeeper.Server.Services
                 if (token == null || !token.Contains('.'))
                     throw new Exception("Invalid token format.");
                 await _sessionService.LogoutSession(token.Split('.')[0]);
-                return await _verificationService.RevokeTokensAsync(userId, "Refresh", token);
-
+                return 1;
             }
             catch (Exception ex)
             {
@@ -466,46 +465,6 @@ namespace GateKeeper.Server.Services
             Array.Clear(keyBytes, 0, keyBytes.Length);
 
             return jwt;
-        }
-
-
-        /// <summary>
-        /// Generates a secure refresh token.
-        /// </summary>
-        /// <returns>Refresh token as a string.</returns>
-        private string GenerateRefreshToken()
-        {
-            var randomBytes = new byte[64];
-            using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
-            rng.GetBytes(randomBytes);
-            return Convert.ToBase64String(randomBytes);
-        }
-
-
-        /// <summary>
-        /// Stores the refresh token in the database.
-        /// </summary>
-        /// <param name="userId">User ID associated with the token.</param>
-        /// <param name="refreshToken">Refresh token to store.</param>
-        /// <param name="connection">Active database connection.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        private async Task<string> StoreVerifyToken(int userId, string verifyToken, string veryfyType, IMySqlConnectorWrapper connection)
-        {
-            // Generate Refresh Token
-            var salt = PasswordHelper.GenerateSalt();
-            var hashedVerifyToken = PasswordHelper.HashPassword(verifyToken, salt);
-            var tokenId = Guid.NewGuid().ToString(); // Unique identifier for the refresh token
-
-            // Store Refresh Token in DB
-            await connection.ExecuteNonQueryAsync("VerificationInsert", CommandType.StoredProcedure,
-                new MySqlParameter("@p_Id", tokenId),
-                new MySqlParameter("@p_VerifyType", veryfyType),
-                new MySqlParameter("@p_UserId", userId),
-                new MySqlParameter("@p_HashedToken", hashedVerifyToken),
-                new MySqlParameter("@p_Salt", salt),
-                new MySqlParameter("@p_ExpiryDate", DateTime.UtcNow.AddDays(7))); // 7-day expiration
-
-            return $"{tokenId}.{verifyToken}";
         }
 
         /// <summary>
