@@ -12,8 +12,8 @@ import { InviteComponent } from './user/invite/invite.component'
 import { SessionsComponent } from './user/sessions/sessions.component';
 
 // Guard
-import { DisabledGuardService } from '../services/guard/disabled-guard.service';
-import { AuthGuard } from '../services/guard/auth-guard.service';
+import { DisabledGuardService } from '../core/guard/disabled-guard.service';
+import { AuthGuard } from '../core/guard/auth-guard.service';
 
 
 const routes: Routes = [

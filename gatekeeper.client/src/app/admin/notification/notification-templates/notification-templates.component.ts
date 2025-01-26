@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { NotificationTemplateService } from '../../../services/site/notification-template.service';
-import { NotificationTemplate } from '../../../models/notification.template.model';
+import { NotificationTemplateService } from '../../../core/services/site/notification-template.service';
+import { NotificationTemplate } from '../../../shared/models/notification.template.model';
 import { BehaviorSubject } from 'rxjs';
 import { ChangeDetectorRef } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser'; // Corrected Import

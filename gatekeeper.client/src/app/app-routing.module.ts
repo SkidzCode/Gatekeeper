@@ -19,7 +19,7 @@ import { HomeComponent } from './site/home/home/home.component';
 
 
 // Guards
-import { DisabledGuardService } from './services/guard/disabled-guard.service';
+import { DisabledGuardService } from './core/guard/disabled-guard.service';
 
 const routes: Routes = [
   // Main layout routes

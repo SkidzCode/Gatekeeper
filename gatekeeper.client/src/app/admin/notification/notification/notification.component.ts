@@ -1,15 +1,15 @@
 import { Component, OnInit, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
-import { NotificationService } from '../../../../../src/app/services/site/notification.service';
-import { NotificationTemplateService } from '../../../../../src/app/services/site/notification-template.service';
-import { UserService } from '../../../../../src/app/services/user/user.service';
-import { Notification } from '../../../../../src/app/models/notification.model';
-import { NotificationTemplate } from '../../../../../src/app/models/notification.template.model';
-import { User } from '../../../../../src/app/models/user.model';
+import { NotificationService } from '../../../core/services/site/notification.service';
+import { NotificationTemplateService } from '../../../core/services/site/notification-template.service';
+import { UserService } from '../../../core/services/user/user.service';
+import { Notification } from '../../../../../src/app/shared/models/notification.model';
+import { NotificationTemplate } from '../../../../../src/app/shared/models/notification.template.model';
+import { User } from '../../../../../src/app/shared/models/user.model';
 import { NotificationPreviewDialogComponent } from '../notification-preview-dialog/notification-preview-dialog.component';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { AuthService } from '../../../../../src/app/services/user/auth.service'; // Import AuthService
+import { AuthService } from '../../../core/services/user/auth.service'; // Import AuthService
 import { MatPaginator, PageEvent } from '@angular/material/paginator';
 import { MatTableDataSource } from '@angular/material/table';
 

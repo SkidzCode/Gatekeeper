@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Notification } from '../../models/notification.model'; // Adjust the path to your Notification model
+import { Notification } from '../../../shared/models/notification.model'; // Adjust the path to your Notification model
 
 @Injectable({
   providedIn: 'root',

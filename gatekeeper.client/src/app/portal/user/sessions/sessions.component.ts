@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { SessionService } from '../../../services/site/session.service';
-import { SessionModel } from '../../../models/session.model';
+import { SessionService } from '../../../core/services/site/session.service';
+import { SessionModel } from '../../../shared/models/session.model';
 
 @Component({
   selector: 'app-sessions',

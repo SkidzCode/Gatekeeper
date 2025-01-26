@@ -5,7 +5,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
-// src/app/models/resource-entry.model.ts
+// src/app/shared/models/resource-entry.model.ts
 
 export interface ResourceEntry {
   key: string;

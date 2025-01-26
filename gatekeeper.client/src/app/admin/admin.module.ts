@@ -21,7 +21,7 @@ import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatTabsModule } from '@angular/material/tabs'; 
 
-import { ResourcesEditorComponent } from '../resources/resources-editor/resources-editor.component';
+
 import { AdminRoutingModule } from './admin-routing.module';
 import { UserListComponent } from './user/user-list/user-list.component';
 import { UserEditComponent } from './user/user-edit/user-edit.component';
@@ -43,7 +43,6 @@ import { HomeComponent } from './home/home/home.component';
     NotificationTemplatesComponent,
     TemplatePreviewIframeComponent,
     AdminLogsBrowserComponent,
-    ResourcesEditorComponent,
     AdminSettingsListComponent,
     AdminSettingsEditComponent,
     HomeComponent,

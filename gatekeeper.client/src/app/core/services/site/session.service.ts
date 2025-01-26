@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { SessionModel } from '../../models/session.model';
+import { SessionModel } from '../../../shared/models/session.model';
 
 @Injectable({
   providedIn: 'root'

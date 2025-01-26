@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Role } from '../models/role.model'; // Adjust the path to your Role model }
+import { Role } from '../../../shared/models/role.model'; // Adjust the path to your Role model }
 /**
  * Example interface representing your Role model from .NET.
  * Adjust property names as per your actual model.

@@ -28,7 +28,7 @@ import { MainLayoutComponent } from './site/layout/main-layout/main-layout.compo
 import { AdminLayoutComponent } from './admin/layout/admin-layout/admin-layout.component';
 import { PortalLayoutComponent } from './portal/layout/portal-layout/portal-layout.component';
 
-import { AuthInterceptor } from './services/user/auth.interceptor.service';
+import { AuthInterceptor } from './core/interceptors/auth.interceptor.service';
 import { DisabledComponent } from './site/disabled/disabled.component';
 import { HomeComponent } from './site/home/home/home.component';
 

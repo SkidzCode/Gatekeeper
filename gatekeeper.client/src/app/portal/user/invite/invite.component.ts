@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Invite, InviteService } from '../../../services/user/invite.service';
+import { Invite, InviteService } from '../../../core/services/user/invite.service';
 
 // Example user retrieval from localStorage, or wherever your FromId is stored
 interface CurrentUser {

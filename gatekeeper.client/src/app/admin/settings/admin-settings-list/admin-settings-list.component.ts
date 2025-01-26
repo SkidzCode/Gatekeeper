@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { SettingsService } from '../../../services/site/settings.service';
-import { Setting } from '../../../models/setting.model';
+import { SettingsService } from '../../../core/services/site/settings.service';
+import { Setting } from '../../../shared/models/setting.model';
 
 @Component({
   selector: 'app-admin-settings-list',

@@ -3,7 +3,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { NotificationTemplate } from '../../models/notification.template.model';
+import { NotificationTemplate } from '../../../shared/models/notification.template.model';
 
 @Injectable({
   providedIn: 'root',

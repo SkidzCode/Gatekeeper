@@ -2,8 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError, BehaviorSubject, map, of } from 'rxjs';
 import { catchError, tap, } from 'rxjs/operators';
-import { User } from '../../models/user.model';
-import { Setting } from '../../models/setting.model';
+import { User } from '../../../shared/models/user.model';
+import { Setting } from '../../../shared/models/setting.model';
 
 
 // Existing Interface

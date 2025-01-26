@@ -12,12 +12,11 @@ import { UserLoginComponent } from '../site/user/user-login/user-login.component
 import { NotificationComponent } from './notification/notification/notification.component';
 import { NotificationTemplatesComponent } from './notification/notification-templates/notification-templates.component';
 import { AdminLogsBrowserComponent } from './history/admin-logs-browser/admin-logs-browser.component'
-import { ResourcesEditorComponent } from '../resources/resources-editor/resources-editor.component';
 import { AdminSettingsListComponent } from './settings/admin-settings-list/admin-settings-list.component';
 import { AdminSettingsEditComponent } from './settings/admin-settings-edit/admin-settings-edit.component';
 
 // Guard
-import { AdminGuard } from '../services/guard/admin-guard.service';
+import { AdminGuard } from '../core/guard/admin-guard.service';
 
 const routes: Routes = [
   {
@@ -31,7 +30,6 @@ const routes: Routes = [
       { path: 'notifications/templates', component: NotificationTemplatesComponent, canActivate: [AdminGuard] },
       { path: 'logs', component: AdminLogsBrowserComponent, canActivate: [AdminGuard] },
       { path: 'login', component: UserLoginComponent, canActivate: [AdminGuard] },
-      { path: 'resources', component: ResourcesEditorComponent, canActivate: [AdminGuard] },
       { path: 'settings', component: AdminSettingsListComponent, canActivate: [AdminGuard] },      // e.g., /admin/settings
       { path: 'settings/new', component: AdminSettingsEditComponent, canActivate: [AdminGuard] },   // e.g., /admin/settings/new
       { path: 'settings/edit/:id', component: AdminSettingsEditComponent, canActivate: [AdminGuard] }, // e.g., /admin/settings/edit/123
