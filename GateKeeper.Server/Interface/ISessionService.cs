@@ -1,6 +1,6 @@
 ﻿using GateKeeper.Server.Models.Account;
 
-namespace GateKeeper.Server.Services
+namespace GateKeeper.Server.Interface
 {
     public interface ISessionService
     {

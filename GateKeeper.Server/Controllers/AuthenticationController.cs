@@ -4,9 +4,9 @@ using System.Security.Claims;
 using GateKeeper.Server.Extension;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Account;
-using GateKeeper.Server.Resources;
 using GateKeeper.Server.Models.Account.Login;
 using GateKeeper.Server.Models.Account.UserModels;
+using System.Runtime.CompilerServices;
 
 namespace GateKeeper.Server.Controllers
 {
@@ -23,6 +23,22 @@ namespace GateKeeper.Server.Controllers
         private readonly IConfiguration _configuration;
         private readonly bool _requiresInvite;
 
+        // Constants for response and error messages
+        private const string UserRegisteredSuccessfully = "User registered successfully";
+        private const string UserVerificationSuccessful = "User verification successful";
+        private const string InvalidVerificationCode = "Invalid verification code";
+        private const string ExceededLoginAttempts = "You have exceeded the maximum number of login attempts. Please try again after 30 minutes.";
+        private const string InvalidCredentials = "Invalid credentials";
+        private const string InternalError = "Internal error";
+        private const string TokenNotFound = "Token not found";
+        private const string TokensRevokedSuccessfully = "{0} token(s) revoked successfully";
+        private const string PasswordResetInitiated = "A password reset link has been dispatched. Peek at your inbox (or spam folder, just in case) to continue the mission!";
+        private const string PasswordResetError = "An error occurred while resetting password";
+        private const string PasswordResetSuccessful = "Password has been reset successfully";
+        private const string InvalidRefreshToken = "Invalid Refresh Token";
+        private const string FailedToLogoutDevice = "Failed to logout from the specified device";
+        private const string LoggedOutSuccessfully = "Logged out successfully";
+
         /// <summary>
         /// Constructor for AuthenticationController.
         /// </summary>
@@ -30,8 +46,8 @@ namespace GateKeeper.Server.Controllers
         /// <param name="logger">Logger for logging information and errors.</param>
         /// <param name="userService">User service dependency.</param>
         public AuthenticationController(
-            IUserAuthenticationService authService, 
-            ILogger<AuthenticationController> logger, 
+            IUserAuthenticationService authService,
+            ILogger<AuthenticationController> logger,
             IUserService userService,
             IConfiguration configuration)
         {
@@ -62,8 +78,7 @@ namespace GateKeeper.Server.Controllers
                 if (response.IsSuccessful)
                     return StatusCode(201, new
                     {
-                        message = string.Format(DialogRegister.RegisterSucess, registerRequest.Username,
-                            registerRequest.Email)
+                        message = UserRegisteredSuccessfully
                     });
 
                 if (registerRequest.UserLicAgreement)
@@ -73,9 +88,9 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                response.FailureReason = "Internal Error: " + ex.Message;
+                response.FailureReason = $"{InternalError}: {ex.Message}";
                 response.IsSuccessful = false;
-                return HandleInternalError(ex, DialogRegister.RegisterError);
+                return HandleInternalError(CurrentFunctionName(), ex);
             }
             finally
             {
@@ -107,16 +122,16 @@ namespace GateKeeper.Server.Controllers
             {
                 response = await _authService.VerifyNewUser(request.VerificationCode);
                 if (response.IsVerified)
-                    return Ok(new { message = DialogRegister.RegisterSucess });
-                return BadRequest(new { error = DialogVerify.VerifyInvalid });
+                    return Ok(new { message = UserVerificationSuccessful });
+                return BadRequest(new { error = InvalidVerificationCode });
             }
             catch (Exception ex)
             {
                 response.IsVerified = false;
-                response.FailureReason = "Internal error: " + ex.Message;
+                response.FailureReason = $"{InternalError}: {ex.Message}";
                 if (response.User != null)
                     await response.User.ClearPHIAsync();
-                return HandleInternalError(ex, DialogVerify.VerifyError);
+                return HandleInternalError(CurrentFunctionName(), ex);
             }
             finally
             {
@@ -129,7 +144,6 @@ namespace GateKeeper.Server.Controllers
                 }
                 else
                 {
-                    // response.User could be null if login fails, so we use null-conditional
                     _logger.LogWarning("User verification failed {UserId}, IP: {IpAddress}, Reason: {Reason}, Token: {Token}",
                         response.User?.Id, userIp, response.FailureReason, response.VerificationCode.SanitizeForLogging());
                 }
@@ -158,9 +172,9 @@ namespace GateKeeper.Server.Controllers
 
                 if (!response.IsSuccessful || response.User == null)
                 {
-                    return Unauthorized(response.ToMany ? 
-                        new { error = DialogLogin.LoginMaxAttempts } : 
-                        new { error = DialogLogin.LoginInvalid });
+                    return Unauthorized(response.ToMany ?
+                        new { error = ExceededLoginAttempts } :
+                        new { error = InvalidCredentials });
                 }
 
                 // Return the tokens and user info
@@ -176,12 +190,11 @@ namespace GateKeeper.Server.Controllers
             catch (Exception ex)
             {
                 response.IsSuccessful = false;
-                response.FailureReason = "Internal error: " + ex.Message;
-                return HandleInternalError(ex, DialogLogin.LoginError);
+                response.FailureReason = $"{InternalError}: {ex.Message}";
+                return HandleInternalError(CurrentFunctionName(), ex);
             }
             finally
             {
-                
                 if (response.IsSuccessful)
                 {
                     _logger.LogInformation("User login successful: {UserId}, IP: {IpAddress}, Device: {UserAgent}",
@@ -189,13 +202,11 @@ namespace GateKeeper.Server.Controllers
                 }
                 else
                 {
-                    // response.User could be null if login fails, so we use null-conditional
                     _logger.LogWarning("User login failed for {UserId}, IP: {IpAddress}, Reason: {Reason}",
                         response.User?.Id, userIp, response.FailureReason);
                 }
             }
         }
-
 
         /// <summary>
         /// Refreshes JWT tokens using a valid refresh token.
@@ -213,8 +224,8 @@ namespace GateKeeper.Server.Controllers
                 response = await _authService.RefreshTokensAsync(refreshRequest.RefreshToken);
                 if (!response.IsSuccessful)
                     return Unauthorized(response.ToMany ?
-                        new { error = DialogLogin.LoginMaxAttempts } :
-                        new { error = DialogLogin.LoginInvalidRefreshToken }); 
+                        new { error = ExceededLoginAttempts } :
+                        new { error = InvalidRefreshToken });
 
                 return Ok(new
                 {
@@ -228,8 +239,8 @@ namespace GateKeeper.Server.Controllers
             catch (Exception ex)
             {
                 response.IsSuccessful = false;
-                response.FailureReason = "Internal error: " + ex.Message;
-                return HandleInternalError(ex, DialogLogin.LoginInvalidRefreshToken);
+                response.FailureReason = $"{InternalError}: {ex.Message}";
+                return HandleInternalError(CurrentFunctionName(), ex);
             }
             finally
             {
@@ -262,14 +273,14 @@ namespace GateKeeper.Server.Controllers
                 userId = GetUserIdFromClaims();
                 revokedCount = await _authService.LogoutAsync(logoutRequest.Token, userId);
                 if (revokedCount == 0)
-                    failureReason = "Token not found";
-                return Ok(new { message = string.Format(DialogLogin.LogoutRevokeToken, revokedCount) });
+                    failureReason = TokenNotFound;
+                return Ok(new { message = string.Format(TokensRevokedSuccessfully, revokedCount) });
             }
             catch (Exception ex)
             {
                 revokedCount = 0;
-                failureReason = "Internal error: " + ex.Message;
-                return HandleInternalError(ex, DialogLogin.LogoutError);
+                failureReason = $"{InternalError}: {ex.Message}";
+                return HandleInternalError(CurrentFunctionName(), ex);
             }
             finally
             {
@@ -302,7 +313,7 @@ namespace GateKeeper.Server.Controllers
 
                 User? user = _userService.GetUser(initiateRequest.EmailOrUsername).Result;
                 userId = user?.Id ?? 0;
-                if (user == null) return BadRequest(DialogPassword.UserMissing);
+                if (user == null) return BadRequest("Unknown Username or Email");
 
                 // Fire and forget the background process
                 _ = Task.Run(async () =>
@@ -317,12 +328,12 @@ namespace GateKeeper.Server.Controllers
                             userId, initiateRequest.EmailOrUsername.SanitizeForLogging(), userIp, userAgent);
                     }
                 });
-                
+
             }
             catch (Exception ex)
             {
-                failureReason = "Internal error: " + ex.Message;
-                return HandleInternalError(ex, DialogPassword.UserPasswordResetInitiateError);
+                failureReason = $"{InternalError}: {ex.Message}";
+                return HandleInternalError(CurrentFunctionName(), ex);
             }
             finally
             {
@@ -333,7 +344,7 @@ namespace GateKeeper.Server.Controllers
                     _logger.LogInformation("Error while User initiates password reset: {UserId}, Identifier: {Identifier}, IP: {IpAddress}, Device: {UserAgent}, Reason: {Reason}",
                         userId, initiateRequest.EmailOrUsername.SanitizeForLogging(), userIp, userAgent, failureReason);
             }
-            return Ok(new { message = string.Format(DialogPassword.UserPasswordResetStarted, initiateRequest.EmailOrUsername) });
+            return Ok(new { message = PasswordResetInitiated });
         }
 
         /// <summary>
@@ -351,16 +362,16 @@ namespace GateKeeper.Server.Controllers
             {
                 response = await _authService.ResetPasswordAsync(resetRequest);
                 if (response.IsVerified)
-                    return Ok(new { message = DialogPassword.UserPasswordResetSuccess });
+                    return Ok(new { message = PasswordResetSuccessful });
                 else
-                    return BadRequest(new { message = DialogPassword.UserPasswordResetError });
+                    return BadRequest(new { message = PasswordResetError });
             }
             catch (Exception ex)
             {
-                response.FailureReason = "Internal error: " + ex.Message;
+                response.FailureReason = $"{InternalError}: {ex.Message}";
                 response.IsVerified = false;
                 response.User?.ClearPHIAsync();
-                return HandleInternalError(ex, DialogPassword.UserPasswordResetTokenError);
+                return HandleInternalError(CurrentFunctionName(), ex);
             }
             finally
             {
@@ -392,7 +403,7 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                return HandleInternalError(ex, DialogPassword.UserPasswordStrengthError);
+                return HandleInternalError(CurrentFunctionName(), ex);
             }
         }
 
@@ -413,7 +424,7 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                return HandleInternalError(ex, DialogRegister.EmailExist);
+                return HandleInternalError(CurrentFunctionName(), ex);
             }
         }
 
@@ -434,7 +445,7 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                return HandleInternalError(ex, DialogPassword.UserPasswordStrengthError);
+                return HandleInternalError(CurrentFunctionName(), ex);
             }
         }
 
@@ -454,16 +465,16 @@ namespace GateKeeper.Server.Controllers
                 var isLoggedOut = await _authService.LogoutFromDeviceAsync(userId, logoutDeviceRequest.SessionId);
                 if (isLoggedOut)
                 {
-                    return Ok(new { message = DialogLogin.LogoutDeviceSucess });
+                    return Ok(new { message = LoggedOutSuccessfully });
                 }
                 else
                 {
-                    return BadRequest(new { error = DialogLogin.LogoutFailure });
+                    return BadRequest(new { error = FailedToLogoutDevice });
                 }
             }
             catch (Exception ex)
             {
-                return HandleInternalError(ex, DialogLogin.LogoutDeviceError);
+                return HandleInternalError(CurrentFunctionName(), ex);
             }
         }
 
@@ -481,26 +492,28 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                return HandleInternalError(ex, "An error occurred while checking if registration requires an invite.");
+                return HandleInternalError(CurrentFunctionName(), ex);
             }
         }
 
-
-
-
-        #region private Functions
+        #region Private Functions
 
         private int GetUserIdFromClaims()
         {
             return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
         }
 
-        private IActionResult HandleInternalError(Exception ex, string errorMessageTemplate)
+        private IActionResult HandleInternalError(string functionName, Exception ex)
         {
-            var errorMessage = string.Format(errorMessageTemplate, ex.Message);
-            _logger.LogError(ex, errorMessage);
-            return StatusCode(500, new { error = errorMessage });
+            _logger.LogError(ex, "There was an error with function: {Function} of {ErrorMessage}", functionName, ex.Message);
+            return StatusCode(500, new { error = InternalError });
         }
+
+        private static string CurrentFunctionName([CallerMemberName] string functionName = "")
+        {
+            return functionName;
+        }
+
         #endregion
     }
 }

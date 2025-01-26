@@ -32,68 +32,12 @@
     <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.0" />
     <PackageReference Include="System.Resources.Extensions" Version="9.0.0" />
-    <PackageReference Include="System.Xml.Linq" Version="3.5.21022.801" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\gatekeeper.client\gatekeeper.client.esproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Update="Resources\DialogLogin.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>DialogLogin.resx</DependentUpon>
-    </Compile>
-    <Compile Update="Resources\DialogPassword.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>DialogPassword.resx</DependentUpon>
-    </Compile>
-    <Compile Update="Resources\DialogRegister.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>DialogRegister.resx</DependentUpon>
-    </Compile>
-    <Compile Update="Resources\DialogVerify.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>DialogVerify.resx</DependentUpon>
-    </Compile>
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Update="Resources\DialogLogin.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>DialogLogin.Designer.cs</LastGenOutput>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Update="Resources\DialogPassword.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>DialogPassword.Designer.cs</LastGenOutput>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Update="Resources\DialogRegister.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>DialogRegister.Designer.cs</LastGenOutput>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Update="Resources\DialogVerify.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>DialogVerify.Designer.cs</LastGenOutput>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </EmbeddedResource>
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Documents\EmailPasswordChange.html">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Documents\EmailVerificationTemplate.html">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
   <ItemGroup>

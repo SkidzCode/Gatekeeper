@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using GateKeeper.Server.Services;
 using GateKeeper.Server.Models.Account;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
+using GateKeeper.Server.Interface;
 
 namespace GateKeeper.Server.Controllers
 {

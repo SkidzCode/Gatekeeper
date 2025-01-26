@@ -1,6 +1,5 @@
 ﻿using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Account.UserModels;
-using GateKeeper.Server.Resources;
 using GateKeeper.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -46,9 +45,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = string.Format(DialogLogin.ProfileLoadError, ex.Message) ?? "";
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                _logger.LogError(ex, "There was an error: {ErrorMessage}", ex.Message);
+                return StatusCode(500, new { error = "There was an error" });
             }
         }
     }

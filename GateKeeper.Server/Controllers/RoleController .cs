@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Account;
-using GateKeeper.Server.Resources; // If you have resource files for localized error messages
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using GateKeeper.Server.Extension;

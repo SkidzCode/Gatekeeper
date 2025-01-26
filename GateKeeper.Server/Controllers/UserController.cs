@@ -8,7 +8,6 @@ using System.Security.Claims;
 using GateKeeper.Server.Interface;
 using System.IdentityModel.Tokens.Jwt;
 using GateKeeper.Server.Models.Account;
-using GateKeeper.Server.Resources;
 using GateKeeper.Server.Models.Account.UserModels;
 using System.Drawing;
 using System.Drawing.Drawing2D;

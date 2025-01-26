@@ -12,7 +12,6 @@ using GateKeeper.Server.Interface;
 using Microsoft.IdentityModel.Tokens;
 using System.Reflection.PortableExecutable;
 using System.Runtime.CompilerServices;
-using GateKeeper.Server.Interface;
 using System.Xml;
 using GateKeeper.Server.Models.Account;
 using System.Net;
