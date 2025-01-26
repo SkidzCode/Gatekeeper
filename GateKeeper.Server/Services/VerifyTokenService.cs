@@ -137,7 +137,7 @@ namespace GateKeeper.Server.Services
         {
             var verifyToken = GenerateVerifyToken();
             
-            _logger.LogInformation("Generating token: {Token} for {UserId}", userId, verifyToken.SanitizeForLogging());
+            _logger.LogInformation("Generating token: {Token} for {UserId}", verifyToken.SanitizeForLogging(), userId);
             
             await using var connection = await _dbHelper.GetWrapperAsync();
             // Generate Refresh Token

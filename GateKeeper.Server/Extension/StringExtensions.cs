@@ -1,4 +1,6 @@
-﻿namespace GateKeeper.Server.Extension;
+﻿using System.Web;
+
+namespace GateKeeper.Server.Extension;
 
 public static class StringExtensions
 {
