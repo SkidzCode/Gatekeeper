@@ -12,6 +12,8 @@
           <p>Updated At: {{ session.updatedAt | date:'short' }}</p>
           <p>Complete: {{ session.complete ? 'Yes' : 'No' }}</p>
           <p>Revoked: {{ session.revoked ? 'Yes' : 'No' }}</p>
+          <p *ngIf="session.id === currentSessionId" class="current-session-indicator">Current Session</p>
+          <button mat-button color="warn" (click)="logoutFromSession(session.id)">Logout</button>
         </div>
       </div>
     </div>

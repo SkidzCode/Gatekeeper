@@ -65,7 +65,7 @@ namespace GateKeeper.Server.Services
         /// <summary>
         /// Marks a session as Complete (logout) using SessionLogout.
         /// </summary>
-        public async Task LogoutSession(string token, int userId)
+        public async Task LogoutToken(string token, int userId)
         {
             var response = await _verifyTokenService.VerifyTokenAsync(new VerifyTokenRequest()
             {
@@ -73,7 +73,7 @@ namespace GateKeeper.Server.Services
                 VerificationCode = token
             });
 
-            if (!response.IsVerified || userId != response.User.Id) 
+            if (!response.IsVerified || userId != response.User.Id)
                 return;
 
             string verificationId = token.Split('.')[0];
@@ -83,6 +83,19 @@ namespace GateKeeper.Server.Services
                 "SessionLogout",
                 CommandType.StoredProcedure,
                 new MySqlParameter("@pVerificationId", MySqlDbType.VarChar, 36) { Value = verificationId }
+            );
+        }
+
+        /// <summary>
+        /// Marks a session as Complete (logout) using SessionLogout.
+        /// </summary>
+        public async Task LogoutSession(string verificationId, int userId)
+        {
+            await using var connection = await _dbHelper.GetWrapperAsync();
+            await connection.ExecuteNonQueryAsync(
+                "SessionIdLogout",
+                CommandType.StoredProcedure,
+                new MySqlParameter("@pSessionId", MySqlDbType.VarChar, 36) { Value = verificationId }
             );
         }
 

@@ -243,7 +243,7 @@ namespace GateKeeper.Server.Services
             {
                 if (token == null || !token.Contains('.'))
                     throw new Exception("Invalid token format.");
-                await _sessionService.LogoutSession(token, userId);
+                await _sessionService.LogoutToken(token, userId);
                 return 1;
             }
             catch (Exception ex)
@@ -389,10 +389,10 @@ namespace GateKeeper.Server.Services
         }
         
         /// <inheritdoc />
-        public async Task<bool> LogoutFromDeviceAsync(int userId, string? sessionId = null)
+        public async Task<bool> LogoutFromDeviceAsync(int userId, string sessionId)
         {
-            // Implementation for logging out from a specific device or all devices
-            throw new NotImplementedException();
+            await _sessionService.LogoutSession(sessionId, userId);
+            return true;
         }
 
         #region Private Helper Methods
