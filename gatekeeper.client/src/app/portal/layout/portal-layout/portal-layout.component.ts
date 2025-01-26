@@ -49,14 +49,11 @@ export class PortalLayoutComponent implements AfterViewInit {
   }
 
   logout(): void {
-    this.authService.logout();
-    
-    setTimeout(() => {
+    this.authService.logoutCurrentSession().subscribe(message => {
+      console.log(message);
       this.isLoggedIn = false;
       this.username = null;
-    }, 500);
-    setTimeout(() => {
       this.router.navigate(['/']);
-    }, 1000);
+    });
   }
 }

@@ -10,6 +10,7 @@
       <a mat-list-item routerLink="/admin/notifications/templates">Notification Templates</a>
       <a mat-list-item routerLink="/admin/settings">Settings</a>
       <a mat-list-item routerLink="/admin/logs">Logs</a>
+      <a mat-list-item (click)="logout()" *ngIf="isLoggedIn">Logout</a>
     </mat-nav-list>
   </mat-sidenav>
 

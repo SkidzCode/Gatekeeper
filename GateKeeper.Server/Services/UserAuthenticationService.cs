@@ -166,7 +166,7 @@ namespace GateKeeper.Server.Services
         }
 
         /// <inheritdoc />
-        public async Task<LoginResponse> LoginAsync(UserLoginRequest userLogin)
+        public async Task<LoginResponse> LoginAsync(UserLoginRequest userLogin, string ipAddress, string userAgent)
         {
             LoginResponse response = new LoginResponse();
 
@@ -225,7 +225,9 @@ namespace GateKeeper.Server.Services
                 Complete = false,
                 Revoked = false,
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
+                IpAddress = ipAddress,
+                UserAgent = userAgent
             };
 
             await _sessionService.InsertSession(currentSession);
@@ -241,7 +243,7 @@ namespace GateKeeper.Server.Services
             {
                 if (token == null || !token.Contains('.'))
                     throw new Exception("Invalid token format.");
-                await _sessionService.LogoutSession(token.Split('.')[0]);
+                await _sessionService.LogoutSession(token, userId);
                 return 1;
             }
             catch (Exception ex)

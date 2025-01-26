@@ -11,7 +11,10 @@ BEGIN
            S.CreatedAt,
            S.UpdatedAt,
            V.VerifyType,
-           V.ExpiryDate AS VerificationExpiryDate
+           V.ExpiryDate AS VerificationExpiryDate,
+           S.IpAddress,
+           S.UserAgent,
+           S.SessionData
       FROM Session S
       JOIN Verification V ON S.VerificationId = V.Id
      WHERE V.VerifyType = 'Refresh'

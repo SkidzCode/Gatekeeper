@@ -6,7 +6,10 @@ CREATE PROCEDURE SessionInsert(
     IN pVerificationId VARCHAR(36),
     IN pExpiryDate DATETIME,
     IN pComplete BOOLEAN,
-    IN pRevoked BOOLEAN
+    IN pRevoked BOOLEAN,
+    IN pIpAddress VARCHAR(45),
+    IN pUserAgent VARCHAR(255),
+    IN pSessionData TEXT
 )
 BEGIN
     INSERT INTO Session (
@@ -15,7 +18,10 @@ BEGIN
         VerificationId, 
         ExpiryDate, 
         Complete, 
-        Revoked
+        Revoked,
+        IpAddress,
+        UserAgent,
+        SessionData
     )
     VALUES (
         pId, 
@@ -23,7 +29,10 @@ BEGIN
         pVerificationId, 
         pExpiryDate, 
         pComplete, 
-        pRevoked
+        pRevoked,
+        pIpAddress,
+        pUserAgent,
+        pSessionData
     );
 END $$
 DELIMITER ;

@@ -11,12 +11,14 @@ namespace GateKeeper.Server.Services
     {
         private readonly IDbHelper _dbHelper;
         private readonly ILogger<SessionService> _logger;
+        private readonly IVerifyTokenService _verifyTokenService;
 
-        public SessionService(IConfiguration configuration, IDbHelper dbHelper, ILogger<SessionService> logger)
+        public SessionService(IConfiguration configuration, IDbHelper dbHelper, ILogger<SessionService> logger, IVerifyTokenService verifyTokenService)
         {
             var dbConfig = configuration.GetSection("DatabaseConfig").Get<DatabaseConfig>() ?? new DatabaseConfig();
             _dbHelper = dbHelper;
             _logger = logger;
+            _verifyTokenService = verifyTokenService;
         }
 
         /// <summary>
@@ -33,7 +35,10 @@ namespace GateKeeper.Server.Services
                 new MySqlParameter("@pVerificationId", MySqlDbType.VarChar, 36) { Value = session.VerificationId },
                 new MySqlParameter("@pExpiryDate", MySqlDbType.DateTime) { Value = session.ExpiryDate },
                 new MySqlParameter("@pComplete", MySqlDbType.Bool) { Value = session.Complete },
-                new MySqlParameter("@pRevoked", MySqlDbType.Bool) { Value = session.Revoked }
+                new MySqlParameter("@pRevoked", MySqlDbType.Bool) { Value = session.Revoked },
+                new MySqlParameter("@pIpAddress", MySqlDbType.VarChar, 45) { Value = session.IpAddress },
+                new MySqlParameter("@pUserAgent", MySqlDbType.VarChar, 255) { Value = session.UserAgent },
+                new MySqlParameter("@pSessionData", MySqlDbType.Text) { Value = session.SessionData }
             );
         }
 
@@ -60,8 +65,19 @@ namespace GateKeeper.Server.Services
         /// <summary>
         /// Marks a session as Complete (logout) using SessionLogout.
         /// </summary>
-        public async Task LogoutSession(string verificationId)
+        public async Task LogoutSession(string token, int userId)
         {
+            var response = await _verifyTokenService.VerifyTokenAsync(new VerifyTokenRequest()
+            {
+                TokenType = "Refresh",
+                VerificationCode = token
+            });
+
+            if (!response.IsVerified || userId != response.User.Id) 
+                return;
+
+            string verificationId = token.Split('.')[0];
+
             await using var connection = await _dbHelper.GetWrapperAsync();
             await connection.ExecuteNonQueryAsync(
                 "SessionLogout",
@@ -96,6 +112,9 @@ namespace GateKeeper.Server.Services
                     Revoked = Convert.ToBoolean(reader["Revoked"]),
                     CreatedAt = reader["CreatedAt"] as DateTime? ?? DateTime.MinValue,
                     UpdatedAt = reader["UpdatedAt"] as DateTime? ?? DateTime.MinValue,
+                    IpAddress = reader["IpAddress"].ToString() ?? string.Empty,
+                    UserAgent = reader["UserAgent"].ToString() ?? string.Empty,
+                    SessionData = reader["SessionData"].ToString() ?? string.Empty,
 
                     // If you joined fields from Verification:
                     VerifyType = reader["VerifyType"]?.ToString(),
@@ -134,6 +153,9 @@ namespace GateKeeper.Server.Services
                     Revoked = Convert.ToBoolean(reader["Revoked"]),
                     CreatedAt = reader["CreatedAt"] as DateTime? ?? DateTime.MinValue,
                     UpdatedAt = reader["UpdatedAt"] as DateTime? ?? DateTime.MinValue,
+                    IpAddress = reader["IpAddress"].ToString() ?? string.Empty,
+                    UserAgent = reader["UserAgent"].ToString() ?? string.Empty,
+                    SessionData = reader["SessionData"].ToString() ?? string.Empty,
 
                     VerifyType = reader["VerifyType"]?.ToString(),
                     VerificationExpiryDate = reader["VerificationExpiryDate"] as DateTime?

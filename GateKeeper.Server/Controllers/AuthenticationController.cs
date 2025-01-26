@@ -145,14 +145,16 @@ namespace GateKeeper.Server.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] UserLoginRequest loginRequest)
         {
-            
             LoginResponse response = new();
             if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+            string userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
 
             try
             {
                 // Attempt to authenticate
-                response = await _authService.LoginAsync(loginRequest);
+                response = await _authService.LoginAsync(loginRequest, userIp, userAgent);
 
                 if (!response.IsSuccessful || response.User == null)
                 {
@@ -179,8 +181,7 @@ namespace GateKeeper.Server.Controllers
             }
             finally
             {
-                string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
-                string userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
+                
                 if (response.IsSuccessful)
                 {
                     _logger.LogInformation("User login successful: {UserId}, IP: {IpAddress}, Device: {UserAgent}",

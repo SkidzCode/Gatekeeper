@@ -12,6 +12,10 @@
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
+        public string IpAddress { get; set; } = string.Empty;
+        public string UserAgent { get; set; } = string.Empty;
+        public string SessionData { get; set; } = string.Empty;
+
         // Fields from joined Verification table (optional)
         public string? VerifyType { get; set; }
         public DateTime? VerificationExpiryDate { get; set; }

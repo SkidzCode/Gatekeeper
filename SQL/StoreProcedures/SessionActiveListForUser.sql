@@ -15,7 +15,10 @@ BEGIN
            V.VerifyType,
            V.ExpiryDate AS VerificationExpiryDate,
            V.Complete   AS VerificationComplete,
-           V.Revoked    AS VerificationRevoked
+           V.Revoked    AS VerificationRevoked,
+           S.IpAddress,
+           S.UserAgent,
+           S.SessionData
       FROM Session S
       JOIN Verification V ON S.VerificationId = V.Id
      WHERE S.UserId = pUserId

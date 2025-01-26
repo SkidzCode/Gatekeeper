@@ -16,7 +16,7 @@ namespace GateKeeper.Server.Interface
         /// </summary>
         /// <param name="userLogin">The user's login credentials.</param>
         /// <returns>A tuple containing success status, access token, refresh token, and user details.</returns>
-        Task<LoginResponse> LoginAsync(UserLoginRequest userLogin);
+        Task<LoginResponse> LoginAsync(UserLoginRequest userLogin, string ipAddress, string userAgent);
 
         /// <summary>
         /// Logs out a user by revoking specific or all active tokens.

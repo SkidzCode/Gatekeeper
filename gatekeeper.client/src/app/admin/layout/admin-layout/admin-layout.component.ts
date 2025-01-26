@@ -36,9 +36,11 @@ export class AdminLayoutComponent {
   }
 
   logout(): void {
-    this.authService.logout();
-    this.isLoggedIn = false;
-    this.username = null;
-    this.router.navigate(['/login']);
+    this.authService.logoutCurrentSession().subscribe(message => {
+      console.log(message);
+      this.isLoggedIn = false;
+      this.username = null;
+      this.router.navigate(['/']);
+    });
   }
 }
