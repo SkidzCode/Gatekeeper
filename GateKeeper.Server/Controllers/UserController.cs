@@ -13,6 +13,7 @@ using GateKeeper.Server.Models.Account.UserModels;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using GateKeeper.Server.Extension;
 
 namespace GateKeeper.Server.Controllers
 {
@@ -62,7 +63,7 @@ namespace GateKeeper.Server.Controllers
 
             int userId = GetUserIdFromClaims();
             string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
-            string userAgent = Request.Headers["User-Agent"].ToString();
+            string userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
 
             try
             {
@@ -225,7 +226,7 @@ namespace GateKeeper.Server.Controllers
 
             int userId = GetUserIdFromClaims();
             string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
-            string userAgent = Request.Headers["User-Agent"].ToString();
+            string userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
 
             try
             {

@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading.Tasks;
+using GateKeeper.Server.Extension;
 
 namespace GateKeeper.Server.Services
 {
@@ -199,7 +200,7 @@ namespace GateKeeper.Server.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in GetSettingsByCategoryAsync for Category='{Category}'", category);
+                _logger.LogError(ex, "Error in GetSettingsByCategoryAsync for Category='{Category}'", category.SanitizeForLogging());
                 throw;
             }
 
@@ -234,7 +235,7 @@ namespace GateKeeper.Server.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in SearchSettingsAsync with Name='{Name}', Category='{Category}'", name, category);
+                _logger.LogError(ex, "Error in SearchSettingsAsync with Name='{Name}', Category='{Category}'", name.SanitizeForLogging(), category.SanitizeForLogging());
                 throw;
             }
 
@@ -276,7 +277,7 @@ namespace GateKeeper.Server.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in AddOrUpdateSettingAsync for Name='{SettingName}'", setting.Name);
+                _logger.LogError(ex, "Error in AddOrUpdateSettingAsync for Name='{SettingName}'", setting.Name.SanitizeForLogging());
                 throw;
             }
 

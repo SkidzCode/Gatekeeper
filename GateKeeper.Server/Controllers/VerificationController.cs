@@ -9,6 +9,7 @@ using GateKeeper.Server.Interface;
 using GateKeeper.Server.Services;
 using GateKeeper.Server.Models.Account;
 using GateKeeper.Server.Models.Account.Login;
+using GateKeeper.Server.Extension;
 
 namespace GateKeeper.Server.Controllers
 {
@@ -64,13 +65,13 @@ namespace GateKeeper.Server.Controllers
             finally
             {
                 string _userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
-                string _userAgent = Request.Headers["User-Agent"].ToString();
+                string _userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
                 if (response.IsVerified)
                     _logger.LogInformation("Token validated {UserId}, IP: {IpAddress}, Token: {Token}",
-                        response.User?.Id, _userIp, verifyRequest.VerificationCode);
+                        response.User?.Id, _userIp, verifyRequest.VerificationCode.SanitizeForLogging());
                 else
                     _logger.LogWarning("Password reset failed for {UserId}, IP: {IpAddress}, UserAgent: {_userAgent}, Token: {Token}, Failure Reason: {FailureReason}",
-                        response.User?.Id, _userIp, verifyRequest.VerificationCode, response.FailureReason);
+                        response.User?.Id, _userIp, verifyRequest.VerificationCode.SanitizeForLogging(), response.FailureReason);
             }
         }
 

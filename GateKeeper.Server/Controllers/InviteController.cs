@@ -4,6 +4,7 @@ using System.Security.Claims;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Site; // Your Invite model location
 using System.Data;
+using GateKeeper.Server.Extension;
 using MySqlConnector;
 using GateKeeper.Server.Models.Account;
 
@@ -40,7 +41,7 @@ namespace GateKeeper.Server.Controllers
 
             var userId = GetUserIdFromClaims();
             var userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
-            var userAgent = Request.Headers["User-Agent"].ToString();
+            var userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
 
             try
             {

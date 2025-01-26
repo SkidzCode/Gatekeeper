@@ -4,6 +4,7 @@ using GateKeeper.Server.Models.Account;
 using GateKeeper.Server.Resources; // If you have resource files for localized error messages
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
+using GateKeeper.Server.Extension;
 
 namespace GateKeeper.Server.Controllers
 {
@@ -94,7 +95,7 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving role with name '{RoleName}': {ErrorMessage}", roleName, ex.Message);
+                _logger.LogError(ex, "Error retrieving role with name '{RoleName}': {ErrorMessage}", roleName.SanitizeForLogging(), ex.Message);
                 return StatusCode(500, new { error = "Error retrieving role" });
             }
         }

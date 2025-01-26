@@ -6,6 +6,7 @@ using GateKeeper.Server.Models.Account;
 using GateKeeper.Server.Models.Account.Login;
 using System.Xml;
 using GateKeeper.Server.Models.Account.UserModels;
+using GateKeeper.Server.Extension;
 
 namespace GateKeeper.Server.Services
 {
@@ -136,7 +137,7 @@ namespace GateKeeper.Server.Services
         {
             var verifyToken = GenerateVerifyToken();
             
-            _logger.LogInformation("Generating token: {Token} for {UserId}", userId, verifyToken);
+            _logger.LogInformation("Generating token: {Token} for {UserId}", userId, verifyToken.SanitizeForLogging());
             
             await using var connection = await _dbHelper.GetWrapperAsync();
             // Generate Refresh Token
@@ -147,7 +148,7 @@ namespace GateKeeper.Server.Services
             var hashedVerifyToken = PasswordHelper.HashPassword(verifyToken, salt);
             var tokenId = Guid.NewGuid().ToString(); // Unique identifier for the refresh token
 
-            _logger.LogInformation("Generating Hashed Token: {Hashed}", hashedVerifyToken);
+            _logger.LogInformation("Generating Hashed Token: {Hashed}", hashedVerifyToken.SanitizeForLogging());
 
 
             // Store Refresh Token in DB

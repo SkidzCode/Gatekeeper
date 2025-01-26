@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using GateKeeper.Server.Extension;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Account;
 using GateKeeper.Server.Resources;
@@ -53,7 +54,7 @@ namespace GateKeeper.Server.Controllers
             RegistrationResponse response = new();
             if (!ModelState.IsValid) return BadRequest(ModelState);
             string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
-            string userAgent = Request.Headers["User-Agent"].ToString();
+            string userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
 
             try
             {
@@ -120,7 +121,7 @@ namespace GateKeeper.Server.Controllers
             finally
             {
                 string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
-                string userAgent = Request.Headers["User-Agent"].ToString();
+                string userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
                 if (response.IsVerified)
                 {
                     _logger.LogInformation("User verification: {UserId}, IP: {IpAddress}, Device: {UserAgent}",
@@ -130,7 +131,7 @@ namespace GateKeeper.Server.Controllers
                 {
                     // response.User could be null if login fails, so we use null-conditional
                     _logger.LogWarning("User verification failed {UserId}, IP: {IpAddress}, Reason: {Reason}, Token: {Token}",
-                        response.User?.Id, userIp, response.FailureReason, response.VerificationCode);
+                        response.User?.Id, userIp, response.FailureReason, response.VerificationCode.SanitizeForLogging());
                 }
             }
         }
@@ -179,7 +180,7 @@ namespace GateKeeper.Server.Controllers
             finally
             {
                 string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
-                string userAgent = Request.Headers["User-Agent"].ToString();
+                string userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
                 if (response.IsSuccessful)
                 {
                     _logger.LogInformation("User login successful: {UserId}, IP: {IpAddress}, Device: {UserAgent}",
@@ -232,7 +233,7 @@ namespace GateKeeper.Server.Controllers
             finally
             {
                 string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
-                string userAgent = Request.Headers["User-Agent"].ToString();
+                string userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
                 if (response.IsSuccessful)
                     _logger.LogInformation("User refreshed token successful: {UserId}, IP: {IpAddress}, Device: {UserAgent}",
                         response.User?.Id, userIp, userAgent);
@@ -277,7 +278,7 @@ namespace GateKeeper.Server.Controllers
                         userId, userIp);
                 else
                     _logger.LogWarning("User logout with unknown token: {UserId}, IP: {IpAddress}, token:{RefreshToken}, Reason: {Reason}",
-                        userId, userIp, logoutRequest.Token, failureReason);
+                        userId, userIp, logoutRequest.Token.SanitizeForLogging(), failureReason);
             }
         }
 
@@ -291,7 +292,7 @@ namespace GateKeeper.Server.Controllers
         public IActionResult InitiatePasswordReset([FromBody] InitiatePasswordResetRequest initiateRequest)
         {
             string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
-            string userAgent = Request.Headers["User-Agent"].ToString();
+            string userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
             string failureReason = "";
             var userId = 0;
             try
@@ -312,7 +313,7 @@ namespace GateKeeper.Server.Controllers
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "User initiated password reset error:: {UserId}, Identifier: {Identifier}, IP: {IpAddress}, Device: {UserAgent}",
-                            userId, initiateRequest.EmailOrUsername, userIp, userAgent);
+                            userId, initiateRequest.EmailOrUsername.SanitizeForLogging(), userIp, userAgent);
                     }
                 });
                 
@@ -326,10 +327,10 @@ namespace GateKeeper.Server.Controllers
             {
                 if (failureReason.Length == 0)
                     _logger.LogInformation("User initiates password reset: {UserId}, Identifier: {Identifier}, IP: {IpAddress}, Device: {UserAgent}",
-                        userId, initiateRequest.EmailOrUsername, userIp, userAgent);
+                        userId, initiateRequest.EmailOrUsername.SanitizeForLogging(), userIp, userAgent);
                 else
                     _logger.LogInformation("Error while User initiates password reset: {UserId}, Identifier: {Identifier}, IP: {IpAddress}, Device: {UserAgent}, Reason: {Reason}",
-                        userId, initiateRequest.EmailOrUsername, userIp, userAgent, failureReason);
+                        userId, initiateRequest.EmailOrUsername.SanitizeForLogging(), userIp, userAgent, failureReason);
             }
             return Ok(new { message = string.Format(DialogPassword.UserPasswordResetStarted, initiateRequest.EmailOrUsername) });
         }
@@ -363,7 +364,7 @@ namespace GateKeeper.Server.Controllers
             finally
             {
                 string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
-                string userAgent = Request.Headers["User-Agent"].ToString();
+                string userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
                 if (response.IsVerified)
                     _logger.LogInformation("Password changed for {UserId}, IP: {IpAddress}, Method: {Method}, Device: {Device}",
                         response.User?.Id, userIp, "Token verification", userAgent);

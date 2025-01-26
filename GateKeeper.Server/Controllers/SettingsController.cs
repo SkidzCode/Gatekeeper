@@ -3,6 +3,7 @@ using GateKeeper.Server.Interface;
 using Microsoft.AspNetCore.Authorization;
 using GateKeeper.Server.Models.Site;
 using System.Security.Claims;
+using GateKeeper.Server.Extension;
 
 namespace GateKeeper.Server.Controllers
 {
@@ -229,7 +230,7 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving settings in category '{Category}': {ErrorMessage}", category, ex.Message);
+                _logger.LogError(ex, "Error retrieving settings in category '{Category}': {ErrorMessage}", category.SanitizeForLogging(), ex.Message);
                 return StatusCode(500, new { error = "Error retrieving settings in category" });
             }
         }
@@ -253,7 +254,7 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error searching settings with Name='{Name}' and Category='{Category}': {ErrorMessage}", name, category, ex.Message);
+                _logger.LogError(ex, "Error searching settings with Name='{Name}' and Category='{Category}': {ErrorMessage}", name.SanitizeForLogging(), category.SanitizeForLogging(), ex.Message);
                 return StatusCode(500, new { error = "Error searching settings" });
             }
         }
@@ -289,7 +290,7 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in AddOrUpdate operation for setting '{Name}': {ErrorMessage}", setting.Name, ex.Message);
+                _logger.LogError(ex, "Error in AddOrUpdate operation for setting '{Name}': {ErrorMessage}", setting.Name.SanitizeForLogging(), ex.Message);
                 return StatusCode(500, new { error = "Error in AddOrUpdate operation for setting" });
             }
         }
