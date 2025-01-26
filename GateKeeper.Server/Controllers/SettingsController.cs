@@ -289,7 +289,6 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = $;
                 _logger.LogError(ex, "Error in AddOrUpdate operation for setting '{Name}': {ErrorMessage}", setting.Name, ex.Message);
                 return StatusCode(500, new { error = "Error in AddOrUpdate operation for setting" });
             }
