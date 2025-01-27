@@ -1,139 +1,8 @@
 <div class="notification-container mat-typography">
   <mat-tab-group (selectedTabChange)="onTabChange($event)">
     <mat-tab label="Create Notification">
-      <!-- Row: Left (Create Notification) and Right (Replaceable Variables) -->
-      <div class="notification-row">
-        <!-- LEFT COLUMN: Create Notification -->
-        <mat-card class="left-column">
-          <mat-card-title>Create or Schedule a Notification</mat-card-title>
-          <mat-card-content>
-            <form [formGroup]="notificationForm">
-              <!-- Recipient Field -->
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Recipient</mat-label>
-                <mat-select formControlName="recipientId" required>
-                  <mat-option *ngFor="let user of users" [value]="user.id">
-                    {{ user.firstName }} {{ user.lastName }} ({{ user.email }})
-                  </mat-option>
-                </mat-select>
-                <mat-error *ngIf="notificationForm.get('recipientId')?.hasError('required')">
-                  Recipient is required
-                </mat-error>
-              </mat-form-field>
-
-              <!-- Channel Field -->
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Channel</mat-label>
-                <mat-select formControlName="channel" required>
-                  <mat-option value="email">Email</mat-option>
-                  <mat-option value="sms">SMS</mat-option>
-                  <mat-option value="push">Push</mat-option>
-                  <mat-option value="inapp">In-App</mat-option>
-                </mat-select>
-                <mat-error *ngIf="notificationForm.get('channel')?.hasError('required')">
-                  Channel is required
-                </mat-error>
-              </mat-form-field>
-
-              <!-- Subject Field -->
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Subject</mat-label>
-                <input matInput formControlName="subject" required />
-                <mat-error *ngIf="notificationForm.get('subject')?.hasError('required')">
-                  Subject is required
-                </mat-error>
-              </mat-form-field>
-
-              <!-- Message Field -->
-              <div>
-                <button mat-button (click)="insertVariable('{{From_First_Name}}')">From First Name</button>
-                <button mat-button (click)="insertVariable('{{From_Last_Name}}')">From Last Name</button>
-                <button mat-button (click)="insertVariable('{{From_Email}}')">From Email</button>
-                <button mat-button (click)="insertVariable('{{From_Username}}')">From Username</button>
-                <button mat-button (click)="insertVariable('{{First_Name}}')">First Name</button>
-                <button mat-button (click)="insertVariable('{{Last_Name}}')">Last Name</button>
-                <button mat-button (click)="insertVariable('{{Email}}')">Email</button>
-                <button mat-button (click)="insertVariable('{{Username}}')">Username</button>
-                <button mat-button (click)="insertVariable('{{URL}}')">URL</button>
-                <button mat-button (click)="insertVariable('{{Verification_Code}}')">Verification Code</button>
-              </div>
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Message</mat-label>
-                <textarea matInput
-                          #messageInput
-                          rows="5"
-                          formControlName="message"
-                          required></textarea>
-                <mat-error *ngIf="notificationForm.get('message')?.hasError('required')">
-                  Message is required
-                </mat-error>
-              </mat-form-field>
-
-              <!-- Scheduled At (Optional) -->
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Schedule Date/Time</mat-label>
-                <input matInput [matDatepicker]="picker" formControlName="scheduledAt" />
-                <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-                <mat-datepicker #picker></mat-datepicker>
-              </mat-form-field>
-            </form>
-          </mat-card-content>
-          <mat-card-actions>
-            <button mat-stroked-button color="accent" (click)="previewNotification()"
-                    [disabled]="notificationForm.invalid">
-              Preview
-            </button>
-            <button mat-raised-button color="primary" (click)="submitNotification()"
-                    [disabled]="notificationForm.invalid">
-              Create Notification
-            </button>
-          </mat-card-actions>
-        </mat-card>
-
-        <!-- RIGHT COLUMN: Replaceable Variables -->
-        <mat-card class="right-column">
-          <mat-card-title>Replaceable Variables</mat-card-title>
-          <mat-card-content *ngIf="selectedUser; else noRecipientSelected">
-            <div *ngFor="let variable of variableReplacements">
-              <strong>{{ variable.key }}</strong> - {{ variable.value }}
-            </div>
-          </mat-card-content>
-          <ng-template #noRecipientSelected>
-            <p>Please select a recipient to see replaceable variables.</p>
-          </ng-template>
-        </mat-card>
-      </div> <!-- END .notification-row -->
-
-      <br />
-
-      <!-- Section: Notification Templates -->
-      <mat-card>
-        <mat-card-title>Notification Templates</mat-card-title>
-        <mat-card-content>
-          <form [formGroup]="templateSearchForm">
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Search Templates</mat-label>
-              <input matInput
-                     formControlName="searchValue"
-                     placeholder="Type template name or channel..."
-                     (input)="onTemplateSearchChange()" />
-            </mat-form-field>
-          </form>
-          <div *ngIf="loadingTemplates">Loading templates...</div>
-          <mat-nav-list dense *ngIf="!loadingTemplates && filteredTemplates.length > 0">
-            <mat-list-item *ngFor="let template of filteredTemplates">
-              <div mat-line>
-                <strong>{{ template.templateName }}</strong>
-                ({{ template.channel }}) - {{ template.subject }}
-                <button mat-button (click)="applyTemplate(template)">Use Template</button>
-              </div>
-            </mat-list-item>
-          </mat-nav-list>
-          <div *ngIf="!loadingTemplates && filteredTemplates.length === 0">
-            No templates found.
-          </div>
-        </mat-card-content>
-      </mat-card>
+      <!-- Include the Notification Send Component -->
+      <app-notification-send></app-notification-send>
     </mat-tab>
 
     <mat-tab label="Notifications Log">
@@ -151,6 +20,7 @@
           </mat-paginator>
 
           <table mat-table [dataSource]="dataSource" class="mat-elevation-z2" *ngIf="!loadingNotifications">
+            <!-- Columns definitions -->
             <!-- Recipient ID Column -->
             <ng-container matColumnDef="recipientId">
               <th mat-header-cell *matHeaderCellDef>Recipient ID</th>
@@ -191,5 +61,9 @@
       </mat-card>
     </mat-tab>
 
+    <mat-tab label="Notification Templates">
+      <!-- Include the Notification Templates component -->
+      <app-notification-templates></app-notification-templates>
+    </mat-tab>
   </mat-tab-group>
 </div>

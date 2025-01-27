@@ -2,17 +2,17 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  width: 100%;
+  width: 98%;
   padding: 0 16px; /* Optional: Padding to avoid touching screen edges */
 }
 
 mat-card {
-  width: 100%; /* Ensure mat-card spans the full container width */
+  width: 98%; /* Ensure mat-card spans the full container width */
   padding: 16px; /* Maintain consistent padding */
 }
 
 .full-width {
-  width: 100%; /* Ensure all form fields take up the full width */
+  width: 98%; /* Ensure all form fields take up the full width */
 }
 
 .template-channel {

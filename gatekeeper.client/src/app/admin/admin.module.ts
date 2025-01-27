@@ -33,6 +33,7 @@ import { AdminLogsBrowserComponent } from './history/admin-logs-browser/admin-lo
 import { AdminSettingsListComponent } from './settings/admin-settings-list/admin-settings-list.component';
 import { AdminSettingsEditComponent } from './settings/admin-settings-edit/admin-settings-edit.component';
 import { HomeComponent } from './home/home/home.component';
+import { NotificationSendComponent } from './notification/notification-send/notification-send.component';
 
 @NgModule({
   declarations: [
@@ -46,6 +47,7 @@ import { HomeComponent } from './home/home/home.component';
     AdminSettingsListComponent,
     AdminSettingsEditComponent,
     HomeComponent,
+    NotificationSendComponent,
     
   ],
   imports: [

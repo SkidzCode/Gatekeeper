@@ -27,7 +27,6 @@ const routes: Routes = [
       { path: 'users', component: UserListComponent, canActivate: [AdminGuard] },
       { path: 'users/edit/:id', component: UserEditComponent, canActivate: [AdminGuard] },
       { path: 'notifications/send', component: NotificationComponent, canActivate: [AdminGuard] },
-      { path: 'notifications/templates', component: NotificationTemplatesComponent, canActivate: [AdminGuard] },
       { path: 'logs', component: AdminLogsBrowserComponent, canActivate: [AdminGuard] },
       { path: 'login', component: UserLoginComponent, canActivate: [AdminGuard] },
       { path: 'settings', component: AdminSettingsListComponent, canActivate: [AdminGuard] },      // e.g., /admin/settings
