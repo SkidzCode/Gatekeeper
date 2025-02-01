@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, OnChanges, SimpleChanges, input } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 @Component({
@@ -8,7 +8,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
   standalone: false
 })
 export class TemplatePreviewIframeComponent implements OnChanges {
-  @Input() htmlContent: string = '';
+  readonly htmlContent = input<string>('');
   sanitizedSrcdoc: SafeHtml = '';
 
   constructor(private sanitizer: DomSanitizer) { }
@@ -21,6 +21,6 @@ export class TemplatePreviewIframeComponent implements OnChanges {
 
   private updateSrcdoc(): void {
     // Use DomSanitizer to bypass security and trust the HTML content
-    this.sanitizedSrcdoc = this.sanitizer.bypassSecurityTrustHtml(this.htmlContent);
+    this.sanitizedSrcdoc = this.sanitizer.bypassSecurityTrustHtml(this.htmlContent());
   }
 }

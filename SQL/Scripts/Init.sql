@@ -7,10 +7,7 @@ DROP USER IF EXISTS 'api_user'@'%';
 CREATE USER 'api_user'@'%' IDENTIFIED BY 'SecurePassword!123';
 
 -- Grant the `api_user` permission to execute stored procedures
-GRANT EXECUTE ON UserManagement.* TO 'api_user'@'%';
-
--- Optionally grant SELECT permission on the `Users` table
-GRANT SELECT ON UserManagement.Users TO 'api_user'@'%';
+GRANT EXECUTE ON gatekeeper.* TO 'api_user'@'%';
 
 -- Apply the changes to privileges
 FLUSH PRIVILEGES;

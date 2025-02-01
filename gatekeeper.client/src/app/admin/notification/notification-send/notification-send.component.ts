@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ElementRef, viewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { NotificationService } from '../../../core/services/site/notification.service';
@@ -18,7 +18,7 @@ import { AuthService } from '../../../core/services/user/auth.service';
   standalone: false,
 })
 export class NotificationSendComponent implements OnInit {
-  @ViewChild('messageInput') messageInput!: ElementRef;
+  readonly messageInput = viewChild.required<ElementRef>('messageInput');
   notificationForm!: FormGroup;
   templateSearchForm!: FormGroup;
   templates: NotificationTemplate[] = [];

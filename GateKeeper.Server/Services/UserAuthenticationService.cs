@@ -140,7 +140,6 @@ namespace GateKeeper.Server.Services
                 return response;
 
             await AssignRoleToUser(response.User.Id, "NewUser");
-            string token = await _verificationService.GenerateTokenAsync(response.User.Id, "NewUser");
 
             var template = await _notificationTemplateService.GetNotificationTemplateByNameAsync("Verify Email Template");
             int noticeId = await _notificationService.InsertNotificationAsync(new Notification()
@@ -149,7 +148,7 @@ namespace GateKeeper.Server.Services
                 Message = template.Body,
                 Subject = template.Subject,
                 RecipientId = response.User.Id,
-                TokenType = "Verification",
+                TokenType = "NewUser",
                 URL = registerRequest.Website,
                 FromId = response.User.Id,
                 ToEmail = registerRequest.Email,

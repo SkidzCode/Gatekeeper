@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { UserService } from '../../../core/services/user/user.service';
 import { MatTableDataSource } from '@angular/material/table';
@@ -16,8 +16,8 @@ export class UserListComponent implements OnInit, AfterViewInit {
   displayedColumns: string[] = ['pic', 'id', 'username', 'email', 'actions'];
   dataSource = new MatTableDataSource<User>([]);
 
-  @ViewChild(MatSort) sort!: MatSort;
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  readonly sort = viewChild.required(MatSort);
+  readonly paginator = viewChild.required(MatPaginator);
 
   constructor(
     private userService: UserService,
@@ -40,8 +40,8 @@ export class UserListComponent implements OnInit, AfterViewInit {
         // Now that data is available, set the sort and paginator references
         // If this is done in ngAfterViewInit only, it might be too early 
         // if data is loaded asynchronously.
-        this.dataSource.sort = this.sort;
-        this.dataSource.paginator = this.paginator;
+        this.dataSource.sort = this.sort();
+        this.dataSource.paginator = this.paginator();
       },
       error: (err) => console.error(err),
     });

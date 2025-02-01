@@ -1,4 +1,4 @@
-import { Component, OnInit, TemplateRef, ViewChild, OnDestroy } from '@angular/core';
+import { Component, OnInit, TemplateRef, OnDestroy, viewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { AuthService } from '../../../../core/services/user/auth.service';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
@@ -16,7 +16,7 @@ interface PasswordResetInitiateRequest {
   standalone: false
 })
 export class ForgotPasswordComponent implements OnInit, OnDestroy {
-  @ViewChild('dialogTemplate') dialogTemplate!: TemplateRef<any>;
+  readonly dialogTemplate = viewChild.required<TemplateRef<any>>('dialogTemplate');
 
   forgotPasswordForm: FormGroup;
   isLoggedIn = false;
@@ -67,7 +67,7 @@ export class ForgotPasswordComponent implements OnInit, OnDestroy {
    * Opens the password reset dialog for guests.
    */
   openDialog(): void {
-    const dialogRef: MatDialogRef<any> = this.dialog.open(this.dialogTemplate, {
+    const dialogRef: MatDialogRef<any> = this.dialog.open(this.dialogTemplate(), {
       width: '400px',
       panelClass: 'custom-dialog-container'
     });

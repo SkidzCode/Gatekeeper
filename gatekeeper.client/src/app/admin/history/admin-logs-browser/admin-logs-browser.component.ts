@@ -2,7 +2,7 @@ import {
   Component,
   OnInit,
   AfterViewInit,
-  ViewChild
+  viewChild
 } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -62,8 +62,8 @@ export class AdminLogsBrowserComponent implements OnInit, AfterViewInit {
   loadingLogs = false;
 
   // The top/bottom paginators
-  @ViewChild('paginatorTop') paginatorTop!: MatPaginator;
-  @ViewChild('paginatorBottom') paginatorBottom!: MatPaginator;
+  readonly paginatorTop = viewChild.required<MatPaginator>('paginatorTop');
+  readonly paginatorBottom = viewChild.required<MatPaginator>('paginatorBottom');
 
   constructor(
     private fb: FormBuilder,
@@ -87,24 +87,26 @@ export class AdminLogsBrowserComponent implements OnInit, AfterViewInit {
    */
   ngAfterViewInit() {
     // Use the TOP paginator as the "primary" for the dataSource
-    this.dataSource.paginator = this.paginatorTop;
+    this.dataSource.paginator = this.paginatorTop();
 
     // 1) When the top paginator changes, mirror that on the bottom
-    this.paginatorTop.page.subscribe((event: PageEvent) => {
-      this.paginatorBottom.pageIndex = event.pageIndex;
-      this.paginatorBottom.pageSize = event.pageSize;
+    this.paginatorTop().page.subscribe((event: PageEvent) => {
+      const paginatorBottom = this.paginatorBottom();
+      paginatorBottom.pageIndex = event.pageIndex;
+      paginatorBottom.pageSize = event.pageSize;
       // Because the data source is actually attached to the top paginator,
       // you do NOT need to reset the dataSource.paginator here—it’s already set.
     });
 
     // 2) When the bottom paginator changes, mirror that on the top
     // Bottom paginator event
-    this.paginatorBottom.page.subscribe((event: PageEvent) => {
+    this.paginatorBottom().page.subscribe((event: PageEvent) => {
       // Just update top’s pageIndex/pageSize
-      this.paginatorTop.pageIndex = event.pageIndex;
-      this.paginatorTop.pageSize = event.pageSize;
+      const paginatorTop = this.paginatorTop();
+      paginatorTop.pageIndex = event.pageIndex;
+      paginatorTop.pageSize = event.pageSize;
       // Then, re-trigger the top paginator’s page event manually:
-      this.paginatorTop._changePageSize(event.pageSize);
+      paginatorTop._changePageSize(event.pageSize);
     });
   }
 

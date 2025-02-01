@@ -1,4 +1,4 @@
-import { Component, inject, AfterViewInit, ViewChild, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, AfterViewInit, ChangeDetectorRef, viewChild } from '@angular/core';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { MatSidenavContainer } from '@angular/material/sidenav';
 import { Observable } from 'rxjs';
@@ -14,7 +14,7 @@ import { Router } from '@angular/router';
   styleUrl: './portal-layout.component.scss'
 })
 export class PortalLayoutComponent implements AfterViewInit {
-  @ViewChild(MatSidenavContainer) sidenavContainer!: MatSidenavContainer;
+  readonly sidenavContainer = viewChild.required(MatSidenavContainer);
 
   private breakpointObserver = inject(BreakpointObserver);
   isLoggedIn = false;
@@ -41,8 +41,9 @@ export class PortalLayoutComponent implements AfterViewInit {
   ngAfterViewInit() {
     // Let everything render first, then update the margins
     setTimeout(() => {
-      if (this.sidenavContainer) {
-        this.sidenavContainer.updateContentMargins();
+      const sidenavContainer = this.sidenavContainer();
+      if (sidenavContainer) {
+        sidenavContainer.updateContentMargins();
         this.cdRef.detectChanges();
       }
     }, 1000);

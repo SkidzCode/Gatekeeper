@@ -76,13 +76,10 @@ export class UserProfileComponent implements OnInit {
                 this.imageError = null;
               }
             }, file.type);
+            
           };
-          isSet = true;
           img.src = e.target.result;
         };
-        if (!isSet) {
-          this.snackBar.open("Image is not valid", 'Close', { duration: 3000 });
-        }
         reader.readAsDataURL(file);
       }
     }
