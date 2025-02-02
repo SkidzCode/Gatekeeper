@@ -142,7 +142,7 @@ namespace GateKeeper.Server.Services
             await AssignRoleToUser(response.User.Id, "NewUser");
 
             var template = await _notificationTemplateService.GetNotificationTemplateByNameAsync("Verify Email Template");
-            int noticeId = await _notificationService.InsertNotificationAsync(new Notification()
+            await _notificationService.InsertNotificationAsync(new Notification()
             {
                 Channel = "Email",
                 Message = template.Body,
@@ -157,7 +157,7 @@ namespace GateKeeper.Server.Services
             
             if (_requiresInvite)
             {
-                await _verificationService.RevokeTokensAsync(tokenResponse.User.Id, "Invite", registerRequest.Token);
+                await _verificationService.CompleteTokensAsync(tokenResponse.User.Id, "Invite", registerRequest.Token);
             }
 
             return response;
@@ -332,7 +332,7 @@ namespace GateKeeper.Server.Services
             try
             {
                 var template = await _notificationTemplateService.GetNotificationTemplateByNameAsync("Reset Password");
-                int noticeId = await _notificationService.InsertNotificationAsync(new Notification()
+                await _notificationService.InsertNotificationAsync(new Notification()
                 {
                     Channel = "Email",
                     Message = template.Body,

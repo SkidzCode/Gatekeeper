@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using System.Data;
 using GateKeeper.Server.Models.Site;
+using Newtonsoft.Json.Linq;
 
 namespace GateKeeper.Server.Services
 {
@@ -33,9 +34,8 @@ namespace GateKeeper.Server.Services
                 _logger.LogError("Invite template not found");
                 return 0;
             }
-            var token = await _verificationService.GenerateTokenAsync(invite.FromId, template.TokenType);
-            invite.VerificationId = token.Split('.')[0];
-            int noticeId = await _notificationService.InsertNotificationAsync(new Notification()
+            
+            var response = await _notificationService.InsertNotificationAsync(new Notification()
             {
                 Channel = "Email",
                 Message = template.Body,
@@ -48,7 +48,8 @@ namespace GateKeeper.Server.Services
                 ToName = invite.ToName
             });
 
-            invite.NotificationId = noticeId;
+            invite.NotificationId = response.NotificationId;
+            invite.VerificationId = response.VerificationId;
             int InviteId = await InsertInvite(invite);
 
             return InviteId;
@@ -63,7 +64,6 @@ namespace GateKeeper.Server.Services
         {
             await using var connection = await _dbHelper.GetWrapperAsync();
 
-            // Example of returning the newly inserted PK (similar to last_id).
             var outputParameters = await connection.ExecuteNonQueryWithOutputAsync(
                 "InsertInvite",
                 CommandType.StoredProcedure,
@@ -75,17 +75,18 @@ namespace GateKeeper.Server.Services
                 {
                     Value = invite.NotificationId ?? (object)DBNull.Value
                 },
-                new MySqlParameter("last_id", MySqlDbType.Int32) { Direction = ParameterDirection.Output }
+                new MySqlParameter("@last_id", MySqlDbType.Int32) { Direction = ParameterDirection.Output }
             );
 
             var newId = 0;
-            if (outputParameters["last_id"] != DBNull.Value)
+            if (outputParameters["@last_id"] != DBNull.Value)
             {
-                newId = Convert.ToInt32(outputParameters["last_id"]);
+                newId = Convert.ToInt32(outputParameters["@last_id"]);
             }
 
             return newId;
         }
+
 
         /// <summary>
         /// Calls the "GetInvitesByFromId" stored procedure and retrieves each record.

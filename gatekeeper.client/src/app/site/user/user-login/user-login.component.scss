@@ -2,8 +2,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  background-color: #f3e5f5; /* Light Magenta Background */
+  min-height: calc(100vh - 280px);
 }
 
 mat-card {
@@ -32,7 +31,6 @@ mat-card-subtitle {
 
 mat-card-subtitle {
   font-size: 1rem;
-  color: #ab47bc; /* Light Violet */
 }
 
 .full-width {
@@ -46,7 +44,15 @@ mat-card-subtitle {
 }
 
 .error-message {
-  color: #d32f2f; /* Red */
   text-align: center;
   margin-top: 12px;
+}
+
+.login-button{
+    margin-left:16px;
+}
+
+.signup-link {
+  text-align: center;
+  margin-top: 16px;
 }

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using GateKeeper.Server.Models.Site;
+using GateKeeper.Server.Models.Account.Notifications;
 
 namespace GateKeeper.Server.Interface
 {
@@ -30,7 +31,7 @@ namespace GateKeeper.Server.Interface
         /// Inserts a new notification and returns the newly inserted notification's ID.
         /// </summary>
         /// <param name="notification">Notification object to insert.</param>
-        Task<int> InsertNotificationAsync(Notification notification);
+        Task<NotificationInsertResponse> InsertNotificationAsync(Notification notification);
 
         /// <summary>
         /// Looks up notifications that need to be sent and sends them.

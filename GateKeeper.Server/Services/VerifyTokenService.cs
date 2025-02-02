@@ -15,6 +15,7 @@ namespace GateKeeper.Server.Services
         public Task<TokenVerificationResponse> VerifyTokenAsync(VerifyTokenRequest verificationCode);
         public Task<string> GenerateTokenAsync(int userId, string verifyType);
         public Task<int> RevokeTokensAsync(int userId, string verifyType, string? token = null);
+        public Task<int> CompleteTokensAsync(int userId, string verifyType, string? token = null);
     }
 
 
@@ -183,6 +184,37 @@ namespace GateKeeper.Server.Services
             };
 
             await connection.ExecuteNonQueryAsync("RevokeVerifyToken", CommandType.StoredProcedure,
+                new MySqlParameter("@p_UserId", MySqlDbType.Int32) { Value = userId },
+                new MySqlParameter("@p_TokenId", MySqlDbType.VarChar, 36) { Value = tokenId ?? (object)DBNull.Value },
+                new MySqlParameter("@p_VerifyType", MySqlDbType.VarChar, 20) { Value = verifyType },
+                rowsAffectedParam);
+
+            // Get the value of the output parameter
+            int rowsAffected = (int)rowsAffectedParam.Value;
+
+            return rowsAffected;
+        }
+
+        /// <summary>
+        /// Revokes tokens for a user, either specific or all tokens.
+        /// </summary>
+        /// <param name="token">Specific token to revoke, or null to revoke all tokens.</param>
+        /// <param name="userId">ID of the user whose tokens are to be revoked.</param>
+        /// <returns>The number of tokens revoked.</returns>
+        public async Task<int> CompleteTokensAsync(int userId, string verifyType, string? token = null)
+        {
+            string? tokenId = null;
+            if (!string.IsNullOrEmpty(token))
+                tokenId = token.Split('.')[0];
+
+            await using var connection = await _dbHelper.GetWrapperAsync();
+
+            var rowsAffectedParam = new MySqlParameter("@p_RowsAffected", MySqlDbType.Int32)
+            {
+                Direction = ParameterDirection.Output
+            };
+
+            await connection.ExecuteNonQueryAsync("CompleteVerifyToken", CommandType.StoredProcedure,
                 new MySqlParameter("@p_UserId", MySqlDbType.Int32) { Value = userId },
                 new MySqlParameter("@p_TokenId", MySqlDbType.VarChar, 36) { Value = tokenId ?? (object)DBNull.Value },
                 new MySqlParameter("@p_VerifyType", MySqlDbType.VarChar, 20) { Value = verifyType },

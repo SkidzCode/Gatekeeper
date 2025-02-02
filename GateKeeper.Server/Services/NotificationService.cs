@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using MySqlConnector;
 using GateKeeper.Server.Interface; // For IDBHelper, IMySqlConnectorWrapper, etc.
 using GateKeeper.Server.Models;
+using GateKeeper.Server.Models.Account.Notifications;
 using GateKeeper.Server.Models.Account.UserModels;
 using GateKeeper.Server.Models.Site; // For Notification model
 
@@ -123,8 +124,9 @@ namespace GateKeeper.Server.Services
         /// </summary>
         /// <param name="notification">Notification object to insert.</param>
         /// <returns>The newly inserted notification's ID.</returns>
-        public async Task<int> InsertNotificationAsync(Notification notification)
+        public async Task<NotificationInsertResponse> InsertNotificationAsync(Notification notification)
         {
+            var response = new NotificationInsertResponse();
             if (notification == null)
                 throw new ArgumentNullException(nameof(notification));
 
@@ -189,9 +191,12 @@ namespace GateKeeper.Server.Services
 
             notification.Message = notification.Message.Replace("{{Verification_Code}}", WebUtility.UrlEncode(verificationCode));
 
+            if (verificationCode.Length > 0)
+            {
+                response.VerificationId = verificationCode.Split('.')[0];
+            }
 
-            
-            
+
             await using var wrapper = await _dbHelper.GetWrapperAsync();
 
             var parameters = new List<MySqlParameter>
@@ -245,14 +250,14 @@ namespace GateKeeper.Server.Services
                 parameters.ToArray()
             );
 
-            var newId = 0;
+            
             if (await reader.ReadAsync())
             {
                 // Since we did SELECT LAST_INSERT_ID() AS new_id in the procedure
-                newId = Convert.ToInt32(reader["new_id"]);
+                response.NotificationId = Convert.ToInt32(reader["new_id"]);
             }
 
-            return newId;
+            return response;
         }
 
         /// <summary>

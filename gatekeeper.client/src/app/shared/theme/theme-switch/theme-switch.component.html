@@ -1,0 +1,6 @@
+<div class="theme-switch-container">
+  <mat-slide-toggle [checked]="isLightTheme" (change)="toggleTheme()">
+    <mat-icon *ngIf="!isLightTheme">brightness_2</mat-icon>
+    <mat-icon *ngIf="isLightTheme">wb_sunny</mat-icon>
+  </mat-slide-toggle>
+</div>

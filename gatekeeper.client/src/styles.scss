@@ -1,47 +1,63 @@
+/* src/styles.scss */
+
+/* Import Angular Material theming APIs */
 @use '@angular/material' as mat;
-@use './styles/card-overrides' as card-overrides;
 
-@include mat.core();
+/* Import your generated theme tokens file.
+   Adjust the path if necessary.
+*/
+@use './styles/green_theme-colors.scss' as hacker;
 
-$myapp-primary: mat.m2-define-palette(mat.$m2-indigo-palette);
-$myapp-accent: mat.m2-define-palette(mat.$m2-pink-palette, A200, A100, A400);
-$myapp-warn: mat.m2-define-palette(mat.$m2-red-palette);
+/* Import Google Fonts (Roboto) */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
 
-// Define custom palettes
-$myapp-error-text: mat.m2-define-palette(mat.$m2-red-palette);
-$myapp-header-text: mat.m2-define-palette(mat.$m2-grey-palette);
+/*
+  Apply the main Angular Material theme.
+  This mixin creates CSS variables based on your color, typography, and density settings.
+*/
+html {
+  color-scheme: light dark;
+  @include mat.theme((
+    color: mat.$violet-palette,
+    typography: Roboto,
+    density: 0
+  ));
 
-$myapp-theme: mat.m2-define-light-theme((
-  color: (
-    primary: $myapp-primary,
-    accent: $myapp-accent,
-    warn: $myapp-warn,
-
-    // Custom colors
-    custom: (
-      error-text: $myapp-error-text,
-      header-text: $myapp-header-text,
-    ),
-  ),
-));
-
-@include mat.all-component-themes($myapp-theme);
-@include mat.all-component-typographies($myapp-theme);
-
-// Expose custom colors
-:root {
-  --myapp-error-text-color: #{mat.m2-get-color-from-palette($myapp-error-text, 500)};
-  --myapp-header-text-color: #{mat.m2-get-color-from-palette($myapp-header-text, 800)};
+  /* Optionally include high contrast overrides.
+     Here we pass 'color-scheme' so that both light and dark values are generated.
+     You could also pass 'light' or 'dark' if you prefer to hard-code one.
+  */
+  @include hacker.high-contrast-overrides(color-scheme);
 }
 
-// Include your custom card styles
-@include card-overrides.card-content-margin($myapp-theme);
-
-html, body {
-  height: 100%;
-}
-
+/*
+  Set global background and text colors using theme tokens.
+*/
 body {
-  margin: 0;
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+}
+
+/*
+  Override Mat Card styles.
+  Here we adjust the card’s elevated container color so that it is slightly different from the background.
+  All card override tokens (such as for shapes, typography, etc.) are available via the main module.
+*/
+:root {
+  @include mat.card-overrides((
+    elevated-container-color: var(--mat-sys-surface-container-high)
+  ));
+}
+
+/*
+  Override button hover styles.
+  This rule forces a dark text color when hovering over buttons for improved readability.
+*/
+.mat-button,
+.mat-raised-button,
+.mat-stroked-button,
+.mat-flat-button {
+  &:hover {
+    color: #000000;
+  }
 }

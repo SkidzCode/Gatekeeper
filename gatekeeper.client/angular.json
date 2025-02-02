@@ -38,8 +38,9 @@
               }
             ],
             "styles": [
-              "@angular/material/prebuilt-themes/purple-green.css",
-              "src/styles.scss"
+              "src/styles.scss",
+              "src/styles/green_theme-colors.scss",
+              "src/styles/material-token.scss"
             ],
             "scripts": []
           },

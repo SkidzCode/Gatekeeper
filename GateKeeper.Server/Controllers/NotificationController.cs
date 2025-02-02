@@ -111,11 +111,11 @@ namespace GateKeeper.Server.Controllers
             try
             {
                 notification.FromId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                var newId = await _notificationService.InsertNotificationAsync(notification);
+                var response = await _notificationService.InsertNotificationAsync(notification);
                 return Ok(new
                 {
                     message = "Notification created successfully.",
-                    newNotificationId = newId
+                    newNotificationId = response.NotificationId
                 });
             }
             catch (Exception ex)

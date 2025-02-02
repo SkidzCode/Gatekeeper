@@ -1,7 +1,7 @@
 <div class="login-container">
   <mat-card>
     <mat-card-header>
-      <mat-card-title>Login</mat-card-title>
+      <mat-card-title>Welcome Back!</mat-card-title>
       <mat-card-subtitle>Enter your credentials to continue</mat-card-subtitle>
     </mat-card-header>
     <mat-card-content>
@@ -31,13 +31,17 @@
         <!-- Submit Button -->
         <div class="action-buttons">
           <app-forgot-password></app-forgot-password>
-          <button mat-raised-button color="primary" type="submit" [disabled]="loginForm.invalid">
+          <button mat-raised-button color="primary" type="submit" [disabled]="loginForm.invalid" class="login-button">
             Login
           </button>
         </div>
         <!-- Error Message -->
         <p *ngIf="errorMessage" class="error-message">{{ errorMessage }}</p>
       </form>
+      <div class="signup-link">
+        Don't have an account? <a href="/register">Sign up</a>
+      </div>
+
     </mat-card-content>
   </mat-card>
 </div>

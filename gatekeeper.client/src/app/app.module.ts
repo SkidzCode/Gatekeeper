@@ -32,6 +32,11 @@ import { AuthInterceptor } from './core/interceptors/auth.interceptor.service';
 import { DisabledComponent } from './site/disabled/disabled.component';
 import { HomeComponent } from './site/home/home/home.component';
 
+import { ThemeSwitchComponent } from './shared/theme/theme-switch/theme-switch.component';
+
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+
+
 @NgModule({
   declarations: [
     AppComponent,
@@ -62,7 +67,9 @@ import { HomeComponent } from './site/home/home/home.component';
     FormsModule,
     MatDialogModule,
     MatOptionModule,
-    MatCheckboxModule
+    MatCheckboxModule,
+    ThemeSwitchComponent,
+    MatSlideToggleModule
   ],
   providers: [
     provideAnimationsAsync(),

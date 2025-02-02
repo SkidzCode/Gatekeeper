@@ -1,69 +1,75 @@
-<div class="notification-container mat-typography">
-  <mat-tab-group (selectedTabChange)="onTabChange($event)">
-    <mat-tab label="Create Notification">
-      <!-- Include the Notification Send Component -->
-      <app-notification-send></app-notification-send>
-    </mat-tab>
+<mat-card>
+    <mat-tab-group (selectedTabChange)="onTabChange($event)">
+      <mat-tab label="Create Notification">
+        <!-- Include the Notification Send Component -->
+        <app-notification-send></app-notification-send>
+      </mat-tab>
 
-    <mat-tab label="Notifications Log">
-      <mat-card>
-        <mat-card-title style="margin-left:16px;">Notifications Log</mat-card-title>
-        <mat-card-content style="margin-left:16px;">
-          <div *ngIf="loadingNotifications">Loading notifications...</div>
+      <mat-tab label="Notifications Log">
+        <mat-card>
+          <mat-card-title style="margin-left:16px;">Notifications Log</mat-card-title>
+          <mat-card-content style="margin-left:16px;">
+            <div *ngIf="loadingNotifications">Loading notifications...</div>
 
-          <!-- Paginator at the TOP -->
-          <mat-paginator #paginatorTop
-                         [length]="dataSource.data.length"
-                         [pageSize]="25"
-                         [pageSizeOptions]="[10, 25, 50, 100]"
-                         showFirstLastButtons>
-          </mat-paginator>
+            <!-- Paginator at the TOP -->
+            <mat-paginator #paginatorTop
+                           [length]="dataSource.data.length"
+                           [pageSize]="25"
+                           [pageSizeOptions]="[10, 25, 50, 100]"
+                           showFirstLastButtons>
+            </mat-paginator>
 
-          <table mat-table [dataSource]="dataSource" class="mat-elevation-z2" *ngIf="!loadingNotifications">
-            <!-- Columns definitions -->
-            <!-- Recipient ID Column -->
-            <ng-container matColumnDef="recipientId">
-              <th mat-header-cell *matHeaderCellDef>Recipient ID</th>
-              <td mat-cell *matCellDef="let row">{{ row.recipientId }}</td>
-            </ng-container>
-            <!-- Channel Column -->
-            <ng-container matColumnDef="channel">
-              <th mat-header-cell *matHeaderCellDef>Channel</th>
-              <td mat-cell *matCellDef="let row">{{ row.channel }}</td>
-            </ng-container>
-            <!-- Message Column -->
-            <ng-container matColumnDef="message">
-              <th mat-header-cell *matHeaderCellDef>Message</th>
-              <td mat-cell *matCellDef="let row">{{ row.message }}</td>
-            </ng-container>
-            <!-- Scheduled At Column -->
-            <ng-container matColumnDef="scheduledAt">
-              <th mat-header-cell *matHeaderCellDef>Scheduled At</th>
-              <td mat-cell *matCellDef="let row">{{ row.scheduledAt }}</td>
-            </ng-container>
-            <!-- Sent Status Column -->
-            <ng-container matColumnDef="isSent">
-              <th mat-header-cell *matHeaderCellDef>Sent?</th>
-              <td mat-cell *matCellDef="let row">{{ row.isSent ? 'Yes' : 'No' }}</td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="['recipientId','channel','message','scheduledAt','isSent']"></tr>
-            <tr mat-row *matRowDef="let row; columns: ['recipientId','channel','message','scheduledAt','isSent']"></tr>
-          </table>
+            <table mat-table [dataSource]="dataSource" class="mat-elevation-z2" *ngIf="!loadingNotifications">
+              <!-- Columns definitions -->
+              <!-- Recipient ID Column -->
+              <ng-container matColumnDef="recipientId">
+                <th mat-header-cell *matHeaderCellDef>Recipient ID</th>
+                <td mat-cell *matCellDef="let row">{{ row.recipientId }}</td>
+              </ng-container>
+              <!-- Channel Column -->
+              <ng-container matColumnDef="channel">
+                <th mat-header-cell *matHeaderCellDef>Channel</th>
+                <td mat-cell *matCellDef="let row">{{ row.channel }}</td>
+              </ng-container>
+              <!-- Message Column -->
+              <ng-container matColumnDef="message">
+                <th mat-header-cell *matHeaderCellDef>Message</th>
+                <td mat-cell *matCellDef="let row">{{ row.message }}</td>
+              </ng-container>
+              <!-- Scheduled At Column -->
+              <ng-container matColumnDef="scheduledAt">
+                <th mat-header-cell *matHeaderCellDef>Scheduled At</th>
+                <td mat-cell *matCellDef="let row">{{ row.scheduledAt }}</td>
+              </ng-container>
+              <!-- Sent Status Column -->
+              <ng-container matColumnDef="isSent">
+                <th mat-header-cell *matHeaderCellDef>Sent?</th>
+                <td mat-cell *matCellDef="let row">{{ row.isSent ? 'Yes' : 'No' }}</td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="['recipientId','channel','message','scheduledAt','isSent']"></tr>
+              <tr mat-row *matRowDef="let row; columns: ['recipientId','channel','message','scheduledAt','isSent']"></tr>
+            </table>
 
-          <!-- Paginator at the BOTTOM -->
-          <mat-paginator #paginatorBottom
-                         [length]="dataSource.data.length"
-                         [pageSize]="25"
-                         [pageSizeOptions]="[10, 25, 50, 100]"
-                         showFirstLastButtons>
-          </mat-paginator>
-        </mat-card-content>
-      </mat-card>
-    </mat-tab>
+            <!-- Paginator at the BOTTOM -->
+            <mat-paginator #paginatorBottom
+                           [length]="dataSource.data.length"
+                           [pageSize]="25"
+                           [pageSizeOptions]="[10, 25, 50, 100]"
+                           showFirstLastButtons>
+            </mat-paginator>
+          </mat-card-content>
+        </mat-card>
+      </mat-tab>
 
-    <mat-tab label="Notification Templates">
-      <!-- Include the Notification Templates component -->
-      <app-notification-templates></app-notification-templates>
-    </mat-tab>
-  </mat-tab-group>
-</div>
+      <mat-tab label="Notification Templates">
+        <!-- Include the Notification Templates component -->
+        <app-notification-templates></app-notification-templates>
+      </mat-tab>
+    </mat-tab-group>
+</mat-card>
+
+
+
+
+      
+

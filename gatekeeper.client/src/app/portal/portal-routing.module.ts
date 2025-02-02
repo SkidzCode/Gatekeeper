@@ -1,3 +1,4 @@
+/// <reference path="../admin/admin-routing.module.ts" />
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 
@@ -18,15 +19,14 @@ import { AuthGuard } from '../core/guard/auth-guard.service';
 
 const routes: Routes = [
   {
-    path: '',
+    path: '', // Added 'portal' path prefix
     component: PortalLayoutComponent,
     children: [
       { path: '', component: HomeComponent, canActivate: [DisabledGuardService, AuthGuard] },
       { path: 'user/profile', component: UserProfileComponent, canActivate: [DisabledGuardService, AuthGuard] },
       { path: 'user/settings', component: UserSettingsComponent, canActivate: [DisabledGuardService, AuthGuard] },
       { path: 'user/invite', component: InviteComponent, canActivate: [DisabledGuardService, AuthGuard] },
-      { path: 'user/sessions', component: SessionsComponent, canActivate: [DisabledGuardService, AuthGuard] }
-
+      { path: 'user/sessions', component: SessionsComponent, canActivate: [DisabledGuardService, AuthGuard] },
       // ... more portal routes here
     ],
   },

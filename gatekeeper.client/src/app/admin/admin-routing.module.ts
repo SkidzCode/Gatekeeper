@@ -10,7 +10,6 @@ import { UserListComponent } from './user/user-list/user-list.component';
 import { UserEditComponent } from './user/user-edit/user-edit.component';
 import { UserLoginComponent } from '../site/user/user-login/user-login.component';
 import { NotificationComponent } from './notification/notification/notification.component';
-import { NotificationTemplatesComponent } from './notification/notification-templates/notification-templates.component';
 import { AdminLogsBrowserComponent } from './history/admin-logs-browser/admin-logs-browser.component'
 import { AdminSettingsListComponent } from './settings/admin-settings-list/admin-settings-list.component';
 import { AdminSettingsEditComponent } from './settings/admin-settings-edit/admin-settings-edit.component';

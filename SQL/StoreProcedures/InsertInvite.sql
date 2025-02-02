@@ -1,6 +1,3 @@
--- =========================================
--- 1. InsertInvite
--- =========================================
 DROP PROCEDURE IF EXISTS InsertInvite;
 DELIMITER $$
 CREATE PROCEDURE InsertInvite (
@@ -8,7 +5,8 @@ CREATE PROCEDURE InsertInvite (
     IN p_ToName VARCHAR(255),
     IN p_ToEmail VARCHAR(255),
     IN p_VerificationId CHAR(36),
-    IN p_NotificationId INT
+    IN p_NotificationId INT,
+    OUT last_id INT
 )
 BEGIN
     INSERT INTO Invites (
@@ -25,5 +23,7 @@ BEGIN
         p_VerificationId,
         p_NotificationId
     );
+    
+    SET last_id = LAST_INSERT_ID();
 END$$
 DELIMITER ;

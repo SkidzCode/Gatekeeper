@@ -1,7 +1,6 @@
 @use '@angular/material' as mat;
-@use '../../../../styles.scss' as app-theme;
+@use '../../../../styles/green_theme-colors.scss' as myapp-theme; // adjust the path as needed
 @use 'sass:color';
-@use 'sass:map';
 
 .admin-logs-browser-container {
   display: flex;
@@ -14,7 +13,6 @@
     flex-direction: column;
     gap: 1rem;
   }
-  // Remove .full-width class
 
   .actions-row {
     display: flex;
@@ -24,21 +22,20 @@
   }
 
   .odd-record {
-    background-color: mat.m2-get-color-from-palette(map.get(app-theme.$myapp-theme, 'primary'), 300);
-
-    $even-color: mat.m2-get-color-from-palette(map.get(app-theme.$myapp-theme, 'primary'), 300);
-    background-color: color.mix($even-color, white, 10%);
+    // Use tone 30 instead of 300.
+    $base-color: mat.m2-get-color-from-palette(myapp-theme.$primary-palette, 10);
+    background-color: $base-color;
   }
-
+   
   .even-record {
-    $odd-color: mat.m2-get-color-from-palette(map.get(app-theme.$myapp-theme, 'primary'), 300);
-    background-color: color.mix($odd-color, white, 25%);
+    $base-color: mat.m2-get-color-from-palette(myapp-theme.$primary-palette, 10);
+    background-color: color.mix($base-color, white, 90%);
   }
 
   .form-row {
     display: flex;
     gap: 1rem;
-    flex-wrap: wrap; // Add flex-wrap here by default
+    flex-wrap: wrap;
   }
 
   .form-buttons {
@@ -48,7 +45,7 @@
   }
 
   .form-field {
-    flex: 0 0 100%; // Default to full width
+    flex: 0 0 100%;
   }
   /* Responsive Design */
   @media (min-width: 601px) and (max-width: 800px) {
