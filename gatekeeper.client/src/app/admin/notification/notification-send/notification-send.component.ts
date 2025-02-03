@@ -1,4 +1,4 @@
-import { Component, OnInit, ElementRef, viewChild } from '@angular/core';
+import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { NotificationService } from '../../../core/services/site/notification.service';
@@ -7,7 +7,6 @@ import { UserService } from '../../../core/services/user/user.service';
 import { Notification } from '../../../../../src/app/shared/models/notification.model';
 import { NotificationTemplate } from '../../../../../src/app/shared/models/notification.template.model';
 import { User } from '../../../../../src/app/shared/models/user.model';
-import { NotificationPreviewDialogComponent } from '../notification-preview-dialog/notification-preview-dialog.component';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/services/user/auth.service';
 
@@ -18,7 +17,8 @@ import { AuthService } from '../../../core/services/user/auth.service';
   standalone: false,
 })
 export class NotificationSendComponent implements OnInit {
-  readonly messageInput = viewChild.required<ElementRef>('messageInput');
+  @ViewChild('messageInput') messageInput!: ElementRef;
+
   notificationForm!: FormGroup;
   templateSearchForm!: FormGroup;
   templates: NotificationTemplate[] = [];
@@ -27,6 +27,9 @@ export class NotificationSendComponent implements OnInit {
   loadingTemplates = false;
   loadingUsers = false;
   currentUser: User | null = null;
+
+  // Toggle preview section on/off
+  previewMode = false;
 
   constructor(
     private fb: FormBuilder,
@@ -166,18 +169,7 @@ export class NotificationSendComponent implements OnInit {
       this.showSnackBar('Please fill out required fields before previewing');
       return;
     }
-    const dialogRef = this.dialog.open(NotificationPreviewDialogComponent, {
-      width: '500px',
-      data: {
-        subject: this.notificationForm.value.subject,
-        message: this.notificationForm.value.message
-      }
-    });
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result?.send) {
-        this.submitNotification();
-      }
-    });
+    this.previewMode = !this.previewMode;
   }
 
   submitNotification(): void {
@@ -199,6 +191,7 @@ export class NotificationSendComponent implements OnInit {
       next: () => {
         this.showSnackBar('Notification created successfully');
         this.notificationForm.reset({ channel: 'email', tokenType: '' });
+        this.previewMode = false; // reset preview mode on submit
       },
       error: (err) => {
         console.error('Error creating notification:', err);
@@ -210,6 +203,18 @@ export class NotificationSendComponent implements OnInit {
   insertVariable(variable: string): void {
     const currentMessage = this.notificationForm.get('message')?.value || '';
     this.notificationForm.get('message')?.setValue(currentMessage + ' ' + variable);
+  }
+
+  getPreviewHtml(): string {
+    const subject = this.escapeHtml(this.notificationForm.value.subject || '');
+    const message = this.notificationForm.value.message || '';
+    return `<h2>${subject}</h2>${message}`;
+  }
+
+  private escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   private loadCurrentUser(): void {

@@ -20,7 +20,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatTabsModule } from '@angular/material/tabs'; 
-
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 
 import { AdminRoutingModule } from './admin-routing.module';
 import { UserListComponent } from './user/user-list/user-list.component';
@@ -73,7 +73,8 @@ import { NotificationSendComponent } from './notification/notification-send/noti
     MatIconModule,
     MatProgressSpinner,
     MatRadioModule,
-    MatTabsModule
+    MatTabsModule,
+    MatSlideToggleModule
   ],
 })
 export class AdminModule { }

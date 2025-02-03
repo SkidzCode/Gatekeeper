@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, viewChild } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ViewChild } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { NotificationService } from '../../../core/services/site/notification.service';
 import { Notification } from '../../../../../src/app/shared/models/notification.model';
@@ -14,11 +14,14 @@ import { MatTableDataSource } from '@angular/material/table';
 })
 export class NotificationComponent implements OnInit, AfterViewInit {
   dataSource = new MatTableDataSource<Notification>([]);
-  readonly paginatorTop = viewChild.required<MatPaginator>('paginatorTop');
-  readonly paginatorBottom = viewChild.required<MatPaginator>('paginatorBottom');
+  @ViewChild('paginatorTop') paginatorTop!: MatPaginator;
+  @ViewChild('paginatorBottom') paginatorBottom!: MatPaginator;
 
   loadingNotifications = false;
   selectedTabIndex = 0;
+
+  // Toggle flag to show/hide the message preview (on by default)
+  previewEnabled = true;
 
   constructor(
     private dialog: MatDialog,
@@ -30,18 +33,16 @@ export class NotificationComponent implements OnInit, AfterViewInit {
     this.fetchNotificationLog();
   }
 
-  ngAfterViewInit() {
-    this.dataSource.paginator = this.paginatorTop();
-    this.paginatorTop().page.subscribe((event: PageEvent) => {
-      const paginatorBottom = this.paginatorBottom();
-      paginatorBottom.pageIndex = event.pageIndex;
-      paginatorBottom.pageSize = event.pageSize;
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginatorTop;
+    this.paginatorTop.page.subscribe((event: PageEvent) => {
+      this.paginatorBottom.pageIndex = event.pageIndex;
+      this.paginatorBottom.pageSize = event.pageSize;
     });
-    this.paginatorBottom().page.subscribe((event: PageEvent) => {
-      const paginatorTop = this.paginatorTop();
-      paginatorTop.pageIndex = event.pageIndex;
-      paginatorTop.pageSize = event.pageSize;
-      paginatorTop._changePageSize(event.pageSize);
+    this.paginatorBottom.page.subscribe((event: PageEvent) => {
+      this.paginatorTop.pageIndex = event.pageIndex;
+      this.paginatorTop.pageSize = event.pageSize;
+      this.paginatorTop._changePageSize(event.pageSize);
     });
   }
 

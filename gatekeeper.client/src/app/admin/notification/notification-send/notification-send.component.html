@@ -79,7 +79,7 @@
       <mat-card-actions>
         <button mat-stroked-button color="accent" (click)="previewNotification()"
                 [disabled]="notificationForm.invalid">
-          Preview
+          {{ previewMode ? 'Hide Preview' : 'Preview' }}
         </button>
         <button mat-raised-button color="primary" (click)="submitNotification()"
                 [disabled]="notificationForm.invalid">
@@ -130,6 +130,14 @@
       <div *ngIf="!loadingTemplates && filteredTemplates.length === 0">
         No templates found.
       </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Preview Section -->
+  <mat-card *ngIf="previewMode">
+    <mat-card-title>Preview</mat-card-title>
+    <mat-card-content>
+      <app-template-preview-iframe [htmlContent]="getPreviewHtml()"></app-template-preview-iframe>
     </mat-card-content>
   </mat-card>
 </div>
