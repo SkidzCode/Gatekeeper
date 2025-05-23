@@ -132,7 +132,7 @@ namespace GateKeeper.Server.Test.Services
             Assert.AreEqual(expectedUser.IsActive, result.IsActive);
 
             _mockDbHelper.Verify(db => db.GetWrapperAsync(), Times.Once);
-            mockWrapper.Verify(wrapper => wrapper.ExecuteReaderAsync("GetUserProfile", CommandType.StoredProcedure, It.Is<MySqlParameter[]>(p => p.Length == 1 && p[0].ParameterName == "@p_UserId" && (int)p[0].Value == userId)), Times.Once);
+            mockWrapper.Verify(wrapper => wrapper.ExecuteReaderAsync("GetUserProfile", CommandType.StoredProcedure, It.Is<MySqlParameter[]>(p => p.Length == 1 && p[0].ParameterName == "@p_UserId" && (int)(p[0].Value ?? -99) == userId)), Times.Once);
             mockUserReader.Verify(r => r.ReadAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
             mockUserReader.Verify(r => r.NextResultAsync(It.IsAny<CancellationToken>()), Times.Once);
         }
@@ -160,7 +160,7 @@ namespace GateKeeper.Server.Test.Services
             Assert.IsNull(result);
 
             _mockDbHelper.Verify(db => db.GetWrapperAsync(), Times.Once);
-            mockWrapper.Verify(wrapper => wrapper.ExecuteReaderAsync("GetUserProfile", CommandType.StoredProcedure, It.Is<MySqlParameter[]>(p => p.Length == 1 && p[0].ParameterName == "@p_UserId" && (int)p[0].Value == userId)), Times.Once);
+            mockWrapper.Verify(wrapper => wrapper.ExecuteReaderAsync("GetUserProfile", CommandType.StoredProcedure, It.Is<MySqlParameter[]>(p => p.Length == 1 && p[0].ParameterName == "@p_UserId" && (int)(p[0].Value ?? -99) == userId)), Times.Once);
             mockUserReader.Verify(r => r.ReadAsync(It.IsAny<CancellationToken>()), Times.Once);
             mockUserReader.Verify(r => r.NextResultAsync(It.IsAny<CancellationToken>()), Times.Never);
         }
