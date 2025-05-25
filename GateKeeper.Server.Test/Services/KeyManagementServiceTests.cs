@@ -11,6 +11,8 @@ using System.Security.Cryptography; // For CryptographicException
 using MySqlConnector; // For MySqlParameter
 using System.Data; // For CommandType
 using System.Linq; // For Enumerable.SequenceEqual
+using Microsoft.Extensions.Options; // Added for IOptions
+using GateKeeper.Server.Models.Configuration; // Added for KeyManagementConfig
 
 namespace GateKeeper.Server.Test.Services
 {
@@ -21,7 +23,9 @@ namespace GateKeeper.Server.Test.Services
         private Mock<IMySqlConnectorWrapper> _mockMySqlConnectorWrapper;
         private Mock<ILogger<KeyManagementService>> _mockLogger;
         private KeyManagementService _keyManagementService;
-        private byte[] _testMasterEncryptionKey;
+        private Mock<IOptions<KeyManagementConfig>> _mockKeyManagementConfigOptions;
+        private KeyManagementConfig _keyManagementConfig;
+        private byte[] _testMasterEncryptionKeyBytes; // To store the decoded key for assertions
 
         [TestInitialize]
         public void TestInitialize()
@@ -30,12 +34,13 @@ namespace GateKeeper.Server.Test.Services
             _mockMySqlConnectorWrapper = new Mock<IMySqlConnectorWrapper>();
             _mockLogger = new Mock<ILogger<KeyManagementService>>();
 
-            // Generate a consistent 32-byte key for testing AES-256
-            _testMasterEncryptionKey = new byte[32];
-            for (int i = 0; i < _testMasterEncryptionKey.Length; i++)
-            {
-                _testMasterEncryptionKey[i] = (byte)(i + 1); // Simple predictable pattern
-            }
+            // A valid Base64 encoded 32-byte key
+            string testMasterKeyBase64 = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="; 
+            _testMasterEncryptionKeyBytes = Convert.FromBase64String(testMasterKeyBase64);
+
+            _keyManagementConfig = new KeyManagementConfig { MasterKey = testMasterKeyBase64 };
+            _mockKeyManagementConfigOptions = new Mock<IOptions<KeyManagementConfig>>();
+            _mockKeyManagementConfigOptions.Setup(o => o.Value).Returns(_keyManagementConfig);
 
             _mockDbHelper.Setup(db => db.GetWrapperAsync()).Returns(Task.FromResult(_mockMySqlConnectorWrapper.Object));
             _mockMySqlConnectorWrapper.Setup(c => c.OpenConnectionAsync()).Returns(Task.FromResult(_mockMySqlConnectorWrapper.Object));
@@ -43,7 +48,7 @@ namespace GateKeeper.Server.Test.Services
             _keyManagementService = new KeyManagementService(
                 _mockDbHelper.Object,
                 _mockLogger.Object,
-                _testMasterEncryptionKey
+                _mockKeyManagementConfigOptions.Object // Pass the mocked IOptions
             );
         }
 
@@ -103,7 +108,7 @@ namespace GateKeeper.Server.Test.Services
             // This uses the service's own private decryption logic implicitly
             using (var aes = Aes.Create())
             {
-                aes.Key = _testMasterEncryptionKey;
+                aes.Key = _testMasterEncryptionKeyBytes; // Use the decoded byte array
                 byte[] iv = new byte[aes.BlockSize / 8];
                 Buffer.BlockCopy(capturedEncryptedKey, 0, iv, 0, iv.Length);
                 aes.IV = iv;
@@ -146,7 +151,7 @@ namespace GateKeeper.Server.Test.Services
             byte[] encryptedKeyFromDb;
             using (var aes = Aes.Create())
             {
-                aes.Key = _testMasterEncryptionKey;
+                aes.Key = _testMasterEncryptionKeyBytes; // Use the decoded byte array
                 aes.GenerateIV();
                 aes.Mode = CipherMode.CBC;
                 using var encryptor = aes.CreateEncryptor();

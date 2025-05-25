@@ -27,9 +27,9 @@ namespace GateKeeper.Server.Test.Services
         {
             _mockDbHelper = new Mock<IDbHelper>();
             _mockLogger = new Mock<ILogger<RoleService>>();
-            var mockConfiguration = new Mock<IConfiguration>();
+            // var mockConfiguration = new Mock<IConfiguration>(); // Removed
 
-            _roleService = new RoleService(mockConfiguration.Object, _mockDbHelper.Object, _mockLogger.Object);
+            _roleService = new RoleService(/* mockConfiguration.Object, */ _mockDbHelper.Object, _mockLogger.Object); // IConfiguration mock removed
         }
 
         [TestMethod]

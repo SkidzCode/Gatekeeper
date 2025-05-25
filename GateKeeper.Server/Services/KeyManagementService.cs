@@ -14,16 +14,45 @@ namespace GateKeeper.Server.Services
         private readonly ILogger<KeyManagementService> _logger;
 
         // This could be stored in environment variables or Azure Key Vault, etc.
-        private readonly byte[] _masterEncryptionKey;
+using Microsoft.Extensions.Options; // Added for IOptions
+using GateKeeper.Server.Models.Configuration; // Added for KeyManagementConfig
+
+namespace GateKeeper.Server.Services
+{
+    public class KeyManagementService : IKeyManagementService
+    {
+        private readonly IDbHelper _dbHelper;
+        private readonly ILogger<KeyManagementService> _logger;
+        private readonly byte[] _masterEncryptionKeyBytes; // Changed from _masterEncryptionKey
 
         public KeyManagementService(
             IDbHelper dbHelper,
             ILogger<KeyManagementService> logger,
-            byte[] masterEncryptionKey)
+            IOptions<KeyManagementConfig> keyManagementConfigOptions) // Changed parameter
         {
             _dbHelper = dbHelper;
             _logger = logger;
-            _masterEncryptionKey = masterEncryptionKey;
+            var keyManagementConfig = keyManagementConfigOptions.Value;
+
+            if (string.IsNullOrEmpty(keyManagementConfig.MasterKey))
+            {
+                _logger.LogError("MasterKey is not configured in KeyManagementConfig.");
+                throw new InvalidOperationException("MasterKey is not configured.");
+            }
+            try
+            {
+                _masterEncryptionKeyBytes = Convert.FromBase64String(keyManagementConfig.MasterKey);
+                if (_masterEncryptionKeyBytes.Length != 32) // AES-256 requires a 32-byte key
+                {
+                    _logger.LogError("MasterKey, after Base64 decoding, is not 32 bytes long.");
+                    throw new InvalidOperationException("MasterKey must be a 32-byte key after Base64 decoding.");
+                }
+            }
+            catch (FormatException ex)
+            {
+                _logger.LogError(ex, "MasterKey is not a valid Base64 string.");
+                throw new InvalidOperationException("MasterKey is not a valid Base64 string.", ex);
+            }
         }
 
         /// <summary>
@@ -112,7 +141,7 @@ namespace GateKeeper.Server.Services
             using var aes = Aes.Create();
             try
             {
-                aes.Key = _masterEncryptionKey;
+                aes.Key = _masterEncryptionKeyBytes; // Use the byte array
                 aes.GenerateIV();
                 aes.Mode = CipherMode.CBC;
 
@@ -135,7 +164,7 @@ namespace GateKeeper.Server.Services
         private byte[] DecryptKey(byte[] cipherData)
         {
             using var aes = Aes.Create();
-            aes.Key = _masterEncryptionKey;
+            aes.Key = _masterEncryptionKeyBytes; // Use the byte array
             aes.Mode = CipherMode.CBC;
 
             // Extract IV

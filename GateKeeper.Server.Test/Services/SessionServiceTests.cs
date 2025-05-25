@@ -19,7 +19,7 @@ namespace GateKeeper.Server.Test.Services
     [TestClass]
     public class SessionServiceTests
     {
-        private Mock<IConfiguration> _mockConfiguration;
+        // private Mock<IConfiguration> _mockConfiguration; // Removed
         private Mock<IDbHelper> _mockDbHelper;
         private Mock<IMySqlConnectorWrapper> _mockMySqlConnectorWrapper;
         private Mock<IMySqlDataReaderWrapper> _mockDataReader;
@@ -30,7 +30,7 @@ namespace GateKeeper.Server.Test.Services
         [TestInitialize]
         public void TestInitialize()
         {
-            _mockConfiguration = new Mock<IConfiguration>();
+            // _mockConfiguration = new Mock<IConfiguration>(); // Removed
             _mockDbHelper = new Mock<IDbHelper>();
             _mockMySqlConnectorWrapper = new Mock<IMySqlConnectorWrapper>();
             _mockDataReader = new Mock<IMySqlDataReaderWrapper>();
@@ -38,17 +38,16 @@ namespace GateKeeper.Server.Test.Services
             _mockVerifyTokenService = new Mock<IVerifyTokenService>();
 
             // Mock IConfiguration GetSection for DatabaseConfig
-            // The SUT uses .Get<DatabaseConfig>() ?? new DatabaseConfig(), so GetSection returning a section 
+            // The SUT uses .Get<DatabaseConfig>() ?? new DatabaseConfig(), so GetSection returning a section
             // where Get<T> might return null (Moq default) is acceptable.
-            var mockDbConfigSection = new Mock<IConfigurationSection>(); 
-            _mockConfiguration.Setup(c => c.GetSection("DatabaseConfig")).Returns(mockDbConfigSection.Object);
-            // No need to mock .Get<DatabaseConfig>() specifically if the SUT handles its null result.
+            // var mockDbConfigSection = new Mock<IConfigurationSection>(); // No longer needed as IConfiguration is removed
+            // _mockConfiguration.Setup(c => c.GetSection("DatabaseConfig")).Returns(mockDbConfigSection.Object); // No longer needed
             
             _mockDbHelper.Setup(db => db.GetWrapperAsync()).Returns(Task.FromResult(_mockMySqlConnectorWrapper.Object));
-            _mockMySqlConnectorWrapper.Setup(c => c.OpenConnectionAsync()).Returns(Task.FromResult(_mockMySqlConnectorWrapper.Object)); // Added this line
+            _mockMySqlConnectorWrapper.Setup(c => c.OpenConnectionAsync()).Returns(Task.FromResult(_mockMySqlConnectorWrapper.Object));
 
             _service = new SessionService(
-                _mockConfiguration.Object,
+                /* _mockConfiguration.Object, */ // Removed
                 _mockDbHelper.Object,
                 _mockLogger.Object,
                 _mockVerifyTokenService.Object

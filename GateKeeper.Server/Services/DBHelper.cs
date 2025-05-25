@@ -1,24 +1,30 @@
 ﻿using MySqlConnector;
 using System.Data;
 using GateKeeper.Server.Database;
-using GateKeeper.Server.Models.Account;
+using GateKeeper.Server.Models.Configuration; // Updated to use the new DatabaseConfig location
 using GateKeeper.Server.Interface;
+using Microsoft.Extensions.Options; // Added for IOptions
 
 namespace GateKeeper.Server.Services;
 
 public class DBHelper : IDbHelper
 {
-    public readonly string ConnectionString;
+    private readonly DatabaseConfig _dbConfig;
 
-    public DBHelper(IConfiguration configuration)
+    public DBHelper(IOptions<DatabaseConfig> dbConfigOptions)
     {
-        var dbConfig = configuration.GetSection("DatabaseConfig").Get<DatabaseConfig>() ?? new DatabaseConfig();
-        ConnectionString = $"Server={dbConfig.Server};Database={dbConfig.Database};Uid={dbConfig.User};Pwd={dbConfig.Password};Pooling=true;Maximum Pool Size=100;Connection Lifetime=300"; // Include pooling options here
+        _dbConfig = dbConfigOptions.Value;
+        // Basic validation, though Program.cs handles more comprehensive validation
+        if (string.IsNullOrWhiteSpace(_dbConfig.ConnectionString))
+        {
+            throw new InvalidOperationException("Database connection string is not configured.");
+        }
     }
 
     public async Task<IMySqlConnectorWrapper> GetWrapperAsync()
     {
-        return await new MySqlConnectorWrapper(ConnectionString).OpenConnectionAsync();
+        // Using the ConnectionString directly from the injected and validated DatabaseConfig
+        return await new MySqlConnectorWrapper(_dbConfig.ConnectionString).OpenConnectionAsync();
     }
 }
 

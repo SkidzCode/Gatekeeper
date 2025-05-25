@@ -2,7 +2,9 @@
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Resources;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration; // Added for IConfiguration
+// using Microsoft.Extensions.Configuration; // To be replaced by IOptions
+using Microsoft.Extensions.Options; // Added for IOptions
+using GateKeeper.Server.Models.Configuration; // Added for ResourceSettingsConfig
 using MySqlConnector;
 using System.Data;
 using System.Threading.Tasks;
@@ -13,16 +15,30 @@ namespace GateKeeper.Server.Services
     {
         private readonly IDbHelper _dbHelper;
         private readonly ILogger<ResourceService> _logger;
-        private readonly IConfiguration _configuration; // Added IConfiguration field
+        // private readonly IConfiguration _configuration; // To be replaced
+        private readonly ResourceSettingsConfig _resourceSettings; // Added
         private readonly string _resourceDirectory;
 
-        public ResourceService(IDbHelper dbHelper, ILogger<ResourceService> logger, IConfiguration configuration) // Added IConfiguration to constructor
+        public ResourceService(IDbHelper dbHelper, ILogger<ResourceService> logger, IOptions<ResourceSettingsConfig> resourceSettingsOptions) // Use IOptions
         {
             _dbHelper = dbHelper;
             _logger = logger;
-            _configuration = configuration; // Store the configuration
-            // Get the resource directory from configuration, fallback to a default if necessary
-            _resourceDirectory = _configuration["Resources:Path"] ?? "C:/Users/Skidz/source/repos/GateKeeper/GateKeeper.Server/Resources";
+            _resourceSettings = resourceSettingsOptions.Value; // Store the typed config
+            
+            // Get the resource directory from the typed configuration
+            // The null check for _resourceSettings or _resourceSettings.Path should ideally be handled by startup validation if Path is [Required]
+            if (string.IsNullOrEmpty(_resourceSettings.Path))
+            {
+                _logger.LogWarning("Resource path is not configured in ResourceSettings. Falling back to default or potentially erroring if no fallback.");
+                // Fallback to a default if necessary, or throw if it's critical and not set.
+                // For now, keeping the original fallback logic but warning about it.
+                _resourceDirectory = "C:/Users/Skidz/source/repos/GateKeeper/GateKeeper.Server/Resources"; // Original fallback
+                // Consider: throw new InvalidOperationException("Resource path is not configured.");
+            }
+            else
+            {
+                _resourceDirectory = _resourceSettings.Path;
+            }
         }
 
         public List<ResourceEntry> ListEntries(string resourceFileName)

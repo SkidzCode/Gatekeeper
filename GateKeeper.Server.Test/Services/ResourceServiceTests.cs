@@ -16,30 +16,31 @@ namespace GateKeeper.Server.Test.Services
     [TestClass]
     public class ResourceServiceTests
     {
-        private Mock<IDbHelper> _mockDbHelper; // In SUT, but seems unused for resource file logic
+        private Mock<IDbHelper> _mockDbHelper;
         private Mock<ILogger<ResourceService>> _mockLogger;
+        private Mock<IOptions<ResourceSettingsConfig>> _mockResourceSettingsOptions; // Added
         private ResourceService _resourceService;
-
-        // This is the hardcoded path from ResourceService. We'll try to work with/around it.
-        // private readonly string _hardcodedResourceDirectory = "C:/Users/Skidz/source/repos/GateKeeper/GateKeeper.Server/Resources"; // No longer primary concern
-        private string _testResourceDir; // This will be our actual temp testing directory.
+        private string _testResourceDir;
 
         [TestInitialize]
         public void TestInitialize()
         {
             _mockDbHelper = new Mock<IDbHelper>();
             _mockLogger = new Mock<ILogger<ResourceService>>();
-            
-            var mockConfiguration = new Mock<IConfiguration>();
-            _testResourceDir = Path.Combine(Path.GetTempPath(), $"ResourceServiceTests_TempResources_{Guid.NewGuid()}"); // Ensure unique dir per run
+            _mockResourceSettingsOptions = new Mock<IOptions<ResourceSettingsConfig>>(); // Added
+
+            _testResourceDir = Path.Combine(Path.GetTempPath(), $"ResourceServiceTests_TempResources_{Guid.NewGuid()}");
             if (Directory.Exists(_testResourceDir))
             {
                 Directory.Delete(_testResourceDir, true);
             }
             Directory.CreateDirectory(_testResourceDir);
-            // Set up IConfiguration to return the test path directly via indexer
-            mockConfiguration.Setup(c => c["Resources:Path"]).Returns(_testResourceDir);
-            _resourceService = new ResourceService(_mockDbHelper.Object, _mockLogger.Object, mockConfiguration.Object);
+
+            // Setup ResourceSettingsConfig
+            var resourceSettings = new ResourceSettingsConfig { Path = _testResourceDir };
+            _mockResourceSettingsOptions.Setup(o => o.Value).Returns(resourceSettings);
+            
+            _resourceService = new ResourceService(_mockDbHelper.Object, _mockLogger.Object, _mockResourceSettingsOptions.Object);
         }
 
         [TestCleanup]

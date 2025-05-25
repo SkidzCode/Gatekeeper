@@ -1,74 +1,71 @@
 ﻿using System.Net;
 using System.Net.Mail;
 using GateKeeper.Server.Interface;
-using GateKeeper.Server.Models.Account.UserModels;
-using Microsoft.Extensions.Configuration;
+using GateKeeper.Server.Models.Configuration; // Added for EmailSettingsConfig
+using Microsoft.Extensions.Options; // Added for IOptions
 
 namespace GateKeeper.Server.Services
 {
     public class EmailService : IEmailService
     {
-        private readonly IConfiguration _configuration;
+        private readonly EmailSettingsConfig _emailSettings;
 
-        public EmailService(IConfiguration configuration)
+        public EmailService(IOptions<EmailSettingsConfig> emailSettingsOptions)
         {
-            _configuration = configuration;
+            _emailSettings = emailSettingsOptions.Value;
         }
 
         public async Task SendEmailAsync(string email, string subject, string message)
         {
-            // Get all SMTP/email settings from user secrets
-            var smtpHost = _configuration["EmailSettings:SmtpHost"];
-            var smtpPort = int.Parse(_configuration["EmailSettings:Port"] ?? "587");
-            var userName = _configuration["EmailSettings:UserName"];
-            var password = _configuration["EmailSettings:Password"];
-            var fromName = _configuration["EmailSettings:FromName"];
-            var useSsl = bool.Parse(_configuration["EmailSettings:UseSsl"] ?? "true");
+            // SMTP settings are now from _emailSettings
+            // Assuming UseSsl is a boolean in your appsettings.json, if not, adjust or remove
+            // For simplicity, Ssl will be enabled by default if not specified or can be added to EmailSettingsConfig
+            bool useSsl = true; // Or add UseSsl to EmailSettingsConfig if it varies
 
             // Configure the email client
-            using var smtpClient = new SmtpClient(smtpHost)
+            using var smtpClient = new SmtpClient(_emailSettings.SmtpServer)
             {
-                Port = smtpPort,
-                Credentials = new NetworkCredential(userName, password),
+                Port = _emailSettings.Port,
+                Credentials = new NetworkCredential(_emailSettings.Username, _emailSettings.Password),
                 EnableSsl = useSsl
             };
 
             // Create the email message
             var mailMessage = new MailMessage
             {
-                From = new MailAddress(userName, fromName),
+                From = new MailAddress(_emailSettings.FromAddress), // FromAddress now used
                 Subject = subject,
                 Body = message,
                 IsBodyHtml = true, // Change to true if sending HTML content
             };
 
-            mailMessage.To.Add(new MailAddress(email, email));
+            mailMessage.To.Add(new MailAddress(email)); // Removed toName as it's often the same as email
 
             // Send the email
-            smtpClient.Send(mailMessage);
+            await smtpClient.SendMailAsync(mailMessage); // Use async version
         }
 
+        // This overload seems to have 'fromName2' which might be redundant if FromAddress in config is used.
+        // Consolidating or clarifying its purpose is recommended.
+        // For now, it's adapted to use EmailSettingsConfig, but 'fromName2' is used for the display name.
         public async Task SendEmailAsync(string toEmail, string toName, string fromName2, string subject, string message)
         {
-            // Get all SMTP/email settings from user secrets
-            var smtpHost = _configuration["EmailSettings:SmtpHost"];
-            var smtpPort = int.Parse(_configuration["EmailSettings:Port"] ?? "587");
-            var userName = _configuration["EmailSettings:UserName"];
-            var password = _configuration["EmailSettings:Password"];
-            var useSsl = bool.Parse(_configuration["EmailSettings:UseSsl"] ?? "true");
+            // SMTP settings are now from _emailSettings
+            bool useSsl = true; // Or add UseSsl to EmailSettingsConfig if it varies
             
             // Configure the email client
-            using var smtpClient = new SmtpClient(smtpHost)
+            using var smtpClient = new SmtpClient(_emailSettings.SmtpServer)
             {
-                Port = smtpPort,
-                Credentials = new NetworkCredential(userName, password),
+                Port = _emailSettings.Port,
+                Credentials = new NetworkCredential(_emailSettings.Username, _emailSettings.Password),
                 EnableSsl = useSsl
             };
 
             // Create the email message
             var mailMessage = new MailMessage
             {
-                From = new MailAddress(userName, fromName2),
+                // Using FromAddress for the email, and fromName2 for the display name for this specific overload
+                From = new MailAddress(_emailSettings.FromAddress, fromName2), 
                 Subject = subject,
                 Body = message,
                 IsBodyHtml = true, // Change to true if sending HTML content
@@ -77,7 +74,7 @@ namespace GateKeeper.Server.Services
             mailMessage.To.Add(new MailAddress(toEmail, toName));
 
             // Send the email
-            smtpClient.Send(mailMessage);
+            await smtpClient.SendMailAsync(mailMessage); // Use async version
         }
     }
 }

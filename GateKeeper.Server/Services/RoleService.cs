@@ -17,11 +17,10 @@ namespace GateKeeper.Server.Services
         /// <summary>
         /// Constructor for the RoleService.
         /// </summary>
-        /// <param name="configuration">Application configuration dependency.</param>
         /// <param name="dbHelper">Database helper for obtaining connections.</param>
         /// <param name="logger">Logger for RoleService.</param>
         public RoleService(
-            IConfiguration configuration,
+            // IConfiguration configuration, // Removed
             IDbHelper dbHelper,
             ILogger<RoleService> logger)
         {
