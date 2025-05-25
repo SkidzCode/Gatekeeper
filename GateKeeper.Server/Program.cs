@@ -81,6 +81,14 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IInviteService, InviteService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
 
+// Register IStringDataProtector and its wrapper
+builder.Services.AddTransient<IStringDataProtector>(provider =>
+    new StringDataProtectorWrapper(
+        provider.GetRequiredService<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>()
+            .CreateProtector("SecureCookies")
+    )
+);
+
 #endregion
 
 #region Hangfire

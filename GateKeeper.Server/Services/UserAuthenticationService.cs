@@ -32,7 +32,7 @@ namespace GateKeeper.Server.Services
     /// </summary>
     public class UserAuthenticationService : IUserAuthenticationService
     {
-        private readonly IDataProtector _protector;
+        private readonly IStringDataProtector _protector; // Changed type
         private IHttpContextAccessor _httpContextAccessor;
 
         private readonly IDbHelper _dbHelper;
@@ -60,7 +60,7 @@ namespace GateKeeper.Server.Services
         /// <param name="logger">Logger for logging information and errors.</param>
         /// <param name="settingsService">Service to retrieve settings for users.</param>
         /// <param name="keyManagementService">Key Management Service for retrieving rotating JWT keys.</param>
-        /// <param name="protector"></param>
+        /// <param name="stringDataProtector">String data protector service.</param>
         /// <param name="httpContextAccessor"></param>
         /// <param name="notification"></param>
         /// <param name="notificationTemplateService"></param>
@@ -72,7 +72,7 @@ namespace GateKeeper.Server.Services
             ILogger<UserAuthenticationService> logger,
             ISettingsService settingsService,
             IKeyManagementService keyManagementService,
-            IDataProtectionProvider protector, 
+            IStringDataProtector stringDataProtector, // Changed parameter type
             IHttpContextAccessor httpContextAccessor, 
             INotificationService notification,
             INotificationTemplateService notificationTemplateService,
@@ -85,7 +85,7 @@ namespace GateKeeper.Server.Services
             _userService = userService;
             _settingsService = settingsService;
             _keyManagementService = keyManagementService;
-            _protector = protector.CreateProtector("SecureCookies"); ;
+            _protector = stringDataProtector; // Assign directly
             _httpContextAccessor = httpContextAccessor;
             _requiresInvite = _configuration.GetValue<bool>("RegisterSettings:RequireInvite");
             _notificationService = notification;
@@ -497,7 +497,7 @@ namespace GateKeeper.Server.Services
                 try
                 {
                     // Decrypt the cookie value
-                    var decryptedValue = _protector.Unprotect(attemptsCookie);
+            var decryptedValue = _protector.Unprotect(attemptsCookie); // Now uses string version
                     if (int.TryParse(decryptedValue, out int parsedAttempts))
                         loginResponse.Attempts = parsedAttempts;
                 }
@@ -511,7 +511,7 @@ namespace GateKeeper.Server.Services
 
             // Increment and protect (encrypt) the new attempt count
             loginResponse.Attempts++;
-            var encryptedAttempts = _protector.Protect(loginResponse.Attempts.ToString());
+            var encryptedAttempts = _protector.Protect(loginResponse.Attempts.ToString()); // Now uses string version
 
             // Build secure cookie options
             var cookieOptions = new CookieOptions
