@@ -175,7 +175,7 @@ namespace GateKeeper.Server.Test.Services
             // Assert
             Assert.IsNotNull(result);
             Assert.AreEqual(notificationsData.Count, result.Count);
-            _mockMySqlConnectorWrapper.Verify(c => c.ExecuteReaderAsync("NotificationsGetAll", CommandType.StoredProcedure, null), Times.Once);
+            _mockMySqlConnectorWrapper.Verify(c => c.ExecuteReaderAsync("NotificationsGetAll", CommandType.StoredProcedure), Times.Once);
             for(int i=0; i<notificationsData.Count; i++)
             {
                 Assert.AreEqual(notificationsData[i].Id, result[i].Id);
@@ -273,21 +273,23 @@ namespace GateKeeper.Server.Test.Services
             _mockVerifyTokenService.Setup(s => s.GenerateTokenAsync(It.IsAny<int>(), It.IsAny<string>()))
                                    .ReturnsAsync(fullToken);
 
-            _mockDataReader.Setup(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(true);
-            _mockDataReader.Setup(r => r.GetInt32("new_id")).Returns(expectedNewId);
+            var localMockDataReader = new Mock<IMySqlDataReaderWrapper>();
+            localMockDataReader.SetupSequence(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
+                           .ReturnsAsync(true).ReturnsAsync(false);
+            localMockDataReader.Setup(r => r["new_id"]).Returns(expectedNewId);
             
             _mockMySqlConnectorWrapper.Setup(c => c.ExecuteReaderAsync(
                 "NotificationInsert",
                 CommandType.StoredProcedure,
                 It.IsAny<MySqlParameter[]>()))
-                .ReturnsAsync(_mockDataReader.Object)
+                .ReturnsAsync(localMockDataReader.Object)
                 .Callback<string, CommandType, MySqlParameter[]>((proc, type, pars) => 
                 {
                     Assert.IsTrue(pars.Any(p => p.ParameterName == "@p_Message" && ((string)p.Value).Contains("Test")));
                     Assert.IsTrue(pars.Any(p => p.ParameterName == "@p_Subject" && ((string)p.Value).Contains("Hi Test")));
                      // Check for the potentially problematic Int32 parameters
-                    Assert.IsTrue(pars.Any(p => p.ParameterName == "@p_ToName" && p.MySqlDbType == MySqlDbType.Int32), "p_ToName should be MySqlDbType.Int32 as per SUT");
-                    Assert.IsTrue(pars.Any(p => p.ParameterName == "@p_ToEmail" && p.MySqlDbType == MySqlDbType.Int32), "p_ToEmail should be MySqlDbType.Int32 as per SUT");
+                    Assert.IsTrue(pars.Any(p => p.ParameterName == "@p_ToName" && p.MySqlDbType == MySqlDbType.VarChar), "p_ToName should be MySqlDbType.VarChar");
+                    Assert.IsTrue(pars.Any(p => p.ParameterName == "@p_ToEmail" && p.MySqlDbType == MySqlDbType.VarChar), "p_ToEmail should be MySqlDbType.VarChar");
 
                 });
 
@@ -316,11 +318,12 @@ namespace GateKeeper.Server.Test.Services
             _mockUserService.Setup(s => s.GetUser(notification.RecipientId)).ReturnsAsync(toUser);
             _mockVerifyTokenService.Setup(s => s.GenerateTokenAsync(toUser.Id, notification.TokenType)).ReturnsAsync(expectedToken);
 
-            _mockDataReader.SetupSequence(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
+            var localMockDataReader = new Mock<IMySqlDataReaderWrapper>();
+            localMockDataReader.SetupSequence(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
                            .ReturnsAsync(true).ReturnsAsync(false);
-            _mockDataReader.Setup(r => r.GetInt32("new_id")).Returns(expectedNewNotificationId);
+            localMockDataReader.Setup(r => r["new_id"]).Returns(expectedNewNotificationId);
              _mockMySqlConnectorWrapper.Setup(c => c.ExecuteReaderAsync("NotificationInsert", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
-                .ReturnsAsync(_mockDataReader.Object)
+                .ReturnsAsync(localMockDataReader.Object)
                 .Callback<string, CommandType, MySqlParameter[]>((proc, type, pars) => 
                 {
                     var messageParam = (string)pars.First(p => p.ParameterName == "@p_Message").Value;
@@ -357,11 +360,12 @@ namespace GateKeeper.Server.Test.Services
 
             _mockVerifyTokenService.Setup(s => s.GenerateTokenAsync(fromUser.Id, notification.TokenType)).ReturnsAsync(expectedToken);
 
-            _mockDataReader.SetupSequence(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
+            var localMockDataReader = new Mock<IMySqlDataReaderWrapper>();
+            localMockDataReader.SetupSequence(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
                            .ReturnsAsync(true).ReturnsAsync(false);
-            _mockDataReader.Setup(r => r.GetInt32("new_id")).Returns(expectedNewNotificationId);
+            localMockDataReader.Setup(r => r["new_id"]).Returns(expectedNewNotificationId);
             _mockMySqlConnectorWrapper.Setup(c => c.ExecuteReaderAsync("NotificationInsert", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
-                                      .ReturnsAsync(_mockDataReader.Object);
+                                      .ReturnsAsync(localMockDataReader.Object);
             
             var result = await _notificationService.InsertNotificationAsync(notification);
 

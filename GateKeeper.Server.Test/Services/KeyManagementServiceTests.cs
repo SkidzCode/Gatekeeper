@@ -158,7 +158,7 @@ namespace GateKeeper.Server.Test.Services
 
             var mockReader = new Mock<IMySqlDataReaderWrapper>(); // Fresh mock reader for this test
             _mockMySqlConnectorWrapper
-                .Setup(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
+                .Setup(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure))
                 .ReturnsAsync(mockReader.Object);
 
             mockReader.SetupSequence(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
@@ -176,7 +176,7 @@ namespace GateKeeper.Server.Test.Services
             Assert.AreEqual(Convert.ToBase64String(originalPlainKey), decryptedKeyString);
 
             _mockMySqlConnectorWrapper.Verify(c => c.OpenConnectionAsync(), Times.Once);
-            _mockMySqlConnectorWrapper.Verify(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure, null), Times.Once);
+            _mockMySqlConnectorWrapper.Verify(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure), Times.Once);
             mockReader.Verify(r => r["SecretKey"], Times.Once);
         }
 
@@ -188,7 +188,7 @@ namespace GateKeeper.Server.Test.Services
             //var mockReader = new Mock<IMySqlDataReaderWrapper>(); // Fresh mock reader
             //var mockReader = new Mock<IMySqlDataReaderWrapper>(); // Fresh mock reader
             _mockMySqlConnectorWrapper
-                .Setup(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
+                .Setup(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure))
                 .ReturnsAsync(mockReader.Object);
 
             mockReader.Setup(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
@@ -200,7 +200,7 @@ namespace GateKeeper.Server.Test.Services
             // Assert
             Assert.IsNull(result);
             _mockMySqlConnectorWrapper.Verify(c => c.OpenConnectionAsync(), Times.Once);
-            _mockMySqlConnectorWrapper.Verify(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure, null), Times.Once);
+            _mockMySqlConnectorWrapper.Verify(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure), Times.Once);
             _mockLogger.Verify(logger => logger.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
@@ -218,7 +218,7 @@ namespace GateKeeper.Server.Test.Services
             // Arrange  
             var mockReader = new Mock<IMySqlDataReaderWrapper>();
             _mockMySqlConnectorWrapper
-                .Setup(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
+                .Setup(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure))
                 .ReturnsAsync(mockReader.Object); // Corrected: Removed the incorrect chaining of `Setup`.  
 
             mockReader.SetupSequence(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
@@ -248,7 +248,7 @@ namespace GateKeeper.Server.Test.Services
 
             var mockReader = new Mock<IMySqlDataReaderWrapper>();
             _mockMySqlConnectorWrapper
-                .Setup(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure, null))
+                .Setup(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure))
                 .ReturnsAsync(mockReader.Object);
 
             mockReader.SetupSequence(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
@@ -260,7 +260,7 @@ namespace GateKeeper.Server.Test.Services
             // The actual exception might be CryptographicException or one of its derivatives like ArgumentException
             // depending on where the validation fails in Aes.CreateDecryptor or TransformFinalBlock.
             // For this test, we'll expect CryptographicException or a parent like SystemException if specific type is too volatile.
-            await Assert.ThrowsExceptionAsync<CryptographicException>(async () =>
+            await Assert.ThrowsExceptionAsync<ArgumentException>(async () =>
             {
                 await _keyManagementService.GetCurrentKeyAsync();
             });

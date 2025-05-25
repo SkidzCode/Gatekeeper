@@ -209,25 +209,25 @@ namespace GateKeeper.Server.Services
                 {
                     Value = notification.FromId
                 },
-                new MySqlParameter("@p_ToName", MySqlDbType.Int32)
+                new MySqlParameter("@p_ToName", MySqlDbType.VarChar, 255)
                 {
-                    Value = notification.ToName
+                    Value = (object?)notification.ToName ?? DBNull.Value
                 },
-                new MySqlParameter("@p_ToEmail", MySqlDbType.Int32)
+                new MySqlParameter("@p_ToEmail", MySqlDbType.VarChar, 255)
                 {
-                    Value = notification.ToEmail
+                    Value = (object?)notification.ToEmail ?? DBNull.Value
                 },
                 new MySqlParameter("@p_Channel", MySqlDbType.VarChar, 10)
                 {
                     Value = notification.Channel
                 },
-                new MySqlParameter("@p_URL", MySqlDbType.VarChar, 10)
+                new MySqlParameter("@p_URL", MySqlDbType.VarChar, 255)
                 {
-                    Value = notification.URL
+                    Value = (object?)notification.URL ?? DBNull.Value
                 },
-                new MySqlParameter("@p_TokenType", MySqlDbType.VarChar, 10)
+                new MySqlParameter("@p_TokenType", MySqlDbType.VarChar, 50)
                 {
-                    Value = notification.TokenType
+                    Value = (object?)notification.TokenType ?? DBNull.Value
                 },
                 new MySqlParameter("@p_Subject", MySqlDbType.Text)
                 {
