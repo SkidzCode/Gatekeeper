@@ -296,7 +296,7 @@ namespace GateKeeper.Server.Test.Services
             var result = await _notificationService.InsertNotificationAsync(notification);
 
             Assert.AreEqual(expectedNewId, result.NotificationId);
-            Assert.AreEqual(null, result.VerificationId); // No {{Verification_Code}} in message
+            Assert.AreEqual(string.Empty, result.VerificationId); // No {{Verification_Code}} in message, expect empty string
             _mockMySqlConnectorWrapper.Verify(c => c.ExecuteReaderAsync("NotificationInsert", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()), Times.Once);
         }
 
