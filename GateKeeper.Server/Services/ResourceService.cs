@@ -2,6 +2,7 @@
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Resources;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration; // Added for IConfiguration
 using MySqlConnector;
 using System.Data;
 using System.Threading.Tasks;
@@ -12,13 +13,16 @@ namespace GateKeeper.Server.Services
     {
         private readonly IDbHelper _dbHelper;
         private readonly ILogger<ResourceService> _logger;
+        private readonly IConfiguration _configuration; // Added IConfiguration field
         private readonly string _resourceDirectory;
 
-        public ResourceService(IDbHelper dbHelper, ILogger<ResourceService> logger)
+        public ResourceService(IDbHelper dbHelper, ILogger<ResourceService> logger, IConfiguration configuration) // Added IConfiguration to constructor
         {
             _dbHelper = dbHelper;
             _logger = logger;
-            _resourceDirectory = "C:/Users/Skidz/source/repos/GateKeeper/GateKeeper.Server/Resources";
+            _configuration = configuration; // Store the configuration
+            // Get the resource directory from configuration, fallback to a default if necessary
+            _resourceDirectory = _configuration["Resources:Path"] ?? "C:/Users/Skidz/source/repos/GateKeeper/GateKeeper.Server/Resources";
         }
 
         public List<ResourceEntry> ListEntries(string resourceFileName)
