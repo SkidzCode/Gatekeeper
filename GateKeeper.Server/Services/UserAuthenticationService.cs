@@ -1,6 +1,7 @@
-﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
+using Microsoft.Extensions.Options; // Added for IOptions
+using GateKeeper.Server.Models.Configuration; // Added for typed configuration classes
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -37,7 +38,10 @@ namespace GateKeeper.Server.Services
 
         private readonly IDbHelper _dbHelper;
         private readonly ILogger<UserAuthenticationService> _logger;
-        private readonly IConfiguration _configuration;
+        private readonly JwtSettingsConfig _jwtSettings;
+        private readonly PasswordSettingsConfig _passwordSettings;
+        private readonly RegisterSettingsConfig _registerSettings;
+        private readonly LoginSettingsConfig _loginSettings;
         private readonly IVerifyTokenService _verificationService;
         private readonly IUserService _userService;
         private readonly ISettingsService _settingsService;
@@ -45,7 +49,7 @@ namespace GateKeeper.Server.Services
         private readonly INotificationTemplateService _notificationTemplateService;
         private readonly INotificationService _notificationService;
         private readonly ISessionService _sessionService;
-        private readonly bool _requiresInvite;
+        // private readonly bool _requiresInvite; // This will now come from _registerSettings
 
         private const string cookieName = "LoginAttempts";
 
@@ -67,7 +71,10 @@ namespace GateKeeper.Server.Services
         public UserAuthenticationService(
             IUserService userService,
             IVerifyTokenService verificationService,
-            IConfiguration configuration,
+            IOptions<JwtSettingsConfig> jwtSettingsOptions,
+            IOptions<PasswordSettingsConfig> passwordSettingsOptions,
+            IOptions<RegisterSettingsConfig> registerSettingsOptions,
+            IOptions<LoginSettingsConfig> loginSettingsOptions,
             IDbHelper dbHelper,
             ILogger<UserAuthenticationService> logger,
             ISettingsService settingsService,
@@ -78,16 +85,19 @@ namespace GateKeeper.Server.Services
             INotificationTemplateService notificationTemplateService,
             ISessionService sessionService)
         {
-            _configuration = configuration;
+            _jwtSettings = jwtSettingsOptions.Value;
+            _passwordSettings = passwordSettingsOptions.Value;
+            _registerSettings = registerSettingsOptions.Value;
+            _loginSettings = loginSettingsOptions.Value;
             _dbHelper = dbHelper;
             _logger = logger;
             _verificationService = verificationService;
             _userService = userService;
             _settingsService = settingsService;
             _keyManagementService = keyManagementService;
-            _protector = stringDataProtector; // Assign directly
+            _protector = stringDataProtector;
             _httpContextAccessor = httpContextAccessor;
-            _requiresInvite = _configuration.GetValue<bool>("RegisterSettings:RequireInvite");
+            // _requiresInvite = _configuration.GetValue<bool>("RegisterSettings:RequireInvite"); // Now from _registerSettings.RequireInvite
             _notificationService = notification;
             _notificationTemplateService = notificationTemplateService;
             _sessionService = sessionService;
@@ -110,7 +120,7 @@ namespace GateKeeper.Server.Services
             };
 
             TokenVerificationResponse tokenResponse = new TokenVerificationResponse();
-            if (_requiresInvite)
+            if (_registerSettings.RequireInvite) // Use _registerSettings
             {
                 if (registerRequest.Token.Length > 0)
                 {
@@ -155,7 +165,7 @@ namespace GateKeeper.Server.Services
                 ToName = $"{registerRequest.FirstName} {registerRequest.LastName}"
             });
             
-            if (_requiresInvite)
+            if (_registerSettings.RequireInvite) // Use _registerSettings
             {
                 await _verificationService.CompleteTokensAsync(tokenResponse.User.Id, "Invite", registerRequest.Token);
             }
@@ -383,7 +393,8 @@ namespace GateKeeper.Server.Services
         /// <inheritdoc />
         public async Task<bool> ValidatePasswordStrengthAsync(string password)
         {
-            return await PasswordHelper.ValidatePasswordStrengthAsync(_configuration, password);
+            // Pass the _passwordSettings directly to the helper.
+            return await PasswordHelper.ValidatePasswordStrengthAsync(_passwordSettings, password);
         }
         
         /// <inheritdoc />
@@ -449,12 +460,10 @@ namespace GateKeeper.Server.Services
             {
                 Subject = new ClaimsIdentity(claims),
                 // Duration from config (fallback: 60 minutes if not found)
-                Expires = DateTime.UtcNow.AddMinutes(
-                    Convert.ToDouble(_configuration["JwtConfig:ExpirationMinutes"] ?? "60")
-                ),
+                Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.TokenValidityInMinutes), // Use JwtSettingsConfig
                 SigningCredentials = creds,
-                Issuer = _configuration["JwtConfig:Issuer"],
-                Audience = _configuration["JwtConfig:Audience"]
+                Issuer = _jwtSettings.Issuer, // Use JwtSettingsConfig
+                Audience = _jwtSettings.Audience // Use JwtSettingsConfig
             };
 
             // 6) Create the token
@@ -486,9 +495,10 @@ namespace GateKeeper.Server.Services
             
             if (_httpContextAccessor.HttpContext == null) return loginResponse;
 
-            int maxAttempts = Convert.ToInt32(_configuration["LoginSettings:MaxFailedAttempts"]);
-            int cookieExpiryMinutes = Convert.ToInt32(_configuration["LoginSettings:CookieExpires"]); ;
-            bool lockoutEnabled = Convert.ToBoolean(_configuration["LoginSettings:LockoutEnabled"]); ;
+            // Use _loginSettings
+            int maxAttempts = _loginSettings.MaxFailedAccessAttempts;
+            int cookieExpiryMinutes = _loginSettings.CookieExpiryMinutes;
+            // bool lockoutEnabled = _loginSettings.LockoutEnabled; // LockoutEnabled is not directly used in the following logic, but MaxFailedAccessAttempts implies it.
 
             // Read the current attempt count from encrypted cookie
             var attemptsCookie = _httpContextAccessor.HttpContext.Request.Cookies[cookieName];

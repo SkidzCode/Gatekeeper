@@ -7,7 +7,9 @@ using GateKeeper.Server.Models.Account.UserModels;
 using GateKeeper.Server.Models.Account.Login;
 using GateKeeper.Server.Models.Account.Notifications;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration; // Keep for non-refactored parts
+using Microsoft.Extensions.Options; // Added for IOptions
+using GateKeeper.Server.Models.Configuration; // Added for typed configuration classes
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System;
@@ -29,14 +31,17 @@ namespace GateKeeper.Server.Test.Services
         private Mock<IVerifyTokenService> _mockVerificationService;
         private Mock<ISettingsService> _mockSettingsService;
         private Mock<IKeyManagementService> _mockKeyManagementService;
-        // private Mock<IDataProtectionProvider> _mockDataProtectionProvider; // Removed
-        private Mock<IStringDataProtector> _mockStringDataProtector; // Added
+        private Mock<IStringDataProtector> _mockStringDataProtector;
         private Mock<IHttpContextAccessor> _mockHttpContextAccessor;
         private Mock<INotificationService> _mockNotificationService;
         private Mock<INotificationTemplateService> _mockNotificationTemplateService;
         private Mock<ISessionService> _mockSessionService;
-        // private Mock<IDataProtector> _mockDataProtector; // Removed
         private UserAuthenticationService _authService;
+        private Mock<IOptions<JwtSettingsConfig>> _mockJwtSettingsOptions;
+        private Mock<IOptions<PasswordSettingsConfig>> _mockPasswordSettingsOptions;
+        private Mock<IOptions<RegisterSettingsConfig>> _mockRegisterSettingsOptions; // Added
+        private Mock<IOptions<LoginSettingsConfig>> _mockLoginSettingsOptions;     // Added
+        // private Mock<IConfiguration> _mockConfiguration; // No longer directly needed by UserAuthenticationService
 
         [TestInitialize]
         public void Setup()
@@ -48,74 +53,73 @@ namespace GateKeeper.Server.Test.Services
             _mockVerificationService = new Mock<IVerifyTokenService>();
             _mockSettingsService = new Mock<ISettingsService>();
             _mockKeyManagementService = new Mock<IKeyManagementService>();
-            _mockStringDataProtector = new Mock<IStringDataProtector>(); // Initialized
+            _mockStringDataProtector = new Mock<IStringDataProtector>();
             _mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
             _mockNotificationService = new Mock<INotificationService>();
             _mockNotificationTemplateService = new Mock<INotificationTemplateService>();
             _mockSessionService = new Mock<ISessionService>();
-            // _mockDataProtector = new Mock<IDataProtector>(); // Removed
+            // _mockConfiguration = new Mock<IConfiguration>(); // No longer directly needed
 
-            var mockConfiguration = new Mock<IConfiguration>();
+            // Setup JwtSettingsConfig
+            var jwtSettings = new JwtSettingsConfig
+            {
+                Key = "your_super_secret_key_that_is_at_least_32_bytes_long_for_hs256", // Ensure this is a valid length key for your algorithm
+                Issuer = "your_issuer",
+                Audience = "your_audience",
+                TokenValidityInMinutes = 60,
+                RefreshTokenValidityInDays = 7
+            };
+            _mockJwtSettingsOptions = new Mock<IOptions<JwtSettingsConfig>>();
+            _mockJwtSettingsOptions.Setup(o => o.Value).Returns(jwtSettings);
 
-            // Set up the JWT configuration values
-            mockConfiguration.SetupGet(c => c["JwtConfig:Secret"]).Returns("your_secret_key");
-            mockConfiguration.SetupGet(c => c["JwtConfig:ExpirationMinutes"]).Returns("60");
-            mockConfiguration.SetupGet(c => c["JwtConfig:Issuer"]).Returns("your_issuer");
-            mockConfiguration.SetupGet(c => c["JwtConfig:Audience"]).Returns("your_audience");
+            // Setup PasswordSettingsConfig
+            var passwordSettings = new PasswordSettingsConfig
+            {
+                RequiredLength = 8,
+                RequireDigit = true,
+                RequireLowercase = true,
+                RequireUppercase = true,
+                RequireNonAlphanumeric = true,
+                MaxFailedAccessAttempts = 5 // Example value
+            };
+            _mockPasswordSettingsOptions = new Mock<IOptions<PasswordSettingsConfig>>();
+            _mockPasswordSettingsOptions.Setup(o => o.Value).Returns(passwordSettings);
 
-            // Mock GetSection for RegisterSettings
-            var mockRegisterSettingsSection = new Mock<IConfigurationSection>();
-            mockRegisterSettingsSection.Setup(s => s.Key).Returns("RegisterSettings");
-            mockRegisterSettingsSection.Setup(s => s.Value).Returns((string)null); // Section itself doesn't have a value for GetValue<T>
-            var mockRequireInviteSection = new Mock<IConfigurationSection>();
-            mockRequireInviteSection.Setup(s => s.Key).Returns("RequireInvite");
-            mockRequireInviteSection.Setup(s => s.Value).Returns("false");
-            mockRegisterSettingsSection.Setup(s => s.GetChildren()).Returns(new[] { mockRequireInviteSection.Object });
-            mockConfiguration.Setup(c => c.GetSection("RegisterSettings")).Returns(mockRegisterSettingsSection.Object);
-            mockConfiguration.Setup(c => c.GetSection("RegisterSettings:RequireInvite")).Returns(mockRequireInviteSection.Object);
+            // Setup RegisterSettingsConfig
+            var registerSettings = new RegisterSettingsConfig
+            {
+                RequireInvite = false, // Example value
+                DefaultRole = "User", // Example value
+                RequireEmailConfirmation = true // Example value
+            };
+            _mockRegisterSettingsOptions = new Mock<IOptions<RegisterSettingsConfig>>();
+            _mockRegisterSettingsOptions.Setup(o => o.Value).Returns(registerSettings);
 
-
-            // Mock GetSection for LoginSettings
-            var mockLoginSettingsSection = new Mock<IConfigurationSection>();
-            mockLoginSettingsSection.Setup(s => s.Key).Returns("LoginSettings");
-            mockLoginSettingsSection.Setup(s => s.Value).Returns((string)null);
-            var mockMaxFailedAttemptsSection = new Mock<IConfigurationSection>();
-            mockMaxFailedAttemptsSection.Setup(s => s.Key).Returns("MaxFailedAttempts");
-            mockMaxFailedAttemptsSection.Setup(s => s.Value).Returns("5");
-            var mockCookieExpiresSection = new Mock<IConfigurationSection>();
-            mockCookieExpiresSection.Setup(s => s.Key).Returns("CookieExpires");
-            mockCookieExpiresSection.Setup(s => s.Value).Returns("15");
-            var mockLockoutEnabledSection = new Mock<IConfigurationSection>();
-            mockLockoutEnabledSection.Setup(s => s.Key).Returns("LockoutEnabled");
-            mockLockoutEnabledSection.Setup(s => s.Value).Returns("true");
-            mockLoginSettingsSection.Setup(s => s.GetChildren()).Returns(new[] { mockMaxFailedAttemptsSection.Object, mockCookieExpiresSection.Object, mockLockoutEnabledSection.Object });
-            mockConfiguration.Setup(c => c.GetSection("LoginSettings")).Returns(mockLoginSettingsSection.Object);
-            mockConfiguration.Setup(c => c.GetSection("LoginSettings:MaxFailedAttempts")).Returns(mockMaxFailedAttemptsSection.Object);
-            mockConfiguration.Setup(c => c.GetSection("LoginSettings:CookieExpires")).Returns(mockCookieExpiresSection.Object);
-            mockConfiguration.Setup(c => c.GetSection("LoginSettings:LockoutEnabled")).Returns(mockLockoutEnabledSection.Object);
-
-            // Setup IStringDataProtector mock (simplified to ensure LoginAttempts doesn't block)
-            _mockStringDataProtector.Setup(p => p.Protect(It.IsAny<string>())).Returns((string s) => s + "_protected"); // Simple protection
-            _mockStringDataProtector.Setup(p => p.Unprotect(It.IsAny<string>())).Returns("0"); // Always returns "0" attempts
+            // Setup LoginSettingsConfig
+            var loginSettings = new LoginSettingsConfig
+            {
+                MaxFailedAccessAttempts = 5,
+                CookieExpiryMinutes = 15,
+                LockoutEnabled = true,
+                LockoutDurationInMinutes = 30 // Example value
+            };
+            _mockLoginSettingsOptions = new Mock<IOptions<LoginSettingsConfig>>();
+            _mockLoginSettingsOptions.Setup(o => o.Value).Returns(loginSettings);
             
-            // Set up the PasswordStrength configuration values
-            mockConfiguration.SetupGet(c => c["PasswordStrength:MinLength"]).Returns("8");
-            mockConfiguration.SetupGet(c => c["PasswordStrength:RequireUppercase"]).Returns("true");
-            mockConfiguration.SetupGet(c => c["PasswordStrength:RequireLowercase"]).Returns("true");
-            mockConfiguration.SetupGet(c => c["PasswordStrength:RequireDigit"]).Returns("true");
-            mockConfiguration.SetupGet(c => c["PasswordStrength:RequireSpecialChar"]).Returns("true");
-            mockConfiguration.SetupGet(c => c["PasswordStrength:SpecialChars"]).Returns("!@#$%^&*()_-+=[{]};:'\",.<>/?`~");
+            // Setup IStringDataProtector mock
+            _mockStringDataProtector.Setup(p => p.Protect(It.IsAny<string>())).Returns((string s) => s + "_protected");
+            _mockStringDataProtector.Setup(p => p.Unprotect(It.IsAny<string>())).Returns("0");
 
             var secureString = new SecureString();
-            foreach (char c in "yjulQ1tDEQ+8tzqgRSWQ0OCpsp1idl5W+KMq3ROqFEQ=")
+            // Using a Base64 encoded key for the SecureString, matching what KeyManagementService would provide.
+            // Ensure this key is 32 bytes when decoded if that's what HMAC-SHA256 expects.
+            // Example: "yjulQ1tDEQ+8tzqgRSWQ0OCpsp1idl5W+KMq3ROqFEQ=" is a 32-byte key after Base64 decoding.
+            foreach (char c in "yjulQ1tDEQ+8tzqgRSWQ0OCpsp1idl5W+KMq3ROqFEQ=") // A valid Base64 string for a 32-byte key
             {
                 secureString.AppendChar(c);
             }
             secureString.MakeReadOnly();
-
             _mockKeyManagementService.Setup(kms => kms.GetCurrentKeyAsync()).ReturnsAsync(secureString);
-
-            // _mockDataProtectionProvider.Setup(dp => dp.CreateProtector(It.IsAny<string>())).Returns(_mockDataProtector.Object); // Removed
 
             var mockHttpContext = new Mock<HttpContext>();
             var mockHttpRequest = new Mock<HttpRequest>();
@@ -133,12 +137,15 @@ namespace GateKeeper.Server.Test.Services
             _authService = new UserAuthenticationService(
                 _mockUserService.Object,
                 _mockVerificationService.Object,
-                mockConfiguration.Object,
+                _mockJwtSettingsOptions.Object,
+                _mockPasswordSettingsOptions.Object,
+                _mockRegisterSettingsOptions.Object, // Pass IOptions<RegisterSettingsConfig>
+                _mockLoginSettingsOptions.Object,   // Pass IOptions<LoginSettingsConfig>
                 _mockDbHelper.Object,
                 _mockLogger.Object,
                 _mockSettingsService.Object,
                 _mockKeyManagementService.Object,
-                _mockStringDataProtector.Object, // Changed to pass IStringDataProtector
+                _mockStringDataProtector.Object,
                 _mockHttpContextAccessor.Object,
                 _mockNotificationService.Object,
                 _mockNotificationTemplateService.Object,

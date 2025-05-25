@@ -26,14 +26,14 @@ namespace GateKeeper.Server.Test.Services
         {
             _mockDbHelper = new Mock<IDbHelper>();
             _mockLogger = new Mock<ILogger<UserService>>();
-            var mockConfiguration = new Mock<IConfiguration>();
-            var mockSection = new Mock<IConfigurationSection>();
+            // var mockConfiguration = new Mock<IConfiguration>(); // Removed
+            // var mockSection = new Mock<IConfigurationSection>(); // Removed
 
             // Mock the configuration section to return a valid DatabaseConfig object
-            mockSection.Setup(x => x["ConnectionString"]).Returns("Server=myServerAddress;Database=myDataBase;User Id=myUsername;Password=myPassword;");
-            mockConfiguration.Setup(x => x.GetSection("DatabaseConfig")).Returns(mockSection.Object);
+            // mockSection.Setup(x => x["ConnectionString"]).Returns("Server=myServerAddress;Database=myDataBase;User Id=myUsername;Password=myPassword;"); // Removed
+            // mockConfiguration.Setup(x => x.GetSection("DatabaseConfig")).Returns(mockSection.Object); // Removed
 
-            _userService = new UserService(mockConfiguration.Object, _mockDbHelper.Object, _mockLogger.Object);
+            _userService = new UserService(/* mockConfiguration.Object, */ _mockDbHelper.Object, _mockLogger.Object); // IConfiguration mock removed
         }
 
         [TestMethod]

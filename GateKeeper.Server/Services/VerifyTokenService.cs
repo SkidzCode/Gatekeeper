@@ -26,25 +26,25 @@ namespace GateKeeper.Server.Services
     {
         private readonly IDbHelper _dbHelper;
         private readonly ILogger<VerifyTokenService> _logger;
-        private readonly IConfiguration _configuration;
+        // private readonly IConfiguration _configuration; // Removed
         private readonly IEmailService _emailService;
         private readonly IUserService _userService;
 
         /// <summary>
         /// Constructor for VerificationService.
         /// </summary>
-        /// <param name="configuration">Application configuration dependency.</param>
+        // <param name="configuration">Application configuration dependency.</param> // Removed from docs
         /// <param name="dbHelper">Database helper for DB operations.</param>
         /// <param name="logger">Logger for logging information and errors.</param>
         /// <param name="userService"></param>
         public VerifyTokenService(
-            IConfiguration configuration, 
+            /* IConfiguration configuration, */ // Removed
             IDbHelper dbHelper, 
             ILogger<VerifyTokenService> logger, 
             IEmailService emailService,
             IUserService userService)
         {
-            _configuration = configuration;
+            // _configuration = configuration; // Removed
             _dbHelper = dbHelper;
             _logger = logger;
             _emailService = emailService;

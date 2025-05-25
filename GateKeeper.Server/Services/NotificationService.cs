@@ -16,18 +16,18 @@ namespace GateKeeper.Server.Services
     {
         private readonly IDbHelper _dbHelper;
         private readonly IEmailService _emailService;
-        private readonly IConfiguration _configuration;
+        // private readonly IConfiguration _configuration; // Removed
         private readonly IUserService _userService;
         private readonly IVerifyTokenService _verifyTokenService;
 
         public NotificationService(
             IDbHelper dbHelper, IEmailService emailService, 
-            IConfiguration configuration, IUserService userService,
+            /* IConfiguration configuration, */ IUserService userService, // IConfiguration parameter removed
             IVerifyTokenService verifyTokenService)
         {
             _dbHelper = dbHelper;
             _emailService = emailService;
-            _configuration = configuration;
+            // _configuration = configuration; // Removed
             _userService = userService;
             _verifyTokenService = verifyTokenService;
         }

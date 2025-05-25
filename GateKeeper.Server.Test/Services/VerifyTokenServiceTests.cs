@@ -19,7 +19,7 @@ namespace GateKeeper.Server.Test.Services
     [TestClass]
     public class VerifyTokenServiceTests
     {
-        private Mock<IConfiguration> _mockConfiguration;
+        // private Mock<IConfiguration> _mockConfiguration; // Removed
         private Mock<IDbHelper> _mockDbHelper;
         private Mock<IMySqlConnectorWrapper> _mockMySqlConnectorWrapper;
         private Mock<IMySqlDataReaderWrapper> _mockDataReader;
@@ -31,7 +31,7 @@ namespace GateKeeper.Server.Test.Services
         [TestInitialize]
         public void TestInitialize()
         {
-            _mockConfiguration = new Mock<IConfiguration>();
+            // _mockConfiguration = new Mock<IConfiguration>(); // Removed
             _mockDbHelper = new Mock<IDbHelper>();
             _mockMySqlConnectorWrapper = new Mock<IMySqlConnectorWrapper>();
             _mockDataReader = new Mock<IMySqlDataReaderWrapper>();
@@ -43,7 +43,7 @@ namespace GateKeeper.Server.Test.Services
             _mockMySqlConnectorWrapper.Setup(c => c.OpenConnectionAsync()).Returns(Task.FromResult(_mockMySqlConnectorWrapper.Object));
 
             _service = new VerifyTokenService(
-                _mockConfiguration.Object,
+                /* _mockConfiguration.Object, */ // Removed
                 _mockDbHelper.Object,
                 _mockLogger.Object,
                 _mockEmailService.Object,

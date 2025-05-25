@@ -5,13 +5,15 @@ using Microsoft.Extensions.Configuration;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
-using System; // For Convert
+using System;
+using GateKeeper.Server.Models.Configuration; // For Convert
 
 namespace GateKeeper.Server.Test.Services
 {
     [TestClass]
     public class PasswordHelperTests
     {
+        private PasswordSettingsConfig _passwordSettingsConfig;
         #region GenerateSalt Tests
         [TestMethod]
         public void GenerateSalt_ReturnsNonNullOrEmptyString()
@@ -28,7 +30,7 @@ namespace GateKeeper.Server.Test.Services
             // (16 / 3) * 4 = 21.333... so it will be padded to 24 characters.
             var salt = PasswordHelper.GenerateSalt();
             Assert.AreEqual(24, salt.Length, "A 16-byte salt should result in a 24-character Base64 string.");
-            
+
             // Also check if it's a valid Base64 string
             try
             {
@@ -69,7 +71,7 @@ namespace GateKeeper.Server.Test.Services
             var salt = PasswordHelper.GenerateSalt();
             var hash = PasswordHelper.HashPassword("password123", salt);
             Assert.AreEqual(44, hash.Length, "A 32-byte hash (SHA512 output from SUT) should result in a 44-character Base64 string.");
-             // Also check if it's a valid Base64 string
+            // Also check if it's a valid Base64 string
             try
             {
                 Convert.FromBase64String(hash);
@@ -95,7 +97,7 @@ namespace GateKeeper.Server.Test.Services
         {
             var password = "mySecurePassword";
             var salt1 = PasswordHelper.GenerateSalt();
-            var salt2 = PasswordHelper.GenerateSalt(); 
+            var salt2 = PasswordHelper.GenerateSalt();
             // Ensure salts are actually different for the test to be meaningful, though GenerateSalt should ensure this.
             while(salt1 == salt2) salt2 = PasswordHelper.GenerateSalt();
 
@@ -124,7 +126,7 @@ namespace GateKeeper.Server.Test.Services
             // which will throw ArgumentNullException if password is null.
             PasswordHelper.HashPassword(null, salt);
         }
-        
+
         [TestMethod]
         public void HashPassword_EmptyPassword_DoesNotThrowAndProducesHash()
         {
@@ -143,128 +145,106 @@ namespace GateKeeper.Server.Test.Services
         }
         #endregion
 
-        #region ValidatePasswordStrengthAsync Tests
-        private Mock<IConfiguration> _mockConfiguration;
-        private Mock<IConfigurationSection> _mockPasswordStrengthSection;
-
-        private void SetupPasswordPolicy(int minLength, bool reqUpper, bool reqLower, bool reqDigit, bool reqSpecial, string specialChars)
+        private void SetupPasswordPolicy(int requiredLength, bool requireUppercase, bool requireLowercase, bool requireDigit, bool requireNonAlphanumeric, int maxFailedAccessAttempts)
         {
-            _mockConfiguration = new Mock<IConfiguration>();
-            // PasswordHelper uses direct indexing like _configuration["PasswordStrength:Key"]
-
-            _mockConfiguration.Setup(c => c["PasswordStrength:MinLength"]).Returns(minLength.ToString());
-            _mockConfiguration.Setup(c => c["PasswordStrength:RequireUppercase"]).Returns(reqUpper.ToString());
-            _mockConfiguration.Setup(c => c["PasswordStrength:RequireLowercase"]).Returns(reqLower.ToString());
-            _mockConfiguration.Setup(c => c["PasswordStrength:RequireDigit"]).Returns(reqDigit.ToString());
-            _mockConfiguration.Setup(c => c["PasswordStrength:RequireSpecialChar"]).Returns(reqSpecial.ToString());
-            _mockConfiguration.Setup(c => c["PasswordStrength:SpecialChars"]).Returns(specialChars);
+            _passwordSettingsConfig = new PasswordSettingsConfig
+            {
+                RequiredLength = requiredLength,
+                RequireUppercase = requireUppercase,
+                RequireLowercase = requireLowercase,
+                RequireDigit = requireDigit,
+                RequireNonAlphanumeric = requireNonAlphanumeric,
+                MaxFailedAccessAttempts = maxFailedAccessAttempts
+            };
         }
 
         [TestMethod]
         public async Task ValidatePasswordStrengthAsync_ValidPassword_ReturnsTrue()
         {
-            SetupPasswordPolicy(8, true, true, true, true, "!@#$");
-            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_mockConfiguration.Object, "ValidP@ss1");
+            SetupPasswordPolicy(8, true, true, true, true, 5);
+            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_passwordSettingsConfig, "ValidP@ss1");
             Assert.IsTrue(result);
         }
 
         [TestMethod]
         public async Task ValidatePasswordStrengthAsync_TooShort_ReturnsFalse()
         {
-            SetupPasswordPolicy(8, true, true, true, true, "!@#$");
-            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_mockConfiguration.Object, "V@lid1"); // 6 chars
+            SetupPasswordPolicy(8, true, true, true, true, 5);
+            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_passwordSettingsConfig, "V@lid1"); // 6 chars  
             Assert.IsFalse(result);
         }
 
         [TestMethod]
         public async Task ValidatePasswordStrengthAsync_MissingUppercase_ReturnsFalse()
         {
-            SetupPasswordPolicy(8, true, true, true, true, "!@#$");
-            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_mockConfiguration.Object, "validp@ss1");
+            SetupPasswordPolicy(8, true, true, true, true, 5);
+            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_passwordSettingsConfig, "validp@ss1");
             Assert.IsFalse(result);
         }
-        
+
         [TestMethod]
         public async Task ValidatePasswordStrengthAsync_MissingUppercase_NotRequired_ReturnsTrue()
         {
-            SetupPasswordPolicy(8, false, true, true, true, "!@#$"); // Uppercase not required
-            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_mockConfiguration.Object, "validp@ss1");
+            SetupPasswordPolicy(8, false, true, true, true, 5); // Uppercase not required  
+            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_passwordSettingsConfig, "validp@ss1");
             Assert.IsTrue(result);
         }
 
         [TestMethod]
         public async Task ValidatePasswordStrengthAsync_MissingLowercase_ReturnsFalse()
         {
-            SetupPasswordPolicy(8, true, true, true, true, "!@#$");
-            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_mockConfiguration.Object, "VALIDP@SS1");
+            SetupPasswordPolicy(8, true, true, true, true, 5);
+            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_passwordSettingsConfig, "VALIDP@SS1");
             Assert.IsFalse(result);
         }
 
         [TestMethod]
         public async Task ValidatePasswordStrengthAsync_MissingDigit_ReturnsFalse()
         {
-            SetupPasswordPolicy(8, true, true, true, true, "!@#$");
-            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_mockConfiguration.Object, "ValidP@ss");
+            SetupPasswordPolicy(8, true, true, true, true, 5);
+            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_passwordSettingsConfig, "ValidP@ss");
             Assert.IsFalse(result);
         }
 
         [TestMethod]
         public async Task ValidatePasswordStrengthAsync_MissingSpecialChar_ReturnsFalse()
         {
-            SetupPasswordPolicy(8, true, true, true, true, "!@#$");
-            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_mockConfiguration.Object, "ValidPass1");
+            SetupPasswordPolicy(8, true, true, true, true, 5);
+            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_passwordSettingsConfig, "ValidPass1");
             Assert.IsFalse(result);
-        }
-        
-        [TestMethod]
-        public async Task ValidatePasswordStrengthAsync_UsesDisallowedSpecialChar_ReturnsFalse()
-        {
-            SetupPasswordPolicy(8, true, true, true, true, "!@#$"); // Only !@#$ allowed
-            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_mockConfiguration.Object, "ValidP^ss1"); // ^ is not in !@#$
-            Assert.IsFalse(result);
-        }
-        
-        [TestMethod]
-        public async Task ValidatePasswordStrengthAsync_UsesAllowedSpecialChar_ReturnsTrue()
-        {
-            SetupPasswordPolicy(8, true, true, true, true, "!@#$^"); 
-            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_mockConfiguration.Object, "ValidP^ss1"); // ^ is allowed
-            Assert.IsTrue(result);
         }
 
         [TestMethod]
         public async Task ValidatePasswordStrengthAsync_EmptyPassword_ReturnsFalse()
         {
-            SetupPasswordPolicy(8, false, false, false, false, ""); // Lenient policy
-            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_mockConfiguration.Object, "");
+            SetupPasswordPolicy(8, false, false, false, false, 5); // Lenient policy  
+            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_passwordSettingsConfig, "");
             Assert.IsFalse(result);
         }
 
         [TestMethod]
         public async Task ValidatePasswordStrengthAsync_NullPassword_ReturnsFalse()
         {
-             SetupPasswordPolicy(8, false, false, false, false, "");
-            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_mockConfiguration.Object, null);
+            SetupPasswordPolicy(8, false, false, false, false, 5);
+            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_passwordSettingsConfig, null);
             Assert.IsFalse(result);
         }
 
         [TestMethod]
         public async Task ValidatePasswordStrengthAsync_AllRequirementsDisabled_ShortPasswordIsValid()
         {
-            // Policy: MinLength 3, no other requirements
-            SetupPasswordPolicy(3, false, false, false, false, ""); 
-            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_mockConfiguration.Object, "abc");
+            // Policy: MinLength 3, no other requirements  
+            SetupPasswordPolicy(3, false, false, false, false, 5);
+            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_passwordSettingsConfig, "abc");
             Assert.IsTrue(result);
         }
 
         [TestMethod]
         public async Task ValidatePasswordStrengthAsync_OnlyLengthRequired_FailsIfTooShort()
         {
-            SetupPasswordPolicy(3, false, false, false, false, "");
-            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_mockConfiguration.Object, "ab");
+            SetupPasswordPolicy(3, false, false, false, false, 5);
+            var result = await PasswordHelper.ValidatePasswordStrengthAsync(_passwordSettingsConfig, "ab");
             Assert.IsFalse(result);
         }
-
-        #endregion
     }
 }

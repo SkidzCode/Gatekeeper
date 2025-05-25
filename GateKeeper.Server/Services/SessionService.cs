@@ -13,9 +13,9 @@ namespace GateKeeper.Server.Services
         private readonly ILogger<SessionService> _logger;
         private readonly IVerifyTokenService _verifyTokenService;
 
-        public SessionService(IConfiguration configuration, IDbHelper dbHelper, ILogger<SessionService> logger, IVerifyTokenService verifyTokenService)
+        public SessionService(/* IConfiguration configuration, */ IDbHelper dbHelper, ILogger<SessionService> logger, IVerifyTokenService verifyTokenService)
         {
-            var dbConfig = configuration.GetSection("DatabaseConfig").Get<DatabaseConfig>() ?? new DatabaseConfig();
+            // var dbConfig = configuration.GetSection("DatabaseConfig").Get<DatabaseConfig>() ?? new DatabaseConfig(); // Removed
             _dbHelper = dbHelper;
             _logger = logger;
             _verifyTokenService = verifyTokenService;

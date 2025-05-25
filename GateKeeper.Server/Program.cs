@@ -9,6 +9,7 @@ using Hangfire.MySql;
 using Serilog;
 using GateKeeper.Server.Middleware;
 using Serilog.Formatting.Compact;
+using GateKeeper.Server.Models.Configuration; // Added for typed configurations
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -67,6 +68,48 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddDataProtection();
 builder.Services.AddHttpContextAccessor();
+
+// Register and Validate Typed Configuration
+builder.Services.AddOptions<EmailSettingsConfig>()
+    .Bind(builder.Configuration.GetSection(EmailSettingsConfig.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<DatabaseConfig>()
+    .Bind(builder.Configuration.GetSection(DatabaseConfig.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<JwtSettingsConfig>()
+    .Bind(builder.Configuration.GetSection(JwtSettingsConfig.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<KeyManagementConfig>()
+    .Bind(builder.Configuration.GetSection(KeyManagementConfig.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<PasswordSettingsConfig>() // Added PasswordSettingsConfig
+    .Bind(builder.Configuration.GetSection(PasswordSettingsConfig.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<RegisterSettingsConfig>()
+    .Bind(builder.Configuration.GetSection(RegisterSettingsConfig.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<LoginSettingsConfig>()
+    .Bind(builder.Configuration.GetSection(LoginSettingsConfig.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services.AddOptions<ResourceSettingsConfig>()
+    .Bind(builder.Configuration.GetSection(ResourceSettingsConfig.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+// End Register and Validate Typed Configuration
 
 builder.Services.AddSingleton<IDbHelper, DBHelper>();
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -162,27 +205,27 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddSingleton<IKeyManagementService>(sp =>
 {
-    var config = sp.GetRequiredService<IConfiguration>();
+    var keyManagementConfig = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<KeyManagementConfig>>().Value;
     var dbHelper = sp.GetRequiredService<IDbHelper>();
     var logger = sp.GetRequiredService<ILogger<KeyManagementService>>();
 
-    // Load the base64-encoded key from user secrets: "Encryption:MasterKey"
-    var base64Key = config["Encryption:MasterKey"];
-    if (string.IsNullOrEmpty(base64Key))
-    {
-        throw new InvalidOperationException("Encryption:MasterKey not found in user secrets.");
-    }
-
-    // Convert base64 => raw bytes (32 bytes = AES-256)
-    var masterKeyBytes = Convert.FromBase64String(base64Key);
-
-    return new KeyManagementService(dbHelper, logger, masterKeyBytes);
+    // KeyManagementService is already refactored to take IOptions<KeyManagementConfig> in its constructor.
+    // The validation for MasterKey (presence, Base64 format, length) is handled within KeyManagementService.
+    return new KeyManagementService(
+        dbHelper, 
+        logger, 
+        sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<KeyManagementConfig>>() // Pass IOptions directly
+    );
 });
 
 // Add JWT authentication to middleware
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        // JwtSettings will be injected by the options framework
+        var jwtSettingsProvider = builder.Services.BuildServiceProvider().GetRequiredService<Microsoft.Extensions.Options.IOptions<JwtSettingsConfig>>();
+        var jwtSettings = jwtSettingsProvider.Value;
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -190,8 +233,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["JwtConfig:Issuer"],
-            ValidAudience = builder.Configuration["JwtConfig:Audience"],
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
 
             // 1) The magic: a custom key resolver
             IssuerSigningKeyResolver = (token, securityToken, kid, validationParameters) =>

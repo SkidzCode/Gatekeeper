@@ -17,11 +17,10 @@ public class UserService : IUserService
     /// <summary>
     /// Constructor for the UserController.
     /// </summary>
-    /// <param name="configuration">Application configuration dependency.</param>
-    public UserService(IConfiguration configuration, IDbHelper dbHelper, ILogger<UserService> logger)
+    public UserService(/* IConfiguration configuration, */ IDbHelper dbHelper, ILogger<UserService> logger) // IConfiguration removed
     {
         // Retrieve database connection string
-        var dbConfig = configuration.GetSection("DatabaseConfig").Get<DatabaseConfig>() ?? new DatabaseConfig();
+        // var dbConfig = configuration.GetSection("DatabaseConfig").Get<DatabaseConfig>() ?? new DatabaseConfig(); // Removed
         _dbHelper = dbHelper;
         _logger = logger;
     }

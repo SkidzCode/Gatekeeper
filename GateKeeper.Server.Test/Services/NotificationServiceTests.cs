@@ -24,7 +24,7 @@ namespace GateKeeper.Server.Test.Services
         private Mock<IMySqlConnectorWrapper> _mockMySqlConnectorWrapper;
         private Mock<IMySqlDataReaderWrapper> _mockDataReader;
         private Mock<IEmailService> _mockEmailService;
-        private Mock<IConfiguration> _mockConfiguration;
+        // private Mock<IConfiguration> _mockConfiguration; // Removed
         private Mock<IUserService> _mockUserService;
         private Mock<IVerifyTokenService> _mockVerifyTokenService;
         private Mock<ILogger<NotificationService>> _mockLogger;
@@ -95,7 +95,7 @@ namespace GateKeeper.Server.Test.Services
             _mockMySqlConnectorWrapper = new Mock<IMySqlConnectorWrapper>();
             _mockDataReader = new Mock<IMySqlDataReaderWrapper>();
             _mockEmailService = new Mock<IEmailService>();
-            _mockConfiguration = new Mock<IConfiguration>();
+            // _mockConfiguration = new Mock<IConfiguration>(); // Removed
             _mockUserService = new Mock<IUserService>();
             _mockVerifyTokenService = new Mock<IVerifyTokenService>();
             _mockLogger = new Mock<ILogger<NotificationService>>();
@@ -106,7 +106,7 @@ namespace GateKeeper.Server.Test.Services
             _notificationService = new NotificationService(
                 _mockDbHelper.Object,
                 _mockEmailService.Object,
-                _mockConfiguration.Object,
+                // _mockConfiguration.Object, // Removed
                 _mockUserService.Object,
                 _mockVerifyTokenService.Object
                 // Logger can be passed if constructor accepts it, otherwise it's not used by the service.
