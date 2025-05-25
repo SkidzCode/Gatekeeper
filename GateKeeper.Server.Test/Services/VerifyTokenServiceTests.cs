@@ -53,7 +53,7 @@ namespace GateKeeper.Server.Test.Services
 
         // Helper to set up common reader fields for VerifyTokenAsync
         private void SetupMockReaderForTokenValidation(
-            string sessionId, int userId, string verifyType, string salt, stringhashedToken,
+            string sessionId, int userId, string verifyType, string salt, string hashedToken,
             bool isRevoked = false, bool isComplete = false,
             string firstName = "Test", string lastName = "User", string email = "test@example.com", 
             string phone = "123", string userSalt = "usersalt", string userPass = "userhash", string username = "testuser")

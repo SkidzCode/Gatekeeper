@@ -185,8 +185,8 @@ namespace GateKeeper.Server.Test.Services
         {
             // Arrange
             var mockReader = new Mock<IMySqlDataReaderWrapper>(); // Fresh mock reader
-            var mockReader = new Mock<IMySqlDataReaderWrapper>(); // Fresh mock reader
-            var mockReader = new Mock<IMySqlDataReaderWrapper>(); // Fresh mock reader
+            //var mockReader = new Mock<IMySqlDataReaderWrapper>(); // Fresh mock reader
+            //var mockReader = new Mock<IMySqlDataReaderWrapper>(); // Fresh mock reader
             _mockMySqlConnectorWrapper
                 .Setup(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
                 .ReturnsAsync(mockReader.Object);
@@ -209,25 +209,27 @@ namespace GateKeeper.Server.Test.Services
                 It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
         }
         
+        // or the CS1061 error: The issue arises because the `Setup` method is being incorrectly chained on the result of another `Setup` call.  
+        // The correct approach is to call `Setup` directly on the mock object, not on the result of a `Setup` call.  
+
         [TestMethod]
         public async Task GetCurrentKeyAsync_DbReturnsNullKey_ReturnsNull()
         {
-            // Arrange
+            // Arrange  
             var mockReader = new Mock<IMySqlDataReaderWrapper>();
             _mockMySqlConnectorWrapper
                 .Setup(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
-                .Setup(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
-                .ReturnsAsync(mockReader.Object);
+                .ReturnsAsync(mockReader.Object); // Corrected: Removed the incorrect chaining of `Setup`.  
 
             mockReader.SetupSequence(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
                       .ReturnsAsync(true)
                       .ReturnsAsync(false);
-            mockReader.Setup(r => r["SecretKey"]).Returns(null); // DB returns null for the key column
+            mockReader.Setup(r => r["SecretKey"]).Returns(null); // DB returns null for the key column  
 
-            // Act
+            // Act  
             var result = await _keyManagementService.GetCurrentKeyAsync();
 
-            // Assert
+            // Assert  
             Assert.IsNull(result);
             _mockLogger.Verify(logger => logger.Log(
                 LogLevel.Warning,
