@@ -9,7 +9,9 @@ using System.Xml.Linq;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq; // Required for LINQ operations on XDocument
-using System; // Required for InvalidOperationException, etc.
+using System;
+using GateKeeper.Server.Models.Configuration;
+using Microsoft.Extensions.Options; // Required for InvalidOperationException, etc.
 
 namespace GateKeeper.Server.Test.Services
 {

@@ -6,14 +6,7 @@ using GateKeeper.Server.Interface;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
 using MySqlConnector;
 
-namespace GateKeeper.Server.Services
-{
-    public class KeyManagementService : IKeyManagementService
-    {
-        private readonly IDbHelper _dbHelper;
-        private readonly ILogger<KeyManagementService> _logger;
 
-        // This could be stored in environment variables or Azure Key Vault, etc.
 using Microsoft.Extensions.Options; // Added for IOptions
 using GateKeeper.Server.Models.Configuration; // Added for KeyManagementConfig
 

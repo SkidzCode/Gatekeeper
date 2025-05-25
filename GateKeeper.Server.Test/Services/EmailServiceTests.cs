@@ -136,15 +136,4 @@ namespace GateKeeper.Server.Test.Services
         // For now, the tests focus on configuration usage.
     }
 }
-// Remove DataTestMethod and DataRow tests as they are less direct with IOptions
-// and the validation is handled by DataAnnotations.
-// The tests for Ssl and Port variations are removed as explained above.
-// The remaining tests verify that the configured settings are attempted to be used by SmtpClient.
 
-// More tests will be added here for MailMessage properties and SmtpClient interactions
-        // if a way to mock/intercept SmtpClient can be found without modifying EmailService.
-        // For now, testing MailMessage properties directly is not possible because
-        // the MailMessage object is created and used internally by the SmtpClient.Send method.
-        // Similarly, verifying SmtpClient.Send call is also not possible.
-    }
-}
