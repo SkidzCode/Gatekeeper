@@ -95,6 +95,7 @@ export class AdminSettingsEditComponent implements OnInit {
 
       // The service expects something like Omit<Setting, 'id'|'createdAt'|'updatedAt'> 
       // for the "addSetting()" method. So pass only what's needed:
+      this.setting.defaultSettingValue = String(this.setting.defaultSettingValue);
       this.settingsService
         .addSetting({
           parentId: this.setting.parentId,
@@ -103,7 +104,7 @@ export class AdminSettingsEditComponent implements OnInit {
           category: this.setting.category,
           settingValueType: this.setting.settingValueType,
           defaultSettingValue: this.setting.defaultSettingValue,
-          settingValue: '', // For default, we typically let settingValue be empty
+          settingValue: String(this.setting.defaultSettingValue), // For default, we typically let settingValue be empty
           createdBy: this.setting.createdBy, // or set to your current admin user ID
           updatedBy: this.setting.updatedBy, // or same
         })
@@ -125,6 +126,8 @@ export class AdminSettingsEditComponent implements OnInit {
       // We pass the full Setting object, but typically the server 
       // might ignore fields like createdAt, updatedAt, etc.
       // userId should remain unchanged if it's a default setting.
+      this.setting.defaultSettingValue = String(this.setting.defaultSettingValue);
+      this.setting.settingValue = String(this.setting.settingValue);
       this.settingsService.updateSetting(this.setting).subscribe({
         next: (res) => {
           this.loading = false;
