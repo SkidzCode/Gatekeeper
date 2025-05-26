@@ -43,9 +43,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                // If you have resource strings, you can use them here. Otherwise, a fixed message is fine.
-                _logger.LogError(ex, "Error occurred while fetching all roles: {ErrorMessage}", ex.Message);
-                return StatusCode(500, new { error = "Error occurred while fetching all roles" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -69,8 +68,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving role with Id {Id}: {ErrorMessage}", id, ex.Message);
-                return StatusCode(500, new { error = "Error retrieving role" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -94,8 +93,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving role with name '{RoleName}': {ErrorMessage}", roleName.SanitizeForLogging(), ex.Message);
-                return StatusCode(500, new { error = "Error retrieving role" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -116,8 +115,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating new role: {ErrorMessage}", ex.Message);
-                return StatusCode(500, new { error = "Error creating new role" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -142,8 +141,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating role with Id {Id}: {ErrorMessage}", id, ex.Message);
-                return StatusCode(500, new { error = "Error updating role" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
     }

@@ -30,8 +30,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError("An error occurred: {ErrorMessage}", ex.Message);
-                return StatusCode(500, "An error occurred");
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
     }

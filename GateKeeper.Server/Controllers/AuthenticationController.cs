@@ -91,12 +91,8 @@ namespace GateKeeper.Server.Controllers
             {
                 response.FailureReason = $"{InternalError}: {ex.Message}";
                 response.IsSuccessful = false;
-                _logger.LogError(ex, "{FunctionName}('{Email}','{UserName}') - Error: {ErrorMessage}",
-                    FunctionName(),
-                    registerRequest.Email.SanitizeForLogging(),
-                    registerRequest.Username.SanitizeForLogging(),
-                    ex.Message);
-                return StatusCode(500, new { error = InternalError });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {
@@ -137,9 +133,8 @@ namespace GateKeeper.Server.Controllers
                 response.FailureReason = $"{InternalError}: {ex.Message}";
                 if (response.User != null)
                     await response.User.ClearPHIAsync();
-                _logger.LogError(ex, "{FunctionName}() - Error: {ErrorMessage}",
-                    FunctionName(), ex.Message);
-                return StatusCode(500, new { error = InternalError });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {
@@ -199,9 +194,8 @@ namespace GateKeeper.Server.Controllers
             {
                 response.IsSuccessful = false;
                 response.FailureReason = $"{InternalError}: {ex.Message}";
-                _logger.LogError(ex, "{FunctionName}('{Identifier}') - Error: {ErrorMessage}",
-                    FunctionName(), loginRequest.Identifier.SanitizeForLogging(), ex.Message);
-                return StatusCode(500, new { error = InternalError });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {
@@ -250,9 +244,8 @@ namespace GateKeeper.Server.Controllers
             {
                 response.IsSuccessful = false;
                 response.FailureReason = $"{InternalError}: {ex.Message}";
-                _logger.LogError(ex, "{FunctionName}() - Error: {ErrorMessage}",
-                    FunctionName(), ex.Message);
-                return StatusCode(500, new { error = InternalError });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {
@@ -292,9 +285,8 @@ namespace GateKeeper.Server.Controllers
             {
                 revokedCount = 0;
                 failureReason = $"{InternalError}: {ex.Message}";
-                _logger.LogError(ex, "{FunctionName}('{UserId}') - Error: {ErrorMessage}",
-                    FunctionName(), userId, ex.Message);
-                return StatusCode(500, new { error = InternalError });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {
@@ -344,12 +336,11 @@ namespace GateKeeper.Server.Controllers
                 });
 
             }
-            catch (Exception ex)
+            catch (Exception ex) // This outer catch is being removed
             {
                 failureReason = $"{InternalError}: {ex.Message}";
-                _logger.LogError(ex, "{FunctionName}('{UserId}') - Error: {ErrorMessage}",
-                    FunctionName(), userId, ex.Message);
-                return StatusCode(500, new { error = InternalError });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {
@@ -387,11 +378,8 @@ namespace GateKeeper.Server.Controllers
                 response.FailureReason = $"{InternalError}: {ex.Message}";
                 response.IsVerified = false;
                 response.User?.ClearPHIAsync();
-
-                _logger.LogError(ex, "{FunctionName}() - Error: {ErrorMessage}",
-                    FunctionName(), ex.Message);
-                return StatusCode(500, new { error = InternalError });
-
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {
@@ -423,9 +411,12 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "{FunctionName}() - Error: {ErrorMessage}",
-                    FunctionName(), ex.Message);
-                return StatusCode(500, new { error = InternalError });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -500,9 +491,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "{FunctionName}('{SessionId}') - Error: {ErrorMessage}", 
-                    FunctionName(), logoutDeviceRequest.SessionId.SanitizeForLogging(), ex.Message);
-                return StatusCode(500, new { error = InternalError });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 

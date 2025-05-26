@@ -72,8 +72,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating user: {UserId}, IP: {IpAddress}, Device: {UserAgent}", userId, userIp, userAgent);
-                return StatusCode(500, new { error = "An error occurred while updating the user." });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {
@@ -103,8 +103,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving profile: {UserId}, IP: {IpAddress}", userId, userIp);
-                return StatusCode(500, new { error = "An error occurred while retrieving the user profile." });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {
@@ -130,8 +130,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving users: AdminUserId: {AdminUserId}, IP: {IpAddress}", adminUserId, userIp);
-                return StatusCode(500, new { error = "An error occurred while retrieving users." });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {
@@ -165,8 +165,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving user: RequestedUserId: {UserId}, AdminUserId: {AdminUserId}, IP: {IpAddress}", userId, adminUserId, userIp);
-                return StatusCode(500, new { error = "An error occurred while retrieving the user." });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {
@@ -200,8 +200,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving user for edit: RequestedUserId: {UserId}, AdminUserId: {AdminUserId}, IP: {IpAddress}", userId, adminUserId, userIp);
-                return StatusCode(500, new { error = "An error occurred while retrieving the user for edit." });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {
@@ -285,8 +285,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating user with image: {UserId}, IP: {IpAddress}, Device: {UserAgent}", userId, userIp, userAgent);
-                return StatusCode(500, new { error = "An error occurred while updating the user." });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {
@@ -318,8 +318,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving profile picture: RequestedUserId: {UserId}, IP: {IpAddress}", userId, userIp);
-                return StatusCode(500, new { error = "An error occurred while retrieving the profile picture." });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {

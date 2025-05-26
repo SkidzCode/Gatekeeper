@@ -73,7 +73,8 @@ namespace GateKeeper.Server.Controllers
                     userIp,
                     ex.Message
                 );
-                return StatusCode(500, new { error = "An error occurred while sending the invite." });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {
@@ -116,7 +117,8 @@ namespace GateKeeper.Server.Controllers
                     userIp,
                     ex.Message
                 );
-                return StatusCode(500, new { error = "An error occurred while retrieving invites." });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {
@@ -146,7 +148,8 @@ namespace GateKeeper.Server.Controllers
                     FunctionName(),
                     ex.Message
                 );
-                return StatusCode(500, new { error = "Error retrieving invites required." });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {

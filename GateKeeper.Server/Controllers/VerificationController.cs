@@ -58,9 +58,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                response.FailureReason = "Internal error:" + ex.Message;
-                _logger.LogError(ex, "An error occurred during validation token validation.");
-                return StatusCode(500, new { error = "An error occurred during validation token validation." });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {
@@ -100,8 +99,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred during user verification.");
-                return StatusCode(500, new { error = "An error occurred while verifying the user." });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
     }

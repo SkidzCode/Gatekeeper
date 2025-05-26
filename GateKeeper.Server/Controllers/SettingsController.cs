@@ -58,8 +58,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while fetching all settings: {ErrorMessage}", ex.Message);
-                return StatusCode(500, new { error = "Error occurred while fetching all settings" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -83,8 +83,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving setting with Id {Id}: {ErrorMessage}", id, ex.Message);
-                return StatusCode(500, new { error = "Error retrieving setting" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -113,8 +113,10 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating new setting: {ErrorMessage}", ex.Message);
-                return StatusCode(500, new { error = "Error creating new setting" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -182,8 +184,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating setting with Id {Id}: {ErrorMessage}", id, ex.Message);
-                return StatusCode(500, new { error = "Error updating setting" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -208,8 +210,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting setting with Id {Id}: {ErrorMessage}", id, ex.Message);
-                return StatusCode(500, new { error = "Error deleting setting" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -230,8 +232,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving settings in category '{Category}': {ErrorMessage}", category.SanitizeForLogging(), ex.Message);
-                return StatusCode(500, new { error = "Error retrieving settings in category" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -254,8 +256,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error searching settings with Name='{Name}' and Category='{Category}': {ErrorMessage}", name.SanitizeForLogging(), category.SanitizeForLogging(), ex.Message);
-                return StatusCode(500, new { error = "Error searching settings" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -290,8 +292,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in AddOrUpdate operation for setting '{Name}': {ErrorMessage}", setting.Name.SanitizeForLogging(), ex.Message);
-                return StatusCode(500, new { error = "Error in AddOrUpdate operation for setting" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -302,12 +304,7 @@ namespace GateKeeper.Server.Controllers
             return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
         }
 
-        private IActionResult HandleInternalError(Exception ex, string errorMessageTemplate)
-        {
-            var errorMessage = string.Format(errorMessageTemplate, ex.Message);
-            _logger.LogError(ex, errorMessage);
-            return StatusCode(500, new { error = errorMessage });
-        }
+        // Removed HandleInternalError method as its functionality is now covered by GlobalExceptionHandlerMiddleware
         #endregion
     }
 }

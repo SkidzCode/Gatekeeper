@@ -48,8 +48,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while fetching all notifications: {ErrorMessage}", ex.Message);
-                return StatusCode(500, new { error = "Error occurred while fetching all notifications" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -69,8 +69,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving notifications for user {RecipientId}: {ErrorMessage}", recipientId, ex.Message);
-                return StatusCode(500, new { error = "Error retrieving notifications" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -91,8 +91,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving not-sent notifications: {ErrorMessage}", ex.Message);
-                return StatusCode(500, new { error = "Error retrieving not-sent notifications" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -120,8 +120,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating new notification: {ErrorMessage}", ex.Message);
-                return StatusCode(500, new { error = "Error creating new notification" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
     }
