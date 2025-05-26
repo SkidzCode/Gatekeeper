@@ -275,6 +275,7 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 app.UseMiddleware<LogEnrichmentMiddleware>();
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>(); // Added Global Exception Handler
 
 app.UseDefaultFiles();
 app.UseStaticFiles();

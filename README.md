@@ -156,6 +156,52 @@ Both frontend and backend include unit tests.
   * **Backend Tests:** Navigate to `GateKeeper.Server` (or the test project directory) and run `dotnet test`.
     Refer to [GetStarted.md](https://www.google.com/search?q=GetStarted.md%23testing) for more details on running tests.
 
+## Error Handling
+
+The GateKeeper API employs a centralized error handling middleware to provide consistent error responses. When an error occurs, the API will return a JSON response in a standard format.
+
+### Standard Error Response Format
+
+The `ErrorResponse` model includes the following properties:
+
+*   `StatusCode` (int): The HTTP status code for the error (e.g., 400, 404, 500).
+*   `Message` (string): A human-readable message summarizing the error. For specific errors like validation or business rule violations, this message will provide more context.
+*   `Details` (string, optional): Contains more detailed error information, such as a stack trace. This field is ONLY populated in development environments for debugging purposes and will be `null` in production environments to avoid exposing sensitive information.
+*   `TraceId` (string): A unique identifier for the request. This ID is logged by the server and can be used to correlate server-side logs with the specific error encountered by the client. Please include this `TraceId` when reporting issues.
+
+**Example JSON Error Response:**
+
+```json
+{
+  "StatusCode": 500,
+  "Message": "An unexpected internal server error occurred. Please try again later.",
+  "Details": null, // Or a detailed error string (e.g., stack trace) in development
+  "TraceId": "0HM123456789ABCDEF"
+}
+```
+
+### Common HTTP Status Codes
+
+The API uses standard HTTP status codes to indicate the success or failure of an API request. Here are some common ones you might encounter:
+
+*   **`400 Bad Request`**: This can indicate several issues:
+    *   **Validation Errors**: Input data failed validation (e.g., missing required fields, invalid data format). The `Message` field will often detail which fields are problematic.
+    *   **Business Rule Violations**: The request violated a specific business rule (e.g., trying to create a duplicate entry where it's not allowed). The `Message` will describe the rule violation.
+*   **`401 Unauthorized`**: Authentication is required to access the resource, and the request either lacked authentication credentials or the provided credentials were invalid.
+*   **`403 Forbidden`**: The authenticated user does not have the necessary permissions to perform the requested action on the resource.
+*   **`404 Not Found`**: The requested resource (e.g., a specific user, role, or setting) could not be found on the server.
+*   **`500 Internal Server Error`**: An unexpected error occurred on the server that prevented it from fulfilling the request. The `Message` will typically be generic. Use the `TraceId` to help administrators locate the corresponding server logs for more details.
+
+### Custom Exceptions
+
+The centralized error handler is designed to catch specific custom exceptions and map them to appropriate HTTP status codes and user-friendly messages. These include:
+
+*   `ValidationException`: Typically results in a `400 Bad Request` with a message detailing the validation failure.
+*   `ResourceNotFoundException`: Results in a `404 Not Found` with a message indicating the resource was not found.
+*   `BusinessRuleException`: Typically results in a `400 Bad Request` (or sometimes `409 Conflict`) with a message explaining the business rule that was violated.
+
+This approach ensures that clients receive predictable and informative error responses, aiding in debugging and integration.
+
 ## Documentation & Project Structure
 
   * **[GetStarted.md](https://www.google.com/search?q=GetStarted.md):** Comprehensive guide for installation, detailed configuration, and setup.

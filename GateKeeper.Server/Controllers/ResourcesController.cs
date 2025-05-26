@@ -38,9 +38,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = string.Format("An unexpected error occurred while retrieving entries: {0}", ex.Message);
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -66,9 +65,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = string.Format("An unexpected error occurred while adding a new entry: {0}", ex.Message);
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -107,9 +105,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = string.Format("An unexpected error occurred while updating the entry: {0}", ex.Message);
-                _logger.LogError(ex, errorMessage);
-                return StatusCode(500, new { error = errorMessage });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
     }

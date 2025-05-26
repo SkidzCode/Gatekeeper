@@ -46,9 +46,10 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = "An error occurred while retrieving active sessions.";
-                _logger.LogError(ex, "Error retrieving active sessions for UserId: {UserId}, IP: {IpAddress}", userId, userIp);
-                return StatusCode(500, new { error = errorMessage });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {
@@ -100,9 +101,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                var errorMessage = "An error occurred while retrieving recent activity sessions.";
-                _logger.LogError(ex, "Error retrieving recent sessions for AdminUserId: {AdminUserId}, IP: {IpAddress}", adminUserId, userIp);
-                return StatusCode(500, new { error = errorMessage });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
             finally
             {

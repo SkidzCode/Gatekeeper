@@ -171,7 +171,9 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                return HandleInternalError(ex, "An error occurred while reading chained logs.");
+                // Removed generic catch block and HandleInternalError call, 
+                // error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -257,11 +259,6 @@ namespace GateKeeper.Server.Controllers
             return result;
         }
 
-        private IActionResult HandleInternalError(Exception ex, string errorMessageTemplate)
-        {
-            var errorMessage = $"{errorMessageTemplate} => {ex.Message}";
-            _logger.LogError(ex, errorMessage);
-            return StatusCode(500, new { error = errorMessage });
-        }
+        // Removed HandleInternalError method as its functionality is now covered by GlobalExceptionHandlerMiddleware
     }
 }

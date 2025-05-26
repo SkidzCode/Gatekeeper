@@ -48,8 +48,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while fetching all notification templates: {ErrorMessage}", ex.Message);
-                return StatusCode(500, new { error = "Error occurred while fetching all notification templates" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -73,8 +73,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving notification template with ID {Id}: {ErrorMessage}", id, ex.Message);
-                return StatusCode(500, new { error = "Error retrieving notification template" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -108,8 +108,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating new notification template: {ErrorMessage}", ex.Message);
-                return StatusCode(500, new { error = "Error creating new notification template" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -139,8 +139,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating notification template with ID {Id}: {ErrorMessage}", id, ex.Message);
-                return StatusCode(500, new { error = "Error updating notification template" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
 
@@ -160,8 +160,8 @@ namespace GateKeeper.Server.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting notification template with ID {Id}: {ErrorMessage}", id, ex.Message);
-                return StatusCode(500, new { error = "Error deleting notification template" });
+                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
+                throw; // Re-throw the exception to be caught by the global handler
             }
         }
     }
