@@ -11,8 +11,8 @@ BEGIN
     SELECT *
     FROM Settings
     WHERE 
-        (p_Name IS NULL OR Name LIKE CONCAT('%', p_Name, '%'))
-        AND (p_Category IS NULL OR Category = p_Category)
+        (p_Name IS NULL OR Name LIKE CONCAT('%', p_Name COLLATE utf8mb4_unicode_ci, '%'))
+		AND (p_Category IS NULL OR Category = p_Category) -- Also check collation for Category if it causes issues
     ORDER BY Name
     LIMIT p_Limit OFFSET p_Offset;
 END //
