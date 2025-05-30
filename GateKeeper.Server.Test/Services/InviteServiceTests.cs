@@ -74,7 +74,7 @@ namespace GateKeeper.Server.Test.Services
             };
 
             _mockNotificationTemplateService
-                .Setup(s => s.GetNotificationTemplateByNameAsync("Invite Someone")) // Corrected template name
+                .Setup(s => s.GetNotificationTemplateByNameAsync("Invite Someone", null)) // Corrected template name, added null for languageCode
                 .ReturnsAsync(template);
 
             _mockNotificationService
@@ -132,7 +132,7 @@ namespace GateKeeper.Server.Test.Services
             };
 
             _mockNotificationTemplateService
-                .Setup(s => s.GetNotificationTemplateByNameAsync("Invite Someone"))
+                .Setup(s => s.GetNotificationTemplateByNameAsync("Invite Someone", null))
                 .ReturnsAsync((NotificationTemplate)null);
 
             // Act
@@ -140,7 +140,7 @@ namespace GateKeeper.Server.Test.Services
 
             // Assert
             Assert.AreEqual(0, result);
-            _mockNotificationTemplateService.Verify(s => s.GetNotificationTemplateByNameAsync("Invite Someone"), Times.Once);
+            _mockNotificationTemplateService.Verify(s => s.GetNotificationTemplateByNameAsync("Invite Someone", null), Times.Once);
             _mockNotificationService.Verify(s => s.InsertNotificationAsync(It.IsAny<Notification>()), Times.Never);
             _mockMySqlConnectorWrapper.Verify(c => c.ExecuteNonQueryWithOutputAsync(It.IsAny<string>(), It.IsAny<CommandType>(), It.IsAny<MySqlParameter[]>()), Times.Never);
         }

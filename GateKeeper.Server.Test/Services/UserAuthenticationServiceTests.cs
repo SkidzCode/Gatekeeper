@@ -108,7 +108,7 @@ namespace GateKeeper.Server.Test.Services
             
             // Setup IStringDataProtector mock
             _mockStringDataProtector.Setup(p => p.Protect(It.IsAny<string>())).Returns((string s) => s + "_protected");
-            _mockStringDataProtector.Setup(p => p.Unprotect(It.IsAny<string>())).Returns("0");
+            _mockStringDataProtector.Setup(p => p.Unprotect(It.IsAny<string>())).Returns("0"); // Corrected to return string "0"
 
             var secureString = new SecureString();
             // Using a Base64 encoded key for the SecureString, matching what KeyManagementService would provide.

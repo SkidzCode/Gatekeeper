@@ -242,7 +242,6 @@ namespace GateKeeper.Server.Test.Services
 
             // Act
             var result = await _service.GetNotificationTemplateByIdAsync(templateId, null); // Pass null for languageCode
-            var result = await _service.GetNotificationTemplateByIdAsync(templateId, null); // Pass null for languageCode
 
             // Assert
             Assert.IsNotNull(result);
@@ -303,13 +302,11 @@ namespace GateKeeper.Server.Test.Services
                            .ReturnsAsync(true); // For localized template
 
             // Setup mock reader for default template then for localization
-            SetupMockReaderForTemplate(defaultTemplate); // This will be read first
-                                                         // Then, when localization is read, re-setup for localization:
-            _mockMySqlConnectorWrapper.When(() => _mockMySqlConnectorWrapper.Object.ExecuteReaderAsync(
-                    "NotificationTemplateLocalizationGetByTemplateIdAndLanguageCode", It.IsAny<CommandType>(), It.IsAny<MySqlParameter[]>()))
-                .SetupGet(call => call.Result.ToString()) // A bit of a hack to chain setups based on call order
-                .Callback(() => SetupMockReaderForLocalization(localizedTemplateData));
-
+            _mockDataReader.SetupSequence(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
+                           .ReturnsAsync(true)  // For default template
+                           .Callback(() => SetupMockReaderForTemplate(defaultTemplate))
+                           .ReturnsAsync(true)  // For localized template
+                           .Callback(() => SetupMockReaderForLocalization(localizedTemplateData));
 
             // Act
             var result = await _service.GetNotificationTemplateByIdAsync(templateId, languageToRequest);
