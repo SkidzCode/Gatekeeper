@@ -58,6 +58,10 @@ CREATE PROCEDURE NotificationTemplateDelete(
     IN p_TemplateId INT
 )
 BEGIN
+    -- First, delete all localizations associated with this template
+    CALL NotificationTemplateLocalizationsDeleteByTemplateId(p_TemplateId);
+
+    -- Then, delete the template itself
     DELETE FROM NotificationTemplates
     WHERE TemplateId = p_TemplateId;
 END //
