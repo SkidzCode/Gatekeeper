@@ -40,7 +40,7 @@ namespace GateKeeper.Server.Services
                     LocalizationId = reader.GetInt32("LocalizationId"),
                     TemplateId = reader.GetInt32("TemplateId"),
                     LanguageCode = reader.GetString("LanguageCode"),
-                    LocalizedSubject = reader.IsDBNull("LocalizedSubject") ? null : reader.GetString("LocalizedSubject"),
+                    LocalizedSubject = reader.GetString("LocalizedSubject"),
                     LocalizedBody = reader.GetString("LocalizedBody"),
                     CreatedAt = reader.GetDateTime("CreatedAt"),
                     UpdatedAt = reader.GetDateTime("UpdatedAt")
@@ -238,28 +238,27 @@ namespace GateKeeper.Server.Services
             string effectiveLanguageCode = string.IsNullOrWhiteSpace(languageCode) 
                 ? _localizationSettingsConfig.DefaultLanguageCode 
                 : languageCode;
+
+            if (string.Equals(effectiveLanguageCode, _localizationSettingsConfig.DefaultLanguageCode,
+                    System.StringComparison.OrdinalIgnoreCase)) return template;
             
-            if (!string.Equals(effectiveLanguageCode, _localizationSettingsConfig.DefaultLanguageCode, System.StringComparison.OrdinalIgnoreCase))
+            var localizationParameters = new MySqlParameter[]
             {
-                var localizationParameters = new MySqlParameter[]
-                {
-                    new MySqlParameter("@p_TemplateId", template.TemplateId),
-                    new MySqlParameter("@p_LanguageCode", effectiveLanguageCode)
-                };
+                new MySqlParameter("@p_TemplateId", template.TemplateId),
+                new MySqlParameter("@p_LanguageCode", effectiveLanguageCode)
+            };
 
-                await using var localizationReader = await wrapper.ExecuteReaderAsync(
-                    commandText: "NotificationTemplateLocalizationGetByTemplateIdAndLanguageCode",
-                    commandType: CommandType.StoredProcedure,
-                    parameters: localizationParameters
-                );
+            await using var localizationReader = await wrapper.ExecuteReaderAsync(
+                commandText: "NotificationTemplateLocalizationGetByTemplateIdAndLanguageCode",
+                commandType: CommandType.StoredProcedure,
+                parameters: localizationParameters
+            );
 
-                var localization = await ReadLocalizationAsync(localizationReader);
-                if (localization != null)
-                {
-                    template.Subject = string.IsNullOrEmpty(localization.LocalizedSubject) ? template.Subject : localization.LocalizedSubject;
-                    template.Body = localization.LocalizedBody;
-                }
-            }
+            var localization = await ReadLocalizationAsync(localizationReader);
+            if (localization == null) return template;
+
+            template.Subject = string.IsNullOrEmpty(localization.LocalizedSubject) ? template.Subject : localization.LocalizedSubject;
+            template.Body = localization.LocalizedBody;
             return template;
         }
 

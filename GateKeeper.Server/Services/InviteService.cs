@@ -28,7 +28,7 @@ namespace GateKeeper.Server.Services
 
         public async Task<int> SendInvite(Invite invite)
         {
-            var template = await _notificationTemplateService.GetNotificationTemplateByNameAsync("Invite Someone");
+            var template = await _notificationTemplateService.GetNotificationTemplateByNameAsync("InviteUserTemplate");
             if (template == null)
             {
                 _logger.LogError("Invite template not found");
