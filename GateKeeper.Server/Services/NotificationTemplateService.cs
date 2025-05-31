@@ -66,23 +66,20 @@ namespace GateKeeper.Server.Services
                 new MySqlParameter("@p_IsActive",     template.IsActive)
             };
 
-            // We'll use ExecuteNonQueryWithOutputAsync to grab the returned "NewTemplateId"
-            var output = await wrapper.ExecuteNonQueryWithOutputAsync(
+            // Use ExecuteReaderAsync for SPs that return a result set
+            await using var reader = await wrapper.ExecuteReaderAsync(
                 commandText: "NotificationTemplateInsert",
                 commandType: CommandType.StoredProcedure,
                 parameters: parameters
             );
 
-            // The stored procedure returns SELECT LAST_INSERT_ID() AS NewTemplateId
-            if (output.TryGetValue("NewTemplateId", out var newTemplateIdObj))
+            if (await reader.ReadAsync())
             {
-                if (int.TryParse(newTemplateIdObj?.ToString(), out int newId))
-                {
-                    return newId;
-                }
+                // Assuming the SP returns a column named "NewTemplateId" as per the SQL script
+                return reader.GetInt32("NewTemplateId");
             }
 
-            // Fallback or error handling if needed
+            // Fallback or error handling if ID is not returned
             return 0;
         }
 
