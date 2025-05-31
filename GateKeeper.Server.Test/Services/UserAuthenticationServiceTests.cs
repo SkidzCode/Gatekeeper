@@ -108,7 +108,7 @@ namespace GateKeeper.Server.Test.Services
             
             // Setup IStringDataProtector mock
             _mockStringDataProtector.Setup(p => p.Protect(It.IsAny<string>())).Returns((string s) => s + "_protected");
-            _mockStringDataProtector.Setup(p => p.Unprotect(It.IsAny<string>())).Returns("0");
+            _mockStringDataProtector.Setup(p => p.Unprotect(It.IsAny<string>())).Returns("0"); // Corrected to return string "0"
 
             var secureString = new SecureString();
             // Using a Base64 encoded key for the SecureString, matching what KeyManagementService would provide.
@@ -172,8 +172,9 @@ namespace GateKeeper.Server.Test.Services
             _mockUserService.Setup(us => us.RegisterUser(It.IsAny<User>()))
                 .ReturnsAsync(registrationResponse);
             
-            _mockDbHelper.Setup(db => db.GetWrapperAsync()).ReturnsAsync(Mock.Of<IMySqlConnectorWrapper>());
-            _mockNotificationTemplateService.Setup(nts => nts.GetNotificationTemplateByNameAsync(It.IsAny<string>()))
+            _mockDbHelper.Setup(db => db.GetWrapperAsync()).ReturnsAsync(Mock.Of<IMySqlConnectorWrapper>()); 
+
+            _mockNotificationTemplateService.Setup(nts => nts.GetNotificationTemplateByNameAsync(It.IsAny<string>(), It.IsAny<string?>()))
                 .ReturnsAsync(new NotificationTemplate { Body = "template_body", Subject = "template_subject" });
             _mockNotificationService.Setup(ns => ns.InsertNotificationAsync(It.IsAny<Notification>()))
                 .ReturnsAsync(new NotificationInsertResponse()); // Removed IsSuccess

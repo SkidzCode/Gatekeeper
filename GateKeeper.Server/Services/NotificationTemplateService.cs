@@ -5,6 +5,8 @@ using MySqlConnector;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models;
 using GateKeeper.Server.Models.Site;
+using GateKeeper.Server.Models.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace GateKeeper.Server.Services
 {
@@ -13,18 +15,38 @@ namespace GateKeeper.Server.Services
         Task<int> InsertNotificationTemplateAsync(NotificationTemplate template);
         Task UpdateNotificationTemplateAsync(NotificationTemplate template);
         Task DeleteNotificationTemplateAsync(int templateId);
-        Task<NotificationTemplate?> GetNotificationTemplateByNameAsync(string templateName);
-        Task<NotificationTemplate?> GetNotificationTemplateByIdAsync(int templateId);
+        Task<NotificationTemplate?> GetNotificationTemplateByNameAsync(string templateName, string? languageCode = null);
+        Task<NotificationTemplate?> GetNotificationTemplateByIdAsync(int templateId, string? languageCode = null);
         Task<List<NotificationTemplate>> GetAllNotificationTemplatesAsync();
     }
 
     public class NotificationTemplateService : INotificationTemplateService
     {
         private readonly IDbHelper _dbHelper;
+        private readonly LocalizationSettingsConfig _localizationSettingsConfig;
 
-        public NotificationTemplateService(IDbHelper dbHelper)
+        public NotificationTemplateService(IDbHelper dbHelper, IOptions<LocalizationSettingsConfig> localizationSettingsConfig)
         {
             _dbHelper = dbHelper;
+            _localizationSettingsConfig = localizationSettingsConfig.Value;
+        }
+
+        private async Task<NotificationTemplateLocalization?> ReadLocalizationAsync(IMySqlDataReaderWrapper reader)
+        {
+            if (await reader.ReadAsync())
+            {
+                return new NotificationTemplateLocalization
+                {
+                    LocalizationId = reader.GetInt32("LocalizationId"),
+                    TemplateId = reader.GetInt32("TemplateId"),
+                    LanguageCode = reader.GetString("LanguageCode"),
+                    LocalizedSubject = reader.GetString("LocalizedSubject"),
+                    LocalizedBody = reader.GetString("LocalizedBody"),
+                    CreatedAt = reader.GetDateTime("CreatedAt"),
+                    UpdatedAt = reader.GetDateTime("UpdatedAt")
+                };
+            }
+            return null;
         }
 
         /// <summary>
@@ -44,23 +66,20 @@ namespace GateKeeper.Server.Services
                 new MySqlParameter("@p_IsActive",     template.IsActive)
             };
 
-            // We'll use ExecuteNonQueryWithOutputAsync to grab the returned "NewTemplateId"
-            var output = await wrapper.ExecuteNonQueryWithOutputAsync(
+            // Use ExecuteReaderAsync for SPs that return a result set
+            await using var reader = await wrapper.ExecuteReaderAsync(
                 commandText: "NotificationTemplateInsert",
                 commandType: CommandType.StoredProcedure,
                 parameters: parameters
             );
 
-            // The stored procedure returns SELECT LAST_INSERT_ID() AS NewTemplateId
-            if (output.TryGetValue("NewTemplateId", out var newTemplateIdObj))
+            if (await reader.ReadAsync())
             {
-                if (int.TryParse(newTemplateIdObj?.ToString(), out int newId))
-                {
-                    return newId;
-                }
+                // Assuming the SP returns a column named "NewTemplateId" as per the SQL script
+                return reader.GetInt32("NewTemplateId");
             }
 
-            // Fallback or error handling if needed
+            // Fallback or error handling if ID is not returned
             return 0;
         }
 
@@ -110,8 +129,9 @@ namespace GateKeeper.Server.Services
 
         /// <summary>
         /// Calls NotificationTemplateGet to fetch a single record by ID.
+        /// Optionally localizes Subject and Body if languageCode is provided.
         /// </summary>
-        public async Task<NotificationTemplate?> GetNotificationTemplateByIdAsync(int templateId)
+        public async Task<NotificationTemplate?> GetNotificationTemplateByIdAsync(int templateId, string? languageCode = null)
         {
             await using var wrapper = await _dbHelper.GetWrapperAsync();
 
@@ -120,15 +140,83 @@ namespace GateKeeper.Server.Services
                 new MySqlParameter("@p_TemplateId", templateId)
             };
 
-            await using var reader = await wrapper.ExecuteReaderAsync(
+            NotificationTemplate? template;
+            await using (var reader = await wrapper.ExecuteReaderAsync(
                 commandText: "NotificationTemplateGet",
                 commandType: CommandType.StoredProcedure,
                 parameters: parameters
-            );
-
-            if (await reader.ReadAsync())
+            ))
             {
-                return new NotificationTemplate
+                if (await reader.ReadAsync())
+                {
+                    template = new NotificationTemplate
+                    {
+                        TemplateId = reader.GetInt32("TemplateId"),
+                        TemplateName = reader.GetString("TemplateName"),
+                        Channel = reader.GetString("channel"),
+                        TokenType = reader.GetString("TokenType"),
+                        Subject = reader.GetString("subject"),
+                        Body = reader.GetString("body"),
+                        IsActive = reader.GetInt32("IsActive") == 1,
+                        CreatedAt = reader.GetDateTime("CreatedAt"),
+                        UpdatedAt = reader.GetDateTime("UpdatedAt")
+                    };
+                }
+                else
+                {
+                    return null;
+                }
+            }
+
+            string effectiveLanguageCode = string.IsNullOrWhiteSpace(languageCode) 
+                ? _localizationSettingsConfig.DefaultLanguageCode 
+                : languageCode;
+
+            // Assuming your default language content is stored in the main NotificationTemplates table,
+            // and you only fetch localizations if the requested language is different from a known default (e.g., "en-US").
+            // Adjust this logic if your default language is also in the localizations table.
+            if (template != null && !string.Equals(effectiveLanguageCode, _localizationSettingsConfig.DefaultLanguageCode, System.StringComparison.OrdinalIgnoreCase))
+            {
+                var localizationParameters = new MySqlParameter[]
+                {
+                    new MySqlParameter("@p_TemplateId", template.TemplateId),
+                    new MySqlParameter("@p_LanguageCode", effectiveLanguageCode)
+                };
+
+                await using var localizationReader = await wrapper.ExecuteReaderAsync(
+                    commandText: "NotificationTemplateLocalizationGetByTemplateIdAndLanguageCode",
+                    commandType: CommandType.StoredProcedure,
+                    parameters: localizationParameters
+                );
+
+                var localization = await ReadLocalizationAsync(localizationReader);
+                if (localization != null)
+                {
+                    template.Subject = string.IsNullOrEmpty(localization.LocalizedSubject) ? template.Subject : localization.LocalizedSubject;
+                    template.Body = localization.LocalizedBody;
+                }
+            }
+            return template;
+        }
+
+        public async Task<NotificationTemplate?> GetNotificationTemplateByNameAsync(string templateName, string? languageCode = null)
+        {
+            await using var wrapper = await _dbHelper.GetWrapperAsync();
+
+            var parameters = new MySqlParameter[]
+            {
+                new MySqlParameter("@p_TemplateName", templateName)
+            };
+            
+            NotificationTemplate? template;
+            await using (var reader = await wrapper.ExecuteReaderAsync(
+                commandText: "NotificationTemplateGetByName",
+                commandType: CommandType.StoredProcedure,
+                parameters: parameters
+            ))
+            {
+                 if (!await reader.ReadAsync()) return null;
+                template = new NotificationTemplate
                 {
                     TemplateId = reader.GetInt32("TemplateId"),
                     TemplateName = reader.GetString("TemplateName"),
@@ -142,37 +230,33 @@ namespace GateKeeper.Server.Services
                 };
             }
 
-            return null;
-        }
+            if (template == null) return null;
 
-        public async Task<NotificationTemplate?> GetNotificationTemplateByNameAsync(string templateName)
-        {
-            await using var wrapper = await _dbHelper.GetWrapperAsync();
+            string effectiveLanguageCode = string.IsNullOrWhiteSpace(languageCode) 
+                ? _localizationSettingsConfig.DefaultLanguageCode 
+                : languageCode;
 
-            var parameters = new MySqlParameter[]
+            if (string.Equals(effectiveLanguageCode, _localizationSettingsConfig.DefaultLanguageCode,
+                    System.StringComparison.OrdinalIgnoreCase)) return template;
+            
+            var localizationParameters = new MySqlParameter[]
             {
-                new MySqlParameter("@p_TemplateName", templateName)
+                new MySqlParameter("@p_TemplateId", template.TemplateId),
+                new MySqlParameter("@p_LanguageCode", effectiveLanguageCode)
             };
 
-            await using var reader = await wrapper.ExecuteReaderAsync(
-                commandText: "NotificationTemplateGetByName",
+            await using var localizationReader = await wrapper.ExecuteReaderAsync(
+                commandText: "NotificationTemplateLocalizationGetByTemplateIdAndLanguageCode",
                 commandType: CommandType.StoredProcedure,
-                parameters: parameters
+                parameters: localizationParameters
             );
 
-            if (!await reader.ReadAsync()) return null;
-            return new NotificationTemplate
-            {
-                TemplateId = reader.GetInt32("TemplateId"),
-                TemplateName = reader.GetString("TemplateName"),
-                Channel = reader.GetString("channel"),
-                TokenType = reader.GetString("TokenType"),
-                Subject = reader.GetString("subject"),
-                Body = reader.GetString("body"),
-                IsActive = reader.GetInt32("IsActive") == 1,
-                CreatedAt = reader.GetDateTime("CreatedAt"),
-                UpdatedAt = reader.GetDateTime("UpdatedAt")
-            };
+            var localization = await ReadLocalizationAsync(localizationReader);
+            if (localization == null) return template;
+
+            template.Subject = string.IsNullOrEmpty(localization.LocalizedSubject) ? template.Subject : localization.LocalizedSubject;
+            template.Body = localization.LocalizedBody;
+            return template;
         }
 
         /// <summary>
