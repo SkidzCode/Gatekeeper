@@ -172,8 +172,9 @@ namespace GateKeeper.Server.Test.Services
             _mockUserService.Setup(us => us.RegisterUser(It.IsAny<User>()))
                 .ReturnsAsync(registrationResponse);
             
-            _mockDbHelper.Setup(db => db.GetWrapperAsync()).ReturnsAsync(Mock.Of<IMySqlConnectorWrapper>());
-            _mockNotificationTemplateService.Setup(nts => nts.GetNotificationTemplateByNameAsync(It.IsAny<string>()))
+            _mockDbHelper.Setup(db => db.GetWrapperAsync()).ReturnsAsync(Mock.Of<IMySqlConnectorWrapper>()); 
+
+            _mockNotificationTemplateService.Setup(nts => nts.GetNotificationTemplateByNameAsync(It.IsAny<string>(), It.IsAny<string?>()))
                 .ReturnsAsync(new NotificationTemplate { Body = "template_body", Subject = "template_subject" });
             _mockNotificationService.Setup(ns => ns.InsertNotificationAsync(It.IsAny<Notification>()))
                 .ReturnsAsync(new NotificationInsertResponse()); // Removed IsSuccess
