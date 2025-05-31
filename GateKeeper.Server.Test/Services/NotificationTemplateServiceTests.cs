@@ -143,15 +143,14 @@ namespace GateKeeper.Server.Test.Services
             // Arrange
             var template = CreateTestTemplate(id: 0); // ID is auto-generated
             var expectedNewId = 123;
-            // SUT parses this string to int, which is fine.
-            var outputParams = new Dictionary<string, object> { { "NewTemplateId", expectedNewId.ToString() } };
+            var mockDataReader = new Mock<IMySqlDataReaderWrapper>();
 
             _mockMySqlConnectorWrapper
-                .Setup(c => c.ExecuteNonQueryWithOutputAsync(
+                .Setup(c => c.ExecuteReaderAsync(
                     "NotificationTemplateInsert",
                     CommandType.StoredProcedure,
                     It.IsAny<MySqlParameter[]>()))
-                .ReturnsAsync(outputParams)
+                .ReturnsAsync(mockDataReader.Object)
                 .Callback<string, CommandType, MySqlParameter[]>((proc, type, pars) =>
                 {
                     Assert.AreEqual("NotificationTemplateInsert", proc);
@@ -163,23 +162,32 @@ namespace GateKeeper.Server.Test.Services
                     Assert.AreEqual(template.IsActive, pars.First(p => p.ParameterName == "@p_IsActive").Value);
                 });
 
+            mockDataReader.SetupSequence(r => r.ReadAsync(It.IsAny<CancellationToken>()))
+                          .ReturnsAsync(true)  // First call, simulate record found
+                          .ReturnsAsync(false); // Subsequent calls, no more records
+            mockDataReader.Setup(r => r.GetInt32("NewTemplateId")).Returns(expectedNewId);
+
+
             // Act
             var result = await _service.InsertNotificationTemplateAsync(template);
 
             // Assert
             Assert.AreEqual(expectedNewId, result);
-            _mockMySqlConnectorWrapper.Verify(c => c.ExecuteNonQueryWithOutputAsync("NotificationTemplateInsert", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()), Times.Once);
+            _mockMySqlConnectorWrapper.Verify(c => c.ExecuteReaderAsync("NotificationTemplateInsert", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()), Times.Once);
+            _mockMySqlConnectorWrapper.Verify(c => c.ExecuteNonQueryWithOutputAsync(It.IsAny<string>(), It.IsAny<CommandType>(), It.IsAny<MySqlParameter[]>()), Times.Never); // Ensure old method not called
         }
 
         [TestMethod]
-        public async Task InsertNotificationTemplateAsync_OutputParamNotInt_ReturnsZero()
+        public async Task InsertNotificationTemplateAsync_ReaderReturnsFalse_ReturnsZero()
         {
             var template = CreateTestTemplate(id: 0);
-            var outputParams = new Dictionary<string, object> { { "NewTemplateId", "not-an-int" } };
+            var mockDataReader = new Mock<IMySqlDataReaderWrapper>();
 
             _mockMySqlConnectorWrapper
-                .Setup(c => c.ExecuteNonQueryWithOutputAsync("NotificationTemplateInsert", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
-                .ReturnsAsync(outputParams);
+                .Setup(c => c.ExecuteReaderAsync("NotificationTemplateInsert", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
+                .ReturnsAsync(mockDataReader.Object);
+
+            mockDataReader.Setup(r => r.ReadAsync(It.IsAny<CancellationToken>())).ReturnsAsync(false); // Simulate no record found
 
             var result = await _service.InsertNotificationTemplateAsync(template);
 
@@ -187,18 +195,22 @@ namespace GateKeeper.Server.Test.Services
         }
 
         [TestMethod]
-        public async Task InsertNotificationTemplateAsync_OutputParamMissing_ReturnsZero()
+        public async Task InsertNotificationTemplateAsync_ReaderThrowsException_ReturnsZero() // Or handle as appropriate
         {
             var template = CreateTestTemplate(id: 0);
-            var outputParams = new Dictionary<string, object>(); // Missing "NewTemplateId"
+            var mockDataReader = new Mock<IMySqlDataReaderWrapper>();
 
             _mockMySqlConnectorWrapper
-                .Setup(c => c.ExecuteNonQueryWithOutputAsync("NotificationTemplateInsert", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
-                .ReturnsAsync(outputParams);
+                .Setup(c => c.ExecuteReaderAsync("NotificationTemplateInsert", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
+                .ReturnsAsync(mockDataReader.Object);
+
+            mockDataReader.Setup(r => r.ReadAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
+            mockDataReader.Setup(r => r.GetInt32("NewTemplateId")).Throws(new Exception("Simulated DB error"));
+
 
             var result = await _service.InsertNotificationTemplateAsync(template);
 
-            Assert.AreEqual(0, result);
+            Assert.AreEqual(0, result); // Assuming the service handles this by returning 0
         }
         #endregion
 

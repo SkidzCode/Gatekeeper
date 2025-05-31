@@ -10,6 +10,7 @@ using Serilog;
 using GateKeeper.Server.Middleware;
 using Serilog.Formatting.Compact;
 using GateKeeper.Server.Models.Configuration; // Added for typed configurations
+using Microsoft.Extensions.Options; // Added for IOptions
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,7 +23,8 @@ if (builder.Environment.IsDevelopment())
 #region Add Serilog
 
 // Read the EnableHashing setting
-bool enableHashing = builder.Configuration.GetValue<bool>("Serilog:EnableHashing");
+var serilogConfigOptions = builder.Services.BuildServiceProvider().GetRequiredService<IOptions<SerilogConfig>>();
+bool enableHashing = serilogConfigOptions.Value.EnableHashing;
 
 // Configure Serilog
 var loggerConfiguration = new LoggerConfiguration()
@@ -109,6 +111,9 @@ builder.Services.AddOptions<ResourceSettingsConfig>()
     .Bind(builder.Configuration.GetSection(ResourceSettingsConfig.SectionName))
     .ValidateDataAnnotations()
     .ValidateOnStart();
+
+builder.Services.AddOptions<SerilogConfig>()
+    .Bind(builder.Configuration.GetSection(SerilogConfig.SectionName));
 // End Register and Validate Typed Configuration
 
 builder.Services.AddSingleton<IDbHelper, DBHelper>();

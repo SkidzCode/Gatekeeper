@@ -21,9 +21,9 @@ namespace GateKeeper.Server.Controllers
         /// <summary>
         /// Constructor for the UserController.
         /// </summary>
-        /// <param name="configuration">Application configuration dependency.</param>
+        // <param name="configuration">Application configuration dependency.</param> // Removed IConfiguration
         /// <param name="jwtService">JWT service dependency.</param>
-        public GroupController(IConfiguration configuration, IDbHelper dbHelper, IUserService userService, ILogger<UserController> logger)
+        public GroupController(IDbHelper dbHelper, IUserService userService, ILogger<UserController> logger) // Removed IConfiguration
         {
             _userService = userService;
             _dbHelper = dbHelper;

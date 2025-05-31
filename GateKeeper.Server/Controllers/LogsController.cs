@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using GateKeeper.Server.Models.Configuration; // Ensured
+using Microsoft.Extensions.Options; // Ensured
 
 namespace GateKeeper.Server.Controllers
 {
@@ -9,7 +11,8 @@ namespace GateKeeper.Server.Controllers
     public class LogsController : ControllerBase
     {
         private readonly ILogger<LogsController> _logger;
-        private readonly IConfiguration _configuration;
+        // private readonly IConfiguration _configuration; // Removed
+        private readonly IOptions<SerilogConfig> _serilogConfigOptions; // Added
         private readonly bool _enableHashing = false;
 
         // For convenience, define a maximum we want to return
@@ -17,11 +20,11 @@ namespace GateKeeper.Server.Controllers
 
         public LogsController(
             ILogger<LogsController> logger,
-            IConfiguration configuration)
+            IOptions<SerilogConfig> serilogConfigOptions) // Modified parameters
         {
             _logger = logger;
-            _configuration = configuration;
-            _enableHashing = _configuration.GetValue<bool>("Serilog:EnableHashing");
+            _serilogConfigOptions = serilogConfigOptions; // Assigned new field
+            _enableHashing = _serilogConfigOptions.Value.EnableHashing; // Updated assignment
         }
 
         /// <summary>

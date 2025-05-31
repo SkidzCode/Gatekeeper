@@ -7,9 +7,11 @@ using System.Data;
 using GateKeeper.Server.Extension;
 using MySqlConnector;
 using GateKeeper.Server.Models.Account;
-using Microsoft.Extensions.Configuration;
+// using Microsoft.Extensions.Configuration; // Removed
 using GateKeeper.Server.Models.Account.UserModels;
 using GateKeeper.Server.Inherites;
+using Microsoft.Extensions.Options; // Added for IOptions
+using GateKeeper.Server.Models.Configuration; // Added for RegisterSettingsConfig
 
 namespace GateKeeper.Server.Controllers
 {
@@ -19,15 +21,18 @@ namespace GateKeeper.Server.Controllers
     {
         private readonly IInviteService _inviteService;
         private readonly ILogger<InviteController> _logger;
+        private readonly IOptions<RegisterSettingsConfig> _registerSettingsOptions; // Added
         private readonly bool _requiresInvite;
 
         public InviteController(
             IInviteService inviteService,
-            ILogger<InviteController> logger, IConfiguration configuration)
+            ILogger<InviteController> logger,
+            IOptions<RegisterSettingsConfig> registerSettingsOptions) // Modified parameters
         {
             _inviteService = inviteService;
             _logger = logger;
-            _requiresInvite = configuration.GetValue<bool>("RegisterSettings:RequireInvite");
+            _registerSettingsOptions = registerSettingsOptions; // Assigned new field
+            _requiresInvite = _registerSettingsOptions.Value.RequireInvite; // Updated assignment
         }
 
         /// <summary>

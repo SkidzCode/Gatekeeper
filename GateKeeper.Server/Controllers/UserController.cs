@@ -34,7 +34,7 @@ namespace GateKeeper.Server.Controllers
         /// <param name="configuration">Application configuration dependency.</param>
         /// <param name="jwtService">JWT service dependency.</param>
         public UserController(
-            IConfiguration configuration,
+            // IConfiguration configuration, // Removed
             IDbHelper dbHelper,
             IUserService userService,
             ILogger<UserController> logger,
