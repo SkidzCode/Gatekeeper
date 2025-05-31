@@ -8,6 +8,8 @@ using GateKeeper.Server.Models.Account.Login;
 using GateKeeper.Server.Models.Account.UserModels;
 using System.Runtime.CompilerServices;
 using GateKeeper.Server.Inherites;
+using Microsoft.Extensions.Options; // Added for IOptions
+using GateKeeper.Server.Models.Configuration; // Added for RegisterSettingsConfig
 
 namespace GateKeeper.Server.Controllers
 {
@@ -21,7 +23,7 @@ namespace GateKeeper.Server.Controllers
         private readonly IUserAuthenticationService _authService;
         private readonly ILogger<AuthenticationController> _logger;
         private readonly IUserService _userService;
-        private readonly IConfiguration _configuration;
+        private readonly IOptions<RegisterSettingsConfig> _registerSettingsOptions; // Added
         private readonly bool _requiresInvite;
 
         // Constants for response and error messages
@@ -50,13 +52,13 @@ namespace GateKeeper.Server.Controllers
             IUserAuthenticationService authService,
             ILogger<AuthenticationController> logger,
             IUserService userService,
-            IConfiguration configuration)
+            IOptions<RegisterSettingsConfig> registerSettingsOptions) // Modified parameters
         {
             _authService = authService;
             _logger = logger;
             _userService = userService;
-            _configuration = configuration;
-            _requiresInvite = configuration.GetValue<bool>("RegisterSettings:RequireInvite");
+            _registerSettingsOptions = registerSettingsOptions; // Assigned new field
+            _requiresInvite = _registerSettingsOptions.Value.RequireInvite; // Updated assignment
         }
 
         /// <summary>
