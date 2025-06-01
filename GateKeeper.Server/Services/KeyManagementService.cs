@@ -80,8 +80,16 @@ namespace GateKeeper.Server.Services
             byte[] encryptedKey = await GetActiveEncryptedKeyAsync();
             if (encryptedKey == null || encryptedKey.Length == 0)
             {
-                _logger.LogWarning("No active key found in the database.");
-                return null;
+                _logger.LogWarning("No active key found in the database. Attempting to rotate key.");
+                await RotateKeyAsync(DateTime.UtcNow.AddHours(24));
+                encryptedKey = await GetActiveEncryptedKeyAsync();
+
+                if (encryptedKey == null || encryptedKey.Length == 0)
+                {
+                    _logger.LogError("Still no active key found after attempting rotation. Cannot provide current key.");
+                    return null;
+                }
+                _logger.LogInformation("Successfully rotated key and fetched the new active key.");
             }
 
             // Decrypt

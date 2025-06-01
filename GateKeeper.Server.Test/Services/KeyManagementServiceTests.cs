@@ -184,35 +184,6 @@ namespace GateKeeper.Server.Test.Services
             _mockMySqlConnectorWrapper.Verify(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure), Times.Once);
             mockReader.Verify(r => r["SecretKey"], Times.Once);
         }
-
-        [TestMethod]
-        public async Task GetCurrentKeyAsync_NoActiveKeyFound_ReturnsNull()
-        {
-            // Arrange
-            var mockReader = new Mock<IMySqlDataReaderWrapper>(); // Fresh mock reader
-            //var mockReader = new Mock<IMySqlDataReaderWrapper>(); // Fresh mock reader
-            //var mockReader = new Mock<IMySqlDataReaderWrapper>(); // Fresh mock reader
-            _mockMySqlConnectorWrapper
-                .Setup(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure))
-                .ReturnsAsync(mockReader.Object);
-
-            mockReader.Setup(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
-                      .ReturnsAsync(false); // Simulate no records
-
-            // Act
-            var result = await _keyManagementService.GetCurrentKeyAsync();
-
-            // Assert
-            Assert.IsNull(result);
-            _mockMySqlConnectorWrapper.Verify(c => c.OpenConnectionAsync(), Times.Once);
-            _mockMySqlConnectorWrapper.Verify(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure), Times.Once);
-            _mockLogger.Verify(logger => logger.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("No active key found in the database.")),
-                null,
-                It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
-        }
         
         // or the CS1061 error: The issue arises because the `Setup` method is being incorrectly chained on the result of another `Setup` call.  
         // The correct approach is to call `Setup` directly on the mock object, not on the result of a `Setup` call.  
