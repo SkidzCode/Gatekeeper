@@ -15,7 +15,7 @@ public class DBHelper : IDbHelper
     {
         _dbConfig = dbConfigOptions.Value;
         // Basic validation, though Program.cs handles more comprehensive validation
-        if (string.IsNullOrWhiteSpace(_dbConfig.ConnectionString))
+        if (string.IsNullOrWhiteSpace(_dbConfig.GateKeeperConnection))
         {
             throw new InvalidOperationException("Database connection string is not configured.");
         }
@@ -24,7 +24,7 @@ public class DBHelper : IDbHelper
     public async Task<IMySqlConnectorWrapper> GetWrapperAsync()
     {
         // Using the ConnectionString directly from the injected and validated DatabaseConfig
-        return await new MySqlConnectorWrapper(_dbConfig.ConnectionString).OpenConnectionAsync();
+        return await new MySqlConnectorWrapper(_dbConfig.GateKeeperConnection).OpenConnectionAsync();
     }
 }
 

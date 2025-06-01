@@ -78,7 +78,7 @@ builder.Services.AddOptions<EmailSettingsConfig>()
     .ValidateOnStart();
 
 builder.Services.AddOptions<DatabaseConfig>()
-    .Bind(builder.Configuration.GetSection(DatabaseConfig.SectionName))
+    .Bind(builder.Configuration.GetSection("ConnectionStrings"))
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
