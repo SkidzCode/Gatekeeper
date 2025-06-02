@@ -17,6 +17,7 @@ using GateKeeper.Server.Models.Site;
 using System.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
+using GateKeeper.Server.Exceptions;
 // using GateKeeper.Server.Services; // Duplicate removed
 
 namespace GateKeeper.Server.Test.Services
@@ -127,12 +128,41 @@ namespace GateKeeper.Server.Test.Services
             var mockRequestCookies = new Mock<IRequestCookieCollection>();
             var mockResponseCookies = new Mock<IResponseCookies>();
 
+            // Setup HttpContext Items
+            mockHttpContext.Setup(ctx => ctx.Items).Returns(new Dictionary<object, object?>());
+
+            // Enhanced HttpRequest Mocking
             mockHttpRequest.Setup(req => req.Cookies).Returns(mockRequestCookies.Object);
+            mockHttpRequest.Setup(req => req.Scheme).Returns("https");
+            mockHttpRequest.Setup(req => req.Host).Returns(new HostString("localhost"));
+            mockHttpRequest.Setup(req => req.Path).Returns(new PathString("/")); // Added Path
+
+            var mockConnectionInfo = new Mock<ConnectionInfo>();
+            mockConnectionInfo.Setup(ci => ci.RemoteIpAddress).Returns(System.Net.IPAddress.Loopback);
+            // mockConnectionInfo.Setup(ci => ci.LocalIpAddress).Returns(System.Net.IPAddress.Loopback); // Also an option if needed
+            mockHttpContext.Setup(ctx => ctx.Connection).Returns(mockConnectionInfo.Object);
+
+            // Setup RequestServices
+            var mockServiceProvider = new Mock<IServiceProvider>();
+            mockHttpContext.Setup(ctx => ctx.RequestServices).Returns(mockServiceProvider.Object);
+
+            // Setup Features
+            var features = new Microsoft.AspNetCore.Http.Features.FeatureCollection();
+            var mockHttpResponseFeature = new Mock<Microsoft.AspNetCore.Http.Features.IHttpResponseFeature>();
+            mockHttpResponseFeature.Setup(f => f.Headers).Returns(new HeaderDictionary());
+            mockHttpResponseFeature.Setup(f => f.Body).Returns(new System.IO.MemoryStream());
+            features.Set<Microsoft.AspNetCore.Http.Features.IHttpResponseFeature>(mockHttpResponseFeature.Object);
+            features.Set<Microsoft.AspNetCore.Http.Features.ITlsConnectionFeature>(new Mock<Microsoft.AspNetCore.Http.Features.ITlsConnectionFeature>().Object);
+            mockHttpContext.Setup(ctx => ctx.Features).Returns(features);
+
+            mockResponseCookies.Setup(c => c.Append(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CookieOptions>())); // Setup Append
             mockHttpResponse.Setup(res => res.Cookies).Returns(mockResponseCookies.Object);
             mockHttpContext.Setup(ctx => ctx.Request).Returns(mockHttpRequest.Object);
             mockHttpContext.Setup(ctx => ctx.Response).Returns(mockHttpResponse.Object);
             _mockHttpContextAccessor.Setup(hca => hca.HttpContext).Returns(mockHttpContext.Object);
 
+            // Global setup for GetAllSettingsAsync to prevent NullReferenceException in tests that don't override it.
+            _mockSettingsService.Setup(ss => ss.GetAllSettingsAsync(It.IsAny<int?>())).ReturnsAsync(new List<Setting>());
 
             _authService = new UserAuthenticationService(
                 _mockUserService.Object,
@@ -312,6 +342,224 @@ namespace GateKeeper.Server.Test.Services
             // Assert.IsNotNull(result.User, "User should not be null if IsSuccessful were true."); // User object might be incomplete because IsSuccessful is false.
             _mockVerificationService.Verify(vs => vs.VerifyTokenAsync(It.IsAny<VerifyTokenRequest>()), Times.Once);
             // _mockVerificationService.Verify(vs => vs.GenerateTokenAsync(It.IsAny<int>(), "Refresh"), Times.Once); // Not reached if GenerateJwtToken fails or IsSuccessful is false
+        }
+
+        [TestMethod]
+        public async Task LoginAsync_UserNotFound_ThrowsUserNotFoundException()
+        {
+            // Arrange
+            var userLoginRequest = new UserLoginRequest { Identifier = "unknownuser", Password = "password" };
+            _mockUserService.Setup(us => us.GetUser(userLoginRequest.Identifier)).ReturnsAsync((User)null);
+             // Mock HttpContext and StringDataProtector for UpdateLoginAttemptsAndThrowIfLockedAsync
+            var mockRequestCookies = new Mock<IRequestCookieCollection>();
+            mockRequestCookies.Setup(c => c[It.IsAny<string>()]).Returns((string)null); // No existing cookie
+            _mockHttpContextAccessor.Object.HttpContext.Request.Cookies = mockRequestCookies.Object;
+            // _mockStringDataProtector setup in TestInitialize should cover the Protect call.
+            // Unprotect is also setup in TestInitialize to return "0" by default.
+
+            // Act & Assert
+            await Assert.ThrowsExceptionAsync<UserNotFoundException>(() =>
+                _authService.LoginAsync(userLoginRequest, "127.0.0.1", "TestAgent"));
+            _mockUserService.Verify(us => us.GetUser(userLoginRequest.Identifier), Times.Once);
+        }
+
+        [TestMethod]
+        public async Task LoginAsync_UserSaltNull_ThrowsUserNotFoundException()
+        {
+            // Arrange
+            var userLoginRequest = new UserLoginRequest { Identifier = "userwithnullsalt", Password = "password" };
+            var userWithNullSalt = new User
+            {
+                Id = 2,
+                Username = "userwithnullsalt",
+                Password = "hashedpassword",
+                Salt = null // Null salt
+            };
+            _mockUserService.Setup(us => us.GetUser(userLoginRequest.Identifier)).ReturnsAsync(userWithNullSalt);
+
+            // Mock HttpContext and StringDataProtector for UpdateLoginAttemptsAndThrowIfLockedAsync
+            // These are typically set up in TestInitialize. Ensure they cover this case.
+            // If specific cookie behavior is needed (e.g., cookie exists with "0" attempts), set it up here.
+            // Otherwise, TestInitialize's default of no cookie / Unprotect returning "0" should be fine.
+            var mockRequestCookies = new Mock<IRequestCookieCollection>();
+            mockRequestCookies.Setup(c => c[It.IsAny<string>()]).Returns((string)null);
+            _mockHttpContextAccessor.Object.HttpContext.Request.Cookies = mockRequestCookies.Object;
+            // _mockStringDataProtector.Setup(p => p.Unprotect(It.IsAny<string>())).Returns("0"); // Already in TestInitialize
+
+
+            // Act & Assert
+            await Assert.ThrowsExceptionAsync<UserNotFoundException>(() =>
+                _authService.LoginAsync(userLoginRequest, "127.0.0.1", "TestAgent"));
+            _mockUserService.Verify(us => us.GetUser(userLoginRequest.Identifier), Times.Once);
+        }
+
+        [TestMethod]
+        public async Task LoginAsync_IncorrectPassword_ThrowsInvalidCredentialsException()
+        {
+            // Arrange
+            var userLoginRequest = new UserLoginRequest { Identifier = "johndoe", Password = "wrongpassword" };
+            var user = new User
+            {
+                Id = 1,
+                Username = "johndoe",
+                Email = "john.doe@example.com",
+                Password = "uPTjKd7CONhMrjqtEUbtj0IrVYjp2tqokEGPtsqQlCg=", // Hash for "password123" with "salt"
+                Salt = "salt",
+                Roles = new List<string> { "User" }
+            };
+            _mockUserService.Setup(us => us.GetUser(userLoginRequest.Identifier)).ReturnsAsync(user);
+
+            // Ensure cookie setup from TestInitialize (no cookie -> 0 attempts) is used.
+            // Explicitly ensure the default Unprotect setup is active for this test if concerned about overrides.
+            _mockStringDataProtector.Setup(p => p.Unprotect(It.IsAny<string>())).Returns("0");
+            var initialRequestCookies = Mock.Get(_mockHttpContextAccessor.Object.HttpContext.Request.Cookies);
+            initialRequestCookies.Setup(c => c["LoginAttempts"]).Returns((string)null);
+
+
+            // Re-initialize _authService to ensure it uses the most current mock setups for this test,
+            // similar to the AccountLocked test, though specific settings aren't changed here.
+            // This helps isolate test states.
+            _authService = new UserAuthenticationService(
+                _mockUserService.Object, _mockVerificationService.Object, _mockJwtSettingsOptions.Object,
+                _mockPasswordSettingsOptions.Object, _mockRegisterSettingsOptions.Object, _mockLoginSettingsOptions.Object,
+                _mockDbHelper.Object, _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object, _mockSessionService.Object);
+
+            // Act & Assert
+            await Assert.ThrowsExceptionAsync<InvalidCredentialsException>(() =>
+                _authService.LoginAsync(userLoginRequest, "127.0.0.1", "TestAgent"));
+            _mockUserService.Verify(us => us.GetUser(userLoginRequest.Identifier), Times.Once);
+        }
+
+        [TestMethod]
+        public async Task LoginAsync_AccountLocked_ThrowsAccountLockedException()
+        {
+            // Arrange
+            var userLoginRequest = new UserLoginRequest { Identifier = "lockeduser", Password = "password" };
+            var user = new User { Id = 3, Username = "lockeduser", Salt = "salt", Password = "hashedpassword" }; // Password hash doesn't matter here
+            _mockUserService.Setup(us => us.GetUser(userLoginRequest.Identifier)).ReturnsAsync(user);
+
+            // Configure LoginSettings for MaxFailedAccessAttempts = 1 for this test
+            // This needs to be done *before* _authService is instantiated if it reads this value only once.
+            // Or, ensure the IOptions mock re-evaluates .Value correctly after this setup.
+            var loginSettings = new LoginSettingsConfig { MaxFailedAccessAttempts = 1, CookieExpiryMinutes = 15, LockoutEnabled = true, LockoutDurationInMinutes = 30 };
+            _mockLoginSettingsOptions.Setup(o => o.Value).Returns(loginSettings); // Update the mock for this specific test
+
+            // To correctly simulate account locked, we need to ensure UpdateLoginAttemptsAndThrowIfLockedAsync behaves as expected.
+            // It reads cookie, unprotects, increments, then checks: attempts > maxAttempts.
+            // If maxAttempts = 1:
+            // - If cookie has "0" (unprotected), attempts becomes 1. 1 > 1 is false. Not locked.
+            // - If cookie has "1" (unprotected), attempts becomes 2. 2 > 1 is true. Locked.
+
+            // Get the IRequestCookieCollection mock that was set up in TestInitialize
+            var requestCookiesFromSetup = _mockHttpContextAccessor.Object.HttpContext.Request.Cookies;
+            var requestCookiesMock = Mock.Get(requestCookiesFromSetup); // Get the mock instance
+
+            _mockStringDataProtector.Setup(p => p.Unprotect("locked_cookie_value")).Returns("1"); // Simulate cookie had 1 attempt
+            requestCookiesMock.Setup(c => c["LoginAttempts"]).Returns("locked_cookie_value");
+            // No need to re-assign to _mockHttpContextAccessor.Object.HttpContext.Request.Cookies
+
+            // Re-initialize authService to ensure it picks up the modified _mockLoginSettingsOptions if it's cached internally.
+            // This is a common pattern if IOptions.Value is read once in constructor.
+             _authService = new UserAuthenticationService(
+                _mockUserService.Object, _mockVerificationService.Object, _mockJwtSettingsOptions.Object,
+                _mockPasswordSettingsOptions.Object, _mockRegisterSettingsOptions.Object, _mockLoginSettingsOptions.Object,
+                _mockDbHelper.Object, _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object, _mockSessionService.Object);
+
+
+            // Act & Assert
+            await Assert.ThrowsExceptionAsync<AccountLockedException>(() =>
+                _authService.LoginAsync(userLoginRequest, "127.0.0.1", "TestAgent"));
+            _mockUserService.Verify(us => us.GetUser(userLoginRequest.Identifier), Times.Once);
+        }
+
+        [TestMethod]
+        public async Task RegisterUserAsync_InvalidInviteToken_ThrowsInvalidTokenException()
+        {
+            // Arrange
+            var registerRequest = new RegisterRequest { Email = "test@example.com", Password = "StrongPassword123!", Token = "invalid_token", Username = "testuser", FirstName = "Test", LastName = "User" };
+            var registerSettings = new RegisterSettingsConfig { RequireInvite = true };
+            _mockRegisterSettingsOptions.Setup(o => o.Value).Returns(registerSettings);
+
+            _mockVerificationService.Setup(vs => vs.VerifyTokenAsync(It.Is<VerifyTokenRequest>(r => r.VerificationCode == "invalid_token")))
+                .ReturnsAsync(new TokenVerificationResponse { IsVerified = false, FailureReason = "Token expired" });
+
+            // Re-initialize service with the updated mock for RegisterSettingsConfig
+            _authService = new UserAuthenticationService(
+                _mockUserService.Object, _mockVerificationService.Object, _mockJwtSettingsOptions.Object,
+                _mockPasswordSettingsOptions.Object, _mockRegisterSettingsOptions.Object, _mockLoginSettingsOptions.Object,
+                _mockDbHelper.Object, _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object, _mockSessionService.Object);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsExceptionAsync<InvalidTokenException>(() =>
+                _authService.RegisterUserAsync(registerRequest));
+            Assert.AreEqual("Token expired", exception.Message);
+            _mockVerificationService.Verify(vs => vs.VerifyTokenAsync(It.IsAny<VerifyTokenRequest>()), Times.Once);
+        }
+
+        [TestMethod]
+        public async Task RegisterUserAsync_PasswordTooWeak_ThrowsRegistrationException()
+        {
+            // Arrange
+            var registerRequest = new RegisterRequest { Email = "test@example.com", Password = "weak", Token = "any_token", Username = "testuser", FirstName = "Test", LastName = "User" };
+            var passwordSettings = new PasswordSettingsConfig { RequiredLength = 8, RequireDigit = true };
+            _mockPasswordSettingsOptions.Setup(o => o.Value).Returns(passwordSettings);
+
+            var currentRegisterSettings = _mockRegisterSettingsOptions.Object.Value;
+            if (currentRegisterSettings.RequireInvite)
+            {
+                _mockVerificationService.Setup(vs => vs.VerifyTokenAsync(It.Is<VerifyTokenRequest>(r => r.VerificationCode == "any_token")))
+                    .ReturnsAsync(new TokenVerificationResponse { IsVerified = true, User = new User { Id = 1 } });
+            }
+
+             _authService = new UserAuthenticationService(
+                _mockUserService.Object, _mockVerificationService.Object, _mockJwtSettingsOptions.Object,
+                _mockPasswordSettingsOptions.Object, _mockRegisterSettingsOptions.Object, _mockLoginSettingsOptions.Object,
+                _mockDbHelper.Object, _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object, _mockSessionService.Object);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsExceptionAsync<RegistrationException>(() =>
+                _authService.RegisterUserAsync(registerRequest));
+            Assert.AreEqual("Password does not meet the required complexity.", exception.Message);
+        }
+
+        [TestMethod]
+        public async Task RegisterUserAsync_UserServiceFails_ThrowsRegistrationException()
+        {
+            // Arrange
+            var registerRequest = new RegisterRequest { Email = "test@example.com", Password = "StrongPassword123!", Token = "any_token", Username = "testuser", FirstName = "Test", LastName = "User" };
+            var passwordSettings = new PasswordSettingsConfig { RequiredLength = 6 };
+            _mockPasswordSettingsOptions.Setup(o => o.Value).Returns(passwordSettings);
+
+            var currentRegisterSettings = _mockRegisterSettingsOptions.Object.Value;
+            if (currentRegisterSettings.RequireInvite)
+            {
+                _mockVerificationService.Setup(vs => vs.VerifyTokenAsync(It.Is<VerifyTokenRequest>(r => r.VerificationCode == "any_token")))
+                    .ReturnsAsync(new TokenVerificationResponse { IsVerified = true, User = new User { Id = 1 } });
+            }
+
+            _mockUserService.Setup(us => us.RegisterUser(It.IsAny<User>()))
+                .ReturnsAsync(new RegistrationResponse { IsSuccessful = false, FailureReason = "Database error" });
+
+            _authService = new UserAuthenticationService(
+                _mockUserService.Object, _mockVerificationService.Object, _mockJwtSettingsOptions.Object,
+                _mockPasswordSettingsOptions.Object, _mockRegisterSettingsOptions.Object, _mockLoginSettingsOptions.Object,
+                _mockDbHelper.Object, _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object, _mockSessionService.Object);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsExceptionAsync<RegistrationException>(() =>
+                _authService.RegisterUserAsync(registerRequest));
+            Assert.AreEqual("Database error", exception.Message);
+            _mockUserService.Verify(us => us.RegisterUser(It.IsAny<User>()), Times.Once);
         }
     }
 }

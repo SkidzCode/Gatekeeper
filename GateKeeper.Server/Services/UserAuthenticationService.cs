@@ -25,6 +25,7 @@ using System.Security;
 using GateKeeper.Server.Models.Account.Login;
 using Microsoft.AspNetCore.DataProtection;
 using GateKeeper.Server.Models.Account.UserModels;
+using GateKeeper.Server.Exceptions;
 
 namespace GateKeeper.Server.Services
 {
@@ -132,22 +133,23 @@ namespace GateKeeper.Server.Services
 
                     if (!tokenResponse.IsVerified)
                     {
-                        response.FailureReason = tokenResponse.FailureReason;
-                        return response;
+                        throw new InvalidTokenException(tokenResponse.FailureReason ?? "Invalid invite token.");
                     }
                 }
             }
 
             if (!await ValidatePasswordStrengthAsync(registerRequest.Password))
             {
-                response.FailureReason = "Password does not meet the required complexity.";
-                return response;
+                throw new RegistrationException("Password does not meet the required complexity.");
             }
 
-            response = await _userService.RegisterUser(response.User);
+            var userServiceResponse = await _userService.RegisterUser(response.User);
 
-            if (!response.IsSuccessful)
-                return response;
+            if (!userServiceResponse.IsSuccessful)
+            {
+                throw new RegistrationException(userServiceResponse.FailureReason ?? "User registration failed due to an unknown reason.");
+            }
+            response.User = userServiceResponse.User; // Ensure the user object in the response is the one from the service
 
             await AssignRoleToUser(response.User.Id, "NewUser");
 
@@ -179,13 +181,17 @@ namespace GateKeeper.Server.Services
             LoginResponse response = new LoginResponse();
 
             response.User = await _userService.GetUser(userLogin.Identifier);
-            response = await LoginAttempts(response);
+            await UpdateLoginAttemptsAndThrowIfLockedAsync(response.User, response);
 
-            if (response.ToMany)
-                return response;
-
-            int? userId = response.User?.Id ?? null;
+            // User Not Found Condition
+            if (response.User == null || string.IsNullOrEmpty(response.User.Salt) ||
+                string.IsNullOrEmpty(response.User.Password))
+            {
+                // Ensure ClearPHIAsync is NOT called here as response.User might be null
+                throw new UserNotFoundException($"User '{userLogin.Identifier}' not found or essential data missing.");
+            }
             
+            int? userId = response.User?.Id ?? null; // userId can be safely accessed now
             List<Setting> theSettings = await _settingsService.GetAllSettingsAsync(userId);
             response.Settings = theSettings.Where(s => s.UserId == null).ToList();
             List<Setting> userSettings = theSettings
@@ -200,27 +206,20 @@ namespace GateKeeper.Server.Services
                 })
                 .ToList();
 
-            if (response.User == null || string.IsNullOrEmpty(response.User.Salt) ||
-                string.IsNullOrEmpty(response.User.Password))
-            {
-                response.FailureReason = "User not found";
-                return response;
-            }
-
             var hashedPassword = PasswordHelper.HashPassword(userLogin.Password, response.User.Salt);
 
+            // Invalid Credentials Condition
             if (hashedPassword != response.User.Password)
             {
                 await response.User.ClearPHIAsync();
-                response.FailureReason = "Invalid credentials";
-                return response;
+                throw new InvalidCredentialsException("Invalid username or password.");
             }
 
             // Generate tokens
             response.AccessToken = await GenerateJwtToken(response.User);
             response.RefreshToken = await _verificationService.GenerateTokenAsync(response.User.Id, "Refresh");
             response.VerificationId = response.RefreshToken.Split('.')[0];
-            response.IsSuccessful = true;
+            // response.IsSuccessful = true; // Removed as success is indicated by not throwing
             response.Settings = userSettings;
             await DeleteCookie();
 
@@ -249,8 +248,8 @@ namespace GateKeeper.Server.Services
         {
             try
             {
-                if (token == null || !token.Contains('.'))
-                    throw new Exception("Invalid token format.");
+                if (string.IsNullOrEmpty(token) || !token.Contains('.')) // Added IsNullOrEmpty for robustness
+                    throw new InvalidTokenException("Invalid token format.");
                 await _sessionService.LogoutToken(token, userId);
                 return 1;
             }
@@ -273,7 +272,10 @@ namespace GateKeeper.Server.Services
                 });
 
 
-            if (!response.IsVerified) return response;
+            if (!response.IsVerified)
+            {
+                throw new InvalidTokenException(response.FailureReason ?? "Invalid verification code.");
+            }
 
             await using var connection = await _dbHelper.GetWrapperAsync();
             await connection.ExecuteNonQueryAsync("ValidateFinish", CommandType.StoredProcedure,
@@ -294,9 +296,7 @@ namespace GateKeeper.Server.Services
             });
 
             response.User = response2.User;
-            response = await LoginAttempts(response);
-
-            if (response.ToMany) return response;
+            await UpdateLoginAttemptsAndThrowIfLockedAsync(response.User, response);
 
             int? userId = response.User?.Id ?? null;
             List<Setting> theSettings = await _settingsService.GetAllSettingsAsync(userId);
@@ -318,10 +318,14 @@ namespace GateKeeper.Server.Services
 
             if (!response2.IsVerified || response.User == null)
             {
-                response.FailureReason = response2.FailureReason;
-                if (response.User != null)
-                    await response.User.ClearPHIAsync();
-                return response;
+                // It's important not to call ClearPHIAsync if response.User is null.
+                // If response.User is null, ClearPHIAsync would throw a NullReferenceException.
+                // If response2.IsVerified is false, but user is not null, then we might clear PHI.
+                if (response.User != null && !response2.IsVerified)
+                {
+                     await response.User.ClearPHIAsync();
+                }
+                throw new InvalidTokenException(response2.FailureReason ?? "Invalid refresh token or user not found for token.");
             }
 
             await _verificationService.RevokeTokensAsync(response.User.Id, "Refresh", refreshToken);
@@ -329,7 +333,7 @@ namespace GateKeeper.Server.Services
             response.AccessToken = await GenerateJwtToken(response.User);
             response.RefreshToken = await _verificationService.GenerateTokenAsync(response.User.Id, "Refresh");
             response.VerificationId = response.RefreshToken.Split('.')[0];
-            response.IsSuccessful = true;
+            // response.IsSuccessful = true; // Removed
             response.Settings = userSettings;
             await DeleteCookie();
 
@@ -374,7 +378,10 @@ namespace GateKeeper.Server.Services
                     VerificationCode = resetRequest.ResetToken
                 });
 
-            if (!response.IsVerified) return response;
+            if (!response.IsVerified)
+            {
+                throw new InvalidTokenException(response.FailureReason ?? "Invalid password reset token.");
+            }
 
             await _userService.ChangePassword(response.User.Id, resetRequest.NewPassword);
             return response;
@@ -490,10 +497,9 @@ namespace GateKeeper.Server.Services
                 new MySqlParameter("@p_RoleName", role));
         }
 
-        private async Task<LoginResponse> LoginAttempts(LoginResponse loginResponse)
+        private async Task UpdateLoginAttemptsAndThrowIfLockedAsync(User? user, LoginResponse loginResponse)
         {
-            
-            if (_httpContextAccessor.HttpContext == null) return loginResponse;
+            if (_httpContextAccessor.HttpContext == null) return;
 
             // Use _loginSettings
             int maxAttempts = _loginSettings.MaxFailedAccessAttempts;
@@ -507,7 +513,7 @@ namespace GateKeeper.Server.Services
                 try
                 {
                     // Decrypt the cookie value
-            var decryptedValue = _protector.Unprotect(attemptsCookie); // Now uses string version
+                    var decryptedValue = _protector.Unprotect(attemptsCookie); // Now uses string version
                     if (int.TryParse(decryptedValue, out int parsedAttempts))
                         loginResponse.Attempts = parsedAttempts;
                 }
@@ -515,7 +521,8 @@ namespace GateKeeper.Server.Services
                 {
                     // If decryption fails or data is tampered, we treat it as invalid
                     // (Optionally reset to 0 or handle differently)
-                    loginResponse.Attempts = 100;
+                    // Setting to a high number to likely trigger lockout on next attempt if cookie was tampered.
+                    loginResponse.Attempts = maxAttempts + 1;
                 }
             }
 
@@ -536,13 +543,16 @@ namespace GateKeeper.Server.Services
             _httpContextAccessor.HttpContext.Response.Cookies.Append(cookieName, encryptedAttempts, cookieOptions);
             loginResponse.ToMany = loginResponse.Attempts > maxAttempts;
 
-            if (!loginResponse.ToMany) return loginResponse;
-
-            if (loginResponse.User != null)
-                await loginResponse.User.ClearPHIAsync();
-            loginResponse.FailureReason = "Too many login attempts";
-            return loginResponse;
+            if (loginResponse.ToMany)
+            {
+                if (user != null) // Use the passed user object
+                    await user.ClearPHIAsync();
+                throw new AccountLockedException("Too many login attempts. Account locked.");
+            }
+            // No return loginResponse; as the method is void
         }
+
+        // OriginalLoginAttemptsForRefreshAsync method removed
 
         private async Task DeleteCookie()
         {

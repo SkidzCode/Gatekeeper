@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using GateKeeper.Server.Inherites;
 using Microsoft.Extensions.Options; // Added for IOptions
 using GateKeeper.Server.Models.Configuration; // Added for RegisterSettingsConfig
+using GateKeeper.Server.Exceptions;
 
 namespace GateKeeper.Server.Controllers
 {
@@ -70,44 +71,40 @@ namespace GateKeeper.Server.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Register([FromBody] RegisterRequest registerRequest)
         {
-            RegistrationResponse response = new();
             if (!ModelState.IsValid) return BadRequest(ModelState);
             string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
             string userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
 
             try
             {
-                response = await _authService.RegisterUserAsync(registerRequest);
-                if (response.IsSuccessful)
-                    return StatusCode(201, new
-                    {
-                        message = UserRegisteredSuccessfully
-                    });
+                var registrationResponse = await _authService.RegisterUserAsync(registerRequest);
 
-                if (registerRequest.UserLicAgreement)
-                    _logger.LogInformation("User agreed to the User License Agreement: {UserId}, Proof: {Proof}, IP: {IpAddress}", response.User?.Id, userIp, registerRequest.UserLicAgreement);
+                // If we reach here, registration was successful based on service layer not throwing
+                _logger.LogInformation("User registered: {UserId}, IP: {IpAddress}, Device: {UserAgent}",
+                    registrationResponse.User?.Id, userIp, userAgent);
 
-                return BadRequest(new { error = response.FailureReason });
+                if (registerRequest.UserLicAgreement) // This logging can stay if needed
+                {
+                    _logger.LogInformation("User agreed to the User License Agreement: {UserId}, IP: {IpAddress}",
+                        registrationResponse.User?.Id, userIp);
+                }
+
+                return StatusCode(201, new { message = UserRegisteredSuccessfully });
+            }
+            catch (InvalidTokenException ex)
+            {
+                _logger.LogWarning(ex, "User registration failed: Invalid token. IP: {IpAddress}, UserAgent: {UserAgent}. Email: {Email}, Username: {Username}", userIp, userAgent, registerRequest.Email.SanitizeForLogging(), registerRequest.Username.SanitizeForLogging());
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (RegistrationException ex) // This is our custom general registration exception
+            {
+                _logger.LogWarning(ex, "User registration failed: {RegistrationError}. IP: {IpAddress}, UserAgent: {UserAgent}. Email: {Email}, Username: {Username}", ex.Message, userIp, userAgent, registerRequest.Email.SanitizeForLogging(), registerRequest.Username.SanitizeForLogging());
+                return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                response.FailureReason = $"{InternalError}: {ex.Message}";
-                response.IsSuccessful = false;
-                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
-                throw; // Re-throw the exception to be caught by the global handler
-            }
-            finally
-            {
-                if (response.IsSuccessful)
-                {
-                    _logger.LogInformation("User registered: {UserId}, IP: {IpAddress}, Device: {UserAgent}",
-                        response.User?.Id, userIp, userAgent);
-                }
-                else
-                {
-                    _logger.LogWarning("User registration failed {UserId}, IP: {IpAddress}, Reason: {Reason}",
-                        response.User?.Id, userIp, response.FailureReason);
-                }
+                _logger.LogError(ex, "An unexpected error occurred during user registration. IP: {IpAddress}, UserAgent: {UserAgent}. Email: {Email}, Username: {Username}", userIp, userAgent, registerRequest.Email.SanitizeForLogging(), registerRequest.Username.SanitizeForLogging());
+                throw; // Re-throw for the global exception handler
             }
         }
 
@@ -121,37 +118,26 @@ namespace GateKeeper.Server.Controllers
         public async Task<IActionResult> VerifyNewUser([FromBody] VerifyUserRequest request)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
-            TokenVerificationResponse response = new();
+            string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+            string userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
+            TokenVerificationResponse verificationResponse = null;
             try
             {
-                response = await _authService.VerifyNewUser(request.VerificationCode);
-                if (response.IsVerified)
-                    return Ok(new { message = UserVerificationSuccessful });
-                return BadRequest(new { error = InvalidVerificationCode });
+                verificationResponse = await _authService.VerifyNewUser(request.VerificationCode);
+                // If here, verification was successful
+                _logger.LogInformation("User verification successful: {UserId}, IP: {IpAddress}, Device: {UserAgent}",
+                    verificationResponse.User?.Id, userIp, userAgent);
+                return Ok(new { message = UserVerificationSuccessful });
+            }
+            catch (InvalidTokenException ex)
+            {
+                _logger.LogWarning(ex, "User verification failed: {FailureReason}. IP: {IpAddress}, UserAgent: {UserAgent}, Code: {VerificationCode}", ex.Message, userIp, userAgent, request.VerificationCode.SanitizeForLogging());
+                return BadRequest(new { error = ex.Message }); // Or InvalidVerificationCode
             }
             catch (Exception ex)
             {
-                response.IsVerified = false;
-                response.FailureReason = $"{InternalError}: {ex.Message}";
-                if (response.User != null)
-                    await response.User.ClearPHIAsync();
-                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
-                throw; // Re-throw the exception to be caught by the global handler
-            }
-            finally
-            {
-                string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
-                string userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
-                if (response.IsVerified)
-                {
-                    _logger.LogInformation("User verification: {UserId}, IP: {IpAddress}, Device: {UserAgent}",
-                        response.User?.Id, userIp, userAgent);
-                }
-                else
-                {
-                    _logger.LogWarning("User verification failed {UserId}, IP: {IpAddress}, Reason: {Reason}, Token: {Token}",
-                        response.User?.Id, userIp, response.FailureReason, response.VerificationCode.SanitizeForLogging());
-                }
+                _logger.LogError(ex, "An unexpected error occurred during user verification. IP: {IpAddress}, UserAgent: {UserAgent}, Code: {VerificationCode}", userIp, userAgent, request.VerificationCode.SanitizeForLogging());
+                throw;
             }
         }
 
@@ -164,7 +150,6 @@ namespace GateKeeper.Server.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] UserLoginRequest loginRequest)
         {
-            LoginResponse response = new();
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
             string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
@@ -172,45 +157,39 @@ namespace GateKeeper.Server.Controllers
 
             try
             {
-                // Attempt to authenticate
-                response = await _authService.LoginAsync(loginRequest, userIp, userAgent);
+                var loginResponse = await _authService.LoginAsync(loginRequest, userIp, userAgent);
 
-                if (!response.IsSuccessful || response.User == null)
-                {
-                    return Unauthorized(response.ToMany ?
-                        new { error = ExceededLoginAttempts } :
-                        new { error = InvalidCredentials });
-                }
+                _logger.LogInformation("User login successful: {UserId}, IP: {IpAddress}, Device: {UserAgent}",
+                    loginResponse.User?.Id, userIp, userAgent);
 
-                // Return the tokens and user info
                 return Ok(new
                 {
-                    response.AccessToken,
-                    response.RefreshToken,
-                    response.User,
-                    response.Settings,
-                    response.SessionId
+                    loginResponse.AccessToken,
+                    loginResponse.RefreshToken,
+                    loginResponse.User,
+                    loginResponse.Settings,
+                    loginResponse.SessionId
                 });
+            }
+            catch (UserNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Login attempt failed for identifier {Identifier}: User not found or invalid credentials. IP: {IpAddress}. UserAgent: {UserAgent}", loginRequest.Identifier.SanitizeForLogging(), userIp, userAgent);
+                return Unauthorized(new { error = InvalidCredentials }); // Generic message
+            }
+            catch (InvalidCredentialsException ex)
+            {
+                _logger.LogWarning(ex, "Login attempt failed for identifier {Identifier}: Invalid credentials. IP: {IpAddress}. UserAgent: {UserAgent}", loginRequest.Identifier.SanitizeForLogging(), userIp, userAgent);
+                return Unauthorized(new { error = InvalidCredentials }); // Generic message
+            }
+            catch (AccountLockedException ex)
+            {
+                _logger.LogWarning(ex, "Login attempt failed for identifier {Identifier}: Account locked. IP: {IpAddress}. UserAgent: {UserAgent}", loginRequest.Identifier.SanitizeForLogging(), userIp, userAgent);
+                return Unauthorized(new { error = ExceededLoginAttempts });
             }
             catch (Exception ex)
             {
-                response.IsSuccessful = false;
-                response.FailureReason = $"{InternalError}: {ex.Message}";
-                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
-                throw; // Re-throw the exception to be caught by the global handler
-            }
-            finally
-            {
-                if (response.IsSuccessful)
-                {
-                    _logger.LogInformation("User login successful: {UserId}, IP: {IpAddress}, Device: {UserAgent}",
-                        response.User?.Id, userIp, userAgent);
-                }
-                else
-                {
-                    _logger.LogWarning("User login failed for {UserId}, IP: {IpAddress}, Reason: {Reason}",
-                        response.User?.Id, userIp, response.FailureReason);
-                }
+                _logger.LogError(ex, "An unexpected error occurred during login for identifier {Identifier}. IP: {IpAddress}. UserAgent: {UserAgent}", loginRequest.Identifier.SanitizeForLogging(), userIp, userAgent);
+                throw;
             }
         }
 
@@ -224,41 +203,43 @@ namespace GateKeeper.Server.Controllers
         public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest refreshRequest)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
-            LoginResponse response = new();
+            string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+            string userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
             try
             {
-                response = await _authService.RefreshTokensAsync(refreshRequest.RefreshToken);
-                if (!response.IsSuccessful)
-                    return Unauthorized(response.ToMany ?
-                        new { error = ExceededLoginAttempts } :
-                        new { error = InvalidRefreshToken });
+                var loginResponse = await _authService.RefreshTokensAsync(refreshRequest.RefreshToken);
+
+                _logger.LogInformation("User refreshed token successful: {UserId}, IP: {IpAddress}, Device: {UserAgent}",
+                    loginResponse.User?.Id, userIp, userAgent);
 
                 return Ok(new
                 {
-                    accessToken = response.AccessToken,
-                    refreshToken = response.RefreshToken,
-                    user = response.User,
-                    settings = response.Settings,
-                    response.SessionId
+                    accessToken = loginResponse.AccessToken,
+                    refreshToken = loginResponse.RefreshToken,
+                    user = loginResponse.User,
+                    settings = loginResponse.Settings,
+                    loginResponse.SessionId
                 });
+            }
+            catch (InvalidTokenException ex)
+            {
+                _logger.LogWarning(ex, "Token refresh failed: Invalid token. IP: {IpAddress}, UserAgent: {UserAgent}", userIp, userAgent);
+                return Unauthorized(new { error = InvalidRefreshToken });
+            }
+            catch (UserNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Token refresh failed: User not found for token. IP: {IpAddress}, UserAgent: {UserAgent}", userIp, userAgent);
+                return Unauthorized(new { error = InvalidRefreshToken });
+            }
+            catch (AccountLockedException ex)
+            {
+                _logger.LogWarning(ex, "Token refresh failed: Account locked. IP: {IpAddress}, UserAgent: {UserAgent}", userIp, userAgent);
+                return Unauthorized(new { error = ExceededLoginAttempts });
             }
             catch (Exception ex)
             {
-                response.IsSuccessful = false;
-                response.FailureReason = $"{InternalError}: {ex.Message}";
-                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
-                throw; // Re-throw the exception to be caught by the global handler
-            }
-            finally
-            {
-                string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
-                string userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
-                if (response.IsSuccessful)
-                    _logger.LogInformation("User refreshed token successful: {UserId}, IP: {IpAddress}, Device: {UserAgent}",
-                        response.User?.Id, userIp, userAgent);
-                else
-                    _logger.LogWarning("User refreshed token failed for {UserId}, IP: {IpAddress}, Reason: {Reason}",
-                        response.User?.Id, userIp, response.FailureReason);
+                _logger.LogError(ex, "An unexpected error occurred during token refresh. IP: {IpAddress}, UserAgent: {UserAgent}", userIp, userAgent);
+                throw;
             }
         }
 
@@ -272,33 +253,37 @@ namespace GateKeeper.Server.Controllers
         public async Task<IActionResult> Logout([FromBody] LogoutRequest logoutRequest)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
-            var userId = 0;
+            var userId = 0; // Initialize userId
             var revokedCount = 0;
-            string failureReason = "";
+            string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? ""; // Define userIp here to be accessible in catch
             try
             {
                 userId = GetUserIdFromClaims();
                 revokedCount = await _authService.LogoutAsync(logoutRequest.Token, userId);
-                if (revokedCount == 0)
-                    failureReason = TokenNotFound;
                 return Ok(new { message = string.Format(TokensRevokedSuccessfully, revokedCount) });
+            }
+            catch (InvalidTokenException ex)
+            {
+                _logger.LogWarning(ex, "User logout failed: Invalid token. UserId: {UserId}, IP: {IpAddress}, Token: {Token}", userId, userIp, logoutRequest.Token.SanitizeForLogging());
+                return BadRequest(new { error = "Logout failed due to an invalid token." });
             }
             catch (Exception ex)
             {
-                revokedCount = 0;
-                failureReason = $"{InternalError}: {ex.Message}";
-                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
-                throw; // Re-throw the exception to be caught by the global handler
+                _logger.LogError(ex, "An unexpected error occurred during logout. UserId: {UserId}, IP: {IpAddress}, Token: {Token}", userId, userIp, logoutRequest.Token.SanitizeForLogging());
+                throw;
             }
             finally
             {
-                string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+                // userIp is already defined above. For safety, can recapture or ensure it's passed if needed.
+                // string userIpFinal = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
                 if (revokedCount > 0)
-                    _logger.LogInformation("User logout: {UserId}, IP: {IpAddress}",
-                        userId, userIp);
+                {
+                    _logger.LogInformation("User logout successful: {UserId}, IP: {IpAddress}, RevokedCount: {RevokedCount}", userId, userIp, revokedCount);
+                }
                 else
-                    _logger.LogWarning("User logout with unknown token: {UserId}, IP: {IpAddress}, token:{RefreshToken}, Reason: {Reason}",
-                        userId, userIp, logoutRequest.Token.SanitizeForLogging(), failureReason);
+                {
+                    _logger.LogWarning("User logout attempt completed with no tokens revoked. UserId: {UserId}, IP: {IpAddress}, Token: {Token}", userId, userIp, logoutRequest.Token.SanitizeForLogging());
+                }
             }
         }
 
@@ -366,33 +351,25 @@ namespace GateKeeper.Server.Controllers
         public async Task<IActionResult> ResetPassword([FromBody] PasswordResetRequest resetRequest)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
-            TokenVerificationResponse response = new();
+            string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+            string userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
+            TokenVerificationResponse verificationResponse = null;
             try
             {
-                response = await _authService.ResetPasswordAsync(resetRequest);
-                if (response.IsVerified)
-                    return Ok(new { message = PasswordResetSuccessful });
-                else
-                    return BadRequest(new { message = PasswordResetError });
+                verificationResponse = await _authService.ResetPasswordAsync(resetRequest);
+                 _logger.LogInformation("Password changed for {UserId}, IP: {IpAddress}, Method: {Method}, Device: {Device}",
+                    verificationResponse.User?.Id, userIp, "Token verification", userAgent);
+                return Ok(new { message = PasswordResetSuccessful });
+            }
+            catch (InvalidTokenException ex)
+            {
+                _logger.LogWarning(ex, "Password reset failed: {FailureReason}. IP: {IpAddress}, UserAgent: {UserAgent}", ex.Message, userIp, userAgent);
+                return BadRequest(new { error = ex.Message }); // Or PasswordResetError
             }
             catch (Exception ex)
             {
-                response.FailureReason = $"{InternalError}: {ex.Message}";
-                response.IsVerified = false;
-                response.User?.ClearPHIAsync();
-                // Removed generic catch block, error will be handled by GlobalExceptionHandlerMiddleware
-                throw; // Re-throw the exception to be caught by the global handler
-            }
-            finally
-            {
-                string userIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
-                string userAgent = Request.Headers["User-Agent"].ToString().SanitizeForLogging();
-                if (response.IsVerified)
-                    _logger.LogInformation("Password changed for {UserId}, IP: {IpAddress}, Method: {Method}, Device: {Device}",
-                        response.User?.Id, userIp, "Token verification", userAgent);
-                else
-                    _logger.LogWarning("Password reset failed for {UserId}, IP: {IpAddress}, Method: {Method}, Reason: {Reason}",
-                        response.User?.Id, userIp, "Token verification", response.FailureReason);
+                _logger.LogError(ex, "An unexpected error occurred during password reset. IP: {IpAddress}, UserAgent: {UserAgent}", userIp, userAgent);
+                throw;
             }
         }
 
