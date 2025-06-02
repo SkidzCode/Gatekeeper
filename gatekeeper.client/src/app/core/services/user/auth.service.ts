@@ -320,31 +320,12 @@ export class AuthService {
 
   // Error Handling
   private handleError(error: HttpErrorResponse) {
-    let errorMsg = 'An unknown error occurred. Please try again.'; // Default generic message
+    // Optional: Log the error or extract specific information if needed globally by the service
+    // For example, you might still want to log a generic message or specific parts of the error here.
+    // console.error('AuthService handleError:', error);
 
-    if (error.error instanceof ErrorEvent) {
-      // A client-side or network error occurred. Handle it accordingly.
-      // console.error('An error occurred:', error.error.message); // Optional: for debugging
-      errorMsg = `Network error: ${error.error.message}`;
-    } else {
-      // The backend returned an unsuccessful response code.
-      // The response body may contain clues as to what went wrong.
-      // console.error( // Optional: for debugging
-      //  `Backend returned code ${error.status}, ` +
-      //  `body was: ${JSON.stringify(error.error)}`);
-
-      // Check for our custom ErrorResponse structure first
-      if (error.error?.message) {
-        errorMsg = error.error.message; // This will handle 429 and others if message field is present
-      } else if (error.error?.error) { // Check for { "error": "message" } structure
-        errorMsg = error.error.error;
-      } else if (error.statusText && error.status !== 0) { // error.status === 0 can be a CORS issue or network problem
-        errorMsg = `Error ${error.status}: ${error.statusText}`;
-      } else if (error.message) {
-        // Fallback to the main error message if other more specific messages aren't available
-        errorMsg = error.message;
-      }
-    }
-    return throwError(() => errorMsg);
+    // Instead of processing into a string, re-throw the original error object.
+    // The component or calling code will then be responsible for interpreting it.
+    return throwError(() => error);
   }
 }

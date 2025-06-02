@@ -36,33 +36,42 @@ export class UserLoginComponent {
           this.router.navigate(['/portal']);
         },
         error: (error) => {
-          // New logging lines
+          // Logging lines (can be kept for now or removed if confident)
           console.log('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
           console.log('Error status raw:', error.status);
           console.log('Error status type:', typeof error.status);
           console.log('error.error value:', JSON.stringify(error.error));
+          console.error('Login failed (original log):', error);
 
-          console.error('Login failed (original log):', error); // Keep original log for context, rename slightly for clarity
+          // Default error message
+          let specificMessageFound = false;
 
           if (error.status === 401 || error.status === 403) {
             if (error.error && typeof error.error === 'object' && error.error.Message) {
               this.errorMessage = error.error.Message;
-            } else if (typeof error.error === 'string' && error.error.includes('Account locked')) { // Temp check for string response
-                this.errorMessage = error.error;
+              specificMessageFound = true;
             } else {
+              // Fallback for 401/403 if specific message structure isn't there
               this.errorMessage = 'Login failed. Please check your username and password, or contact support if you believe your access is restricted.';
             }
           } else if (error.status === 429) {
             if (error.error && typeof error.error === 'object' && error.error.Message) {
-              this.errorMessage = error.error.Message; // This should be the "Account locked..." message
-            } else if (typeof error.error === 'string' && error.error.includes('Account locked')) { // Temp check for string response
-                this.errorMessage = error.error;
-            }
-             else {
+              this.errorMessage = error.error.Message; // Expecting "Account locked..."
+              specificMessageFound = true;
+            } else {
+              // Fallback for 429 if specific message structure isn't there
               this.errorMessage = 'Your account is temporarily locked due to too many failed login attempts. Please try again later.';
             }
           } else {
-            this.errorMessage = 'An unexpected error occurred during login. Please try again.';
+            // For other errors, or if error.status is not available (though it should be now)
+            if (error.error && typeof error.error === 'object' && error.error.Message) {
+                this.errorMessage = error.error.Message; // Handle cases where status might be missing but message exists
+            } else if (typeof error.message === 'string') { // Fallback to error.message if it's a string (less likely now)
+                this.errorMessage = error.message;
+            }
+            else {
+                this.errorMessage = 'An unexpected error occurred during login. Please try again.';
+            }
           }
         }
       });
