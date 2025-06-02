@@ -320,17 +320,12 @@ export class AuthService {
 
   // Error Handling
   private handleError(error: HttpErrorResponse) {
-    let errorMsg = 'An unknown error occurred.';
-    if (error.error instanceof ErrorEvent) {
-      // Client-side/network error
-      errorMsg = `Error: ${error.error.message}`;
-    } else if (error.error?.error) {
-      // Server-side error with error message
-      errorMsg = error.error.error;
-    } else if (error.message) {
-      // Other server-side error
-      errorMsg = error.message;
-    }
-    return throwError(() => errorMsg);
+    // Optional: Log the error or extract specific information if needed globally by the service
+    // For example, you might still want to log a generic message or specific parts of the error here.
+    // console.error('AuthService handleError:', error);
+
+    // Instead of processing into a string, re-throw the original error object.
+    // The component or calling code will then be responsible for interpreting it.
+    return throwError(() => error);
   }
 }

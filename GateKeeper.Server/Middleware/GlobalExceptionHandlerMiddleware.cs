@@ -71,6 +71,76 @@ namespace GateKeeper.Server.Middleware
                 };
                 await context.Response.WriteAsync(JsonSerializer.Serialize(response));
             }
+            catch (InvalidCredentialsException ex)
+            {
+                _logger.LogWarning(ex, "Invalid credentials. TraceId: {TraceId}", context.TraceIdentifier);
+                context.Response.ContentType = "application/json";
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                var response = new ErrorResponse
+                {
+                    StatusCode = context.Response.StatusCode,
+                    Message = ex.Message,
+                    Details = _env.IsDevelopment() ? ex.ToString() : null,
+                    TraceId = Activity.Current?.Id ?? context.TraceIdentifier
+                };
+                await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+            }
+            catch (UserNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "User not found. TraceId: {TraceId}", context.TraceIdentifier);
+                context.Response.ContentType = "application/json";
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                var response = new ErrorResponse
+                {
+                    StatusCode = context.Response.StatusCode,
+                    Message = ex.Message,
+                    Details = _env.IsDevelopment() ? ex.ToString() : null,
+                    TraceId = Activity.Current?.Id ?? context.TraceIdentifier
+                };
+                await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+            }
+            catch (AccountLockedException ex)
+            {
+                _logger.LogWarning(ex, "Account locked. TraceId: {TraceId}", context.TraceIdentifier);
+                context.Response.ContentType = "application/json";
+                context.Response.StatusCode = StatusCodes.Status429TooManyRequests; // Changed to 429
+                var response = new ErrorResponse
+                {
+                    StatusCode = context.Response.StatusCode,
+                    Message = ex.Message,
+                    Details = _env.IsDevelopment() ? ex.ToString() : null,
+                    TraceId = Activity.Current?.Id ?? context.TraceIdentifier
+                };
+                await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+            }
+            catch (InvalidTokenException ex)
+            {
+                _logger.LogWarning(ex, "Invalid token. TraceId: {TraceId}", context.TraceIdentifier);
+                context.Response.ContentType = "application/json";
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                var response = new ErrorResponse
+                {
+                    StatusCode = context.Response.StatusCode,
+                    Message = ex.Message,
+                    Details = _env.IsDevelopment() ? ex.ToString() : null,
+                    TraceId = Activity.Current?.Id ?? context.TraceIdentifier
+                };
+                await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+            }
+            catch (RegistrationException ex)
+            {
+                _logger.LogWarning(ex, "Registration error. TraceId: {TraceId}", context.TraceIdentifier);
+                context.Response.ContentType = "application/json";
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                var response = new ErrorResponse
+                {
+                    StatusCode = context.Response.StatusCode,
+                    Message = ex.Message,
+                    Details = _env.IsDevelopment() ? ex.ToString() : null,
+                    TraceId = Activity.Current?.Id ?? context.TraceIdentifier
+                };
+                await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+            }
             catch (Exception ex) // Generic fallback
             {
                 _logger.LogError(ex, "An unhandled exception has occurred. TraceId: {TraceId}", context.TraceIdentifier);

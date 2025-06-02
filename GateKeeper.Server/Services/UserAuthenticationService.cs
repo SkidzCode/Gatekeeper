@@ -25,6 +25,7 @@ using System.Security;
 using GateKeeper.Server.Models.Account.Login;
 using Microsoft.AspNetCore.DataProtection;
 using GateKeeper.Server.Models.Account.UserModels;
+using GateKeeper.Server.Exceptions;
 
 namespace GateKeeper.Server.Services
 {
@@ -132,22 +133,23 @@ namespace GateKeeper.Server.Services
 
                     if (!tokenResponse.IsVerified)
                     {
-                        response.FailureReason = tokenResponse.FailureReason;
-                        return response;
+                        throw new InvalidTokenException(tokenResponse.FailureReason ?? "Invalid invite token.");
                     }
                 }
             }
 
             if (!await ValidatePasswordStrengthAsync(registerRequest.Password))
             {
-                response.FailureReason = "Password does not meet the required complexity.";
-                return response;
+                throw new RegistrationException("Password does not meet the required complexity.");
             }
 
-            response = await _userService.RegisterUser(response.User);
+            var userServiceResponse = await _userService.RegisterUser(response.User);
 
-            if (!response.IsSuccessful)
-                return response;
+            if (!userServiceResponse.IsSuccessful)
+            {
+                throw new RegistrationException(userServiceResponse.FailureReason ?? "User registration failed due to an unknown reason.");
+            }
+            response.User = userServiceResponse.User; // Ensure the user object in the response is the one from the service
 
             await AssignRoleToUser(response.User.Id, "NewUser");
 
@@ -179,13 +181,17 @@ namespace GateKeeper.Server.Services
             LoginResponse response = new LoginResponse();
 
             response.User = await _userService.GetUser(userLogin.Identifier);
-            response = await LoginAttempts(response);
+            await UpdateLoginAttemptsAndThrowIfLockedAsync(response.User, response);
 
-            if (response.ToMany)
-                return response;
-
-            int? userId = response.User?.Id ?? null;
+            // User Not Found Condition
+            if (response.User == null || string.IsNullOrEmpty(response.User.Salt) ||
+                string.IsNullOrEmpty(response.User.Password))
+            {
+                // Ensure ClearPHIAsync is NOT called here as response.User might be null
+                throw new UserNotFoundException($"User '{userLogin.Identifier}' not found or essential data missing.");
+            }
             
+            int? userId = response.User?.Id ?? null; // userId can be safely accessed now
             List<Setting> theSettings = await _settingsService.GetAllSettingsAsync(userId);
             response.Settings = theSettings.Where(s => s.UserId == null).ToList();
             List<Setting> userSettings = theSettings
@@ -200,27 +206,20 @@ namespace GateKeeper.Server.Services
                 })
                 .ToList();
 
-            if (response.User == null || string.IsNullOrEmpty(response.User.Salt) ||
-                string.IsNullOrEmpty(response.User.Password))
-            {
-                response.FailureReason = "User not found";
-                return response;
-            }
-
             var hashedPassword = PasswordHelper.HashPassword(userLogin.Password, response.User.Salt);
 
+            // Invalid Credentials Condition
             if (hashedPassword != response.User.Password)
             {
                 await response.User.ClearPHIAsync();
-                response.FailureReason = "Invalid credentials";
-                return response;
+                throw new InvalidCredentialsException("Invalid username or password.");
             }
 
             // Generate tokens
             response.AccessToken = await GenerateJwtToken(response.User);
             response.RefreshToken = await _verificationService.GenerateTokenAsync(response.User.Id, "Refresh");
             response.VerificationId = response.RefreshToken.Split('.')[0];
-            response.IsSuccessful = true;
+            // response.IsSuccessful = true; // Removed as success is indicated by not throwing
             response.Settings = userSettings;
             await DeleteCookie();
 
@@ -249,8 +248,8 @@ namespace GateKeeper.Server.Services
         {
             try
             {
-                if (token == null || !token.Contains('.'))
-                    throw new Exception("Invalid token format.");
+                if (string.IsNullOrEmpty(token) || !token.Contains('.')) // Added IsNullOrEmpty for robustness
+                    throw new InvalidTokenException("Invalid token format.");
                 await _sessionService.LogoutToken(token, userId);
                 return 1;
             }
@@ -273,7 +272,10 @@ namespace GateKeeper.Server.Services
                 });
 
 
-            if (!response.IsVerified) return response;
+            if (!response.IsVerified)
+            {
+                throw new InvalidTokenException(response.FailureReason ?? "Invalid verification code.");
+            }
 
             await using var connection = await _dbHelper.GetWrapperAsync();
             await connection.ExecuteNonQueryAsync("ValidateFinish", CommandType.StoredProcedure,
@@ -294,9 +296,7 @@ namespace GateKeeper.Server.Services
             });
 
             response.User = response2.User;
-            response = await LoginAttempts(response);
-
-            if (response.ToMany) return response;
+            await UpdateLoginAttemptsAndThrowIfLockedAsync(response.User, response);
 
             int? userId = response.User?.Id ?? null;
             List<Setting> theSettings = await _settingsService.GetAllSettingsAsync(userId);
@@ -318,10 +318,14 @@ namespace GateKeeper.Server.Services
 
             if (!response2.IsVerified || response.User == null)
             {
-                response.FailureReason = response2.FailureReason;
-                if (response.User != null)
-                    await response.User.ClearPHIAsync();
-                return response;
+                // It's important not to call ClearPHIAsync if response.User is null.
+                // If response.User is null, ClearPHIAsync would throw a NullReferenceException.
+                // If response2.IsVerified is false, but user is not null, then we might clear PHI.
+                if (response.User != null && !response2.IsVerified)
+                {
+                     await response.User.ClearPHIAsync();
+                }
+                throw new InvalidTokenException(response2.FailureReason ?? "Invalid refresh token or user not found for token.");
             }
 
             await _verificationService.RevokeTokensAsync(response.User.Id, "Refresh", refreshToken);
@@ -329,7 +333,7 @@ namespace GateKeeper.Server.Services
             response.AccessToken = await GenerateJwtToken(response.User);
             response.RefreshToken = await _verificationService.GenerateTokenAsync(response.User.Id, "Refresh");
             response.VerificationId = response.RefreshToken.Split('.')[0];
-            response.IsSuccessful = true;
+            // response.IsSuccessful = true; // Removed
             response.Settings = userSettings;
             await DeleteCookie();
 
@@ -374,7 +378,10 @@ namespace GateKeeper.Server.Services
                     VerificationCode = resetRequest.ResetToken
                 });
 
-            if (!response.IsVerified) return response;
+            if (!response.IsVerified)
+            {
+                throw new InvalidTokenException(response.FailureReason ?? "Invalid password reset token.");
+            }
 
             await _userService.ChangePassword(response.User.Id, resetRequest.NewPassword);
             return response;
@@ -490,59 +497,121 @@ namespace GateKeeper.Server.Services
                 new MySqlParameter("@p_RoleName", role));
         }
 
-        private async Task<LoginResponse> LoginAttempts(LoginResponse loginResponse)
+        private async Task UpdateLoginAttemptsAndThrowIfLockedAsync(User? user, LoginResponse loginResponse)
         {
-            
-            if (_httpContextAccessor.HttpContext == null) return loginResponse;
+            if (_httpContextAccessor.HttpContext == null) return;
 
             // Use _loginSettings
             int maxAttempts = _loginSettings.MaxFailedAccessAttempts;
             int cookieExpiryMinutes = _loginSettings.CookieExpiryMinutes;
             // bool lockoutEnabled = _loginSettings.LockoutEnabled; // LockoutEnabled is not directly used in the following logic, but MaxFailedAccessAttempts implies it.
 
-            // Read the current attempt count from encrypted cookie
+            // Read the current attempt count and lockout timestamp from encrypted cookie
             var attemptsCookie = _httpContextAccessor.HttpContext.Request.Cookies[cookieName];
+            string decryptedValue = "";
+            DateTimeOffset? lockoutExpiry = null;
+            int currentAttempts = 0;
+
             if (!string.IsNullOrEmpty(attemptsCookie))
             {
                 try
                 {
-                    // Decrypt the cookie value
-            var decryptedValue = _protector.Unprotect(attemptsCookie); // Now uses string version
-                    if (int.TryParse(decryptedValue, out int parsedAttempts))
-                        loginResponse.Attempts = parsedAttempts;
+                    decryptedValue = _protector.Unprotect(attemptsCookie);
+                    var parts = decryptedValue.Split('|');
+                    if (parts.Length == 1) // Old format or just attempts
+                    {
+                        if (int.TryParse(parts[0], out int parsedAttempts))
+                            currentAttempts = parsedAttempts;
+                    }
+                    else if (parts.Length == 2) // Attempts|LockoutExpiry format
+                    {
+                        if (int.TryParse(parts[0], out int parsedAttempts))
+                            currentAttempts = parsedAttempts;
+                        if (long.TryParse(parts[1], out long timestampTicks))
+                            lockoutExpiry = new DateTimeOffset(timestampTicks, TimeSpan.Zero);
+                    }
                 }
                 catch
                 {
-                    // If decryption fails or data is tampered, we treat it as invalid
-                    // (Optionally reset to 0 or handle differently)
-                    loginResponse.Attempts = 100;
+                    // If decryption fails or data is tampered, reset.
+                    currentAttempts = 0; // Or maxAttempts + 1 to force lockout immediately
+                    lockoutExpiry = null;
                 }
             }
 
-            // Increment and protect (encrypt) the new attempt count
-            loginResponse.Attempts++;
-            var encryptedAttempts = _protector.Protect(loginResponse.Attempts.ToString()); // Now uses string version
-
-            // Build secure cookie options
-            var cookieOptions = new CookieOptions
+            // Check if currently locked out
+            if (lockoutExpiry.HasValue && DateTimeOffset.UtcNow < lockoutExpiry.Value)
             {
-                Expires = DateTime.UtcNow.AddMinutes(cookieExpiryMinutes),
-                HttpOnly = true,      // Prevents JavaScript from accessing the cookie
-                Secure = true,        // Ensures the cookie is only sent over HTTPS
-                IsEssential = true    // Ensures the cookie is sent even if the user hasn't consented
+                TimeSpan remainingLockout = lockoutExpiry.Value - DateTimeOffset.UtcNow;
+                if (user != null) await user.ClearPHIAsync();
+                throw new AccountLockedException($"Account locked. Try again in {Math.Ceiling(remainingLockout.TotalMinutes)} minutes.");
+            }
+
+            // If lockout has expired, reset attempts
+            if (lockoutExpiry.HasValue && DateTimeOffset.UtcNow >= lockoutExpiry.Value)
+            {
+                currentAttempts = 0;
+                lockoutExpiry = null;
+                // Clear the cookie explicitly here or let it be overwritten
+                _httpContextAccessor.HttpContext.Response.Cookies.Delete(cookieName);
+            }
+
+            // Increment attempts
+            currentAttempts++;
+            loginResponse.Attempts = currentAttempts; // Update LoginResponse for other potential uses, though not directly used here
+
+            string cookieValueToStore;
+            CookieOptions cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true, // Ensure this is true for production
+                IsEssential = true,
+                // Cookie expiry should be longer than lockout to maintain lockout state
+                Expires = DateTime.UtcNow.AddMinutes(Math.Max(cookieExpiryMinutes, _loginSettings.LockoutDurationInMinutes + 5))
             };
 
-            // Write the updated (encrypted) attempts back to the cookie
-            _httpContextAccessor.HttpContext.Response.Cookies.Append(cookieName, encryptedAttempts, cookieOptions);
-            loginResponse.ToMany = loginResponse.Attempts > maxAttempts;
+            if (currentAttempts > maxAttempts && _loginSettings.LockoutEnabled)
+            {
+                lockoutExpiry = DateTimeOffset.UtcNow.AddMinutes(_loginSettings.LockoutDurationInMinutes);
+                cookieValueToStore = $"{currentAttempts}|{lockoutExpiry.Value.UtcTicks}";
+                _logger.LogInformation("Lockout condition: Preparing to protect cookie value: {CookieValue}", cookieValueToStore); // LOGGING
 
-            if (!loginResponse.ToMany) return loginResponse;
+                try
+                {
+                    var encryptedCookieValue = _protector.Protect(cookieValueToStore);
+                    _logger.LogInformation("Lockout condition: Successfully protected cookie value. Encrypted length: {Length}", encryptedCookieValue?.Length ?? -1); // LOGGING
 
-            if (loginResponse.User != null)
-                await loginResponse.User.ClearPHIAsync();
-            loginResponse.FailureReason = "Too many login attempts";
-            return loginResponse;
+                    _httpContextAccessor.HttpContext.Response.Cookies.Append(cookieName, encryptedCookieValue, cookieOptions);
+                    _logger.LogInformation("Lockout condition: Appended lockout cookie to response."); // LOGGING
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Lockout condition: CRITICAL - Failed to protect or append lockout cookie. CookieValueToStore: {CookieValueToStore}", cookieValueToStore); // LOGGING
+                    // Optionally, rethrow or handle more gracefully if this failure means the lockout cannot be properly communicated
+                    // For now, the original AccountLockedException will still be thrown below, but this log is vital.
+                }
+
+                TimeSpan currentLockoutDuration = lockoutExpiry.Value - DateTimeOffset.UtcNow;
+                if (user != null) await user.ClearPHIAsync();
+                throw new AccountLockedException($"Too many login attempts. Account locked for {Math.Ceiling(currentLockoutDuration.TotalMinutes)} minutes.");
+            }
+            else
+            {
+                // Store only attempts if not locked out or lockout is disabled
+                cookieValueToStore = currentAttempts.ToString();
+                 // If lockout is not enabled, or not yet exceeding max attempts, cookie lasts for CookieExpiryMinutes
+                cookieOptions.Expires = DateTime.UtcNow.AddMinutes(cookieExpiryMinutes);
+
+                // This part also needs to append the cookie
+                var encryptedCookieValue = _protector.Protect(cookieValueToStore);
+                _httpContextAccessor.HttpContext.Response.Cookies.Append(cookieName, encryptedCookieValue, cookieOptions);
+            }
+
+            // This specific assignment to loginResponse.ToMany seems redundant now with exception throwing
+            // loginResponse.ToMany = currentAttempts > maxAttempts && _loginSettings.LockoutEnabled;
         }
+
+        // OriginalLoginAttemptsForRefreshAsync method removed
 
         private async Task DeleteCookie()
         {
