@@ -36,17 +36,29 @@ export class UserLoginComponent {
           this.router.navigate(['/portal']);
         },
         error: (error) => {
-          console.error('Login failed:', error);
+          // New logging lines
+          console.log('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+          console.log('Error status raw:', error.status);
+          console.log('Error status type:', typeof error.status);
+          console.log('error.error value:', JSON.stringify(error.error));
+
+          console.error('Login failed (original log):', error); // Keep original log for context, rename slightly for clarity
+
           if (error.status === 401 || error.status === 403) {
-            if (error.error && error.error.Message) {
+            if (error.error && typeof error.error === 'object' && error.error.Message) {
               this.errorMessage = error.error.Message;
+            } else if (typeof error.error === 'string' && error.error.includes('Account locked')) { // Temp check for string response
+                this.errorMessage = error.error;
             } else {
               this.errorMessage = 'Login failed. Please check your username and password, or contact support if you believe your access is restricted.';
             }
           } else if (error.status === 429) {
-            if (error.error && error.error.Message) {
+            if (error.error && typeof error.error === 'object' && error.error.Message) {
               this.errorMessage = error.error.Message; // This should be the "Account locked..." message
-            } else {
+            } else if (typeof error.error === 'string' && error.error.includes('Account locked')) { // Temp check for string response
+                this.errorMessage = error.error;
+            }
+             else {
               this.errorMessage = 'Your account is temporarily locked due to too many failed login attempts. Please try again later.';
             }
           } else {
