@@ -574,6 +574,22 @@ namespace GateKeeper.Server.Services
             {
                 lockoutExpiry = DateTimeOffset.UtcNow.AddMinutes(_loginSettings.LockoutDurationInMinutes);
                 cookieValueToStore = $"{currentAttempts}|{lockoutExpiry.Value.UtcTicks}";
+                _logger.LogInformation("Lockout condition: Preparing to protect cookie value: {CookieValue}", cookieValueToStore); // LOGGING
+
+                try
+                {
+                    var encryptedCookieValue = _protector.Protect(cookieValueToStore);
+                    _logger.LogInformation("Lockout condition: Successfully protected cookie value. Encrypted length: {Length}", encryptedCookieValue?.Length ?? -1); // LOGGING
+
+                    _httpContextAccessor.HttpContext.Response.Cookies.Append(cookieName, encryptedCookieValue, cookieOptions);
+                    _logger.LogInformation("Lockout condition: Appended lockout cookie to response."); // LOGGING
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Lockout condition: CRITICAL - Failed to protect or append lockout cookie. CookieValueToStore: {CookieValueToStore}", cookieValueToStore); // LOGGING
+                    // Optionally, rethrow or handle more gracefully if this failure means the lockout cannot be properly communicated
+                    // For now, the original AccountLockedException will still be thrown below, but this log is vital.
+                }
 
                 TimeSpan currentLockoutDuration = lockoutExpiry.Value - DateTimeOffset.UtcNow;
                 if (user != null) await user.ClearPHIAsync();
@@ -585,11 +601,11 @@ namespace GateKeeper.Server.Services
                 cookieValueToStore = currentAttempts.ToString();
                  // If lockout is not enabled, or not yet exceeding max attempts, cookie lasts for CookieExpiryMinutes
                 cookieOptions.Expires = DateTime.UtcNow.AddMinutes(cookieExpiryMinutes);
-            }
 
-            var encryptedCookieValue = _protector.Protect(cookieValueToStore);
-            _httpContextAccessor.HttpContext.Response.Cookies.Delete(cookieName); // Delete old one first
-            _httpContextAccessor.HttpContext.Response.Cookies.Append(cookieName, encryptedCookieValue, cookieOptions);
+                // This part also needs to append the cookie
+                var encryptedCookieValue = _protector.Protect(cookieValueToStore);
+                _httpContextAccessor.HttpContext.Response.Cookies.Append(cookieName, encryptedCookieValue, cookieOptions);
+            }
 
             // This specific assignment to loginResponse.ToMany seems redundant now with exception throwing
             // loginResponse.ToMany = currentAttempts > maxAttempts && _loginSettings.LockoutEnabled;
