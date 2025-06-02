@@ -103,7 +103,7 @@ namespace GateKeeper.Server.Middleware
             {
                 _logger.LogWarning(ex, "Account locked. TraceId: {TraceId}", context.TraceIdentifier);
                 context.Response.ContentType = "application/json";
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.StatusCode = StatusCodes.Status429TooManyRequests; // Changed to 429
                 var response = new ErrorResponse
                 {
                     StatusCode = context.Response.StatusCode,

@@ -561,5 +561,300 @@ namespace GateKeeper.Server.Test.Services
             Assert.AreEqual("Database error", exception.Message);
             _mockUserService.Verify(us => us.RegisterUser(It.IsAny<User>()), Times.Once);
         }
+
+        #region Account Lockout Tests
+
+        private void SetupLoginSettings(int maxAttempts, int lockoutDurationMinutes, bool lockoutEnabled, int cookieExpiryMinutes = 20)
+        {
+            var loginSettings = new LoginSettingsConfig
+            {
+                MaxFailedAccessAttempts = maxAttempts,
+                LockoutDurationInMinutes = lockoutDurationMinutes,
+                LockoutEnabled = lockoutEnabled,
+                CookieExpiryMinutes = cookieExpiryMinutes
+            };
+            _mockLoginSettingsOptions.Setup(o => o.Value).Returns(loginSettings);
+
+            // Re-initialize authService to pick up the new LoginSettingsConfig
+            _authService = new UserAuthenticationService(
+                _mockUserService.Object, _mockVerificationService.Object, _mockJwtSettingsOptions.Object,
+                _mockPasswordSettingsOptions.Object, _mockRegisterSettingsOptions.Object, _mockLoginSettingsOptions.Object,
+                _mockDbHelper.Object, _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object, _mockSessionService.Object);
+        }
+
+        private void MockCookieRead(string cookieName, string? protectedValue, string? unprotectedValue)
+        {
+            var requestCookiesMock = Mock.Get(_mockHttpContextAccessor.Object.HttpContext.Request.Cookies);
+            requestCookiesMock.Setup(c => c[cookieName]).Returns(protectedValue);
+
+            if (protectedValue != null)
+            {
+                _mockStringDataProtector.Setup(p => p.Unprotect(protectedValue)).Returns(unprotectedValue ?? "");
+            }
+            else // If no cookie, Unprotect won't be called for that cookie.
+            {
+                // If a test relies on Unprotect being called even with null cookie (which it shouldn't for this logic),
+                // this might need adjustment or the test needs to ensure Unprotect is not expected to be called.
+            }
+        }
+
+        private void MockCookieWrite(string cookieName, string valueToProtect, string protectedValue)
+        {
+            _mockStringDataProtector.Setup(p => p.Protect(valueToProtect)).Returns(protectedValue);
+        }
+
+        private void VerifyCookieDeleted(string cookieName)
+        {
+            var responseCookiesMock = Mock.Get(_mockHttpContextAccessor.Object.HttpContext.Response.Cookies);
+            responseCookiesMock.Verify(c => c.Delete(cookieName, It.IsAny<CookieOptions>()), Times.Once);
+        }
+
+        private void VerifyCookieAppended(string cookieName, string expectedProtectedValue, TimeSpan expectedExpiryFromNow, bool isEssential = true, bool httpOnly = true, bool secure = true)
+        {
+            var responseCookiesMock = Mock.Get(_mockHttpContextAccessor.Object.HttpContext.Response.Cookies);
+            responseCookiesMock.Verify(c => c.Append(
+                cookieName,
+                expectedProtectedValue,
+                It.Is<CookieOptions>(options =>
+                    options.HttpOnly == httpOnly &&
+                    options.Secure == secure &&
+                    options.IsEssential == isEssential &&
+                    options.Expires.HasValue &&
+                    Math.Abs((options.Expires.Value - (DateTimeOffset.UtcNow + expectedExpiryFromNow)).TotalSeconds) < 5 // Allow 5s variance
+                )
+            ), Times.Once);
+        }
+
+
+        [TestMethod]
+        public async Task LoginAsync_Successful_DeletesAttemptCookie()
+        {
+            // Arrange
+            SetupLoginSettings(maxAttempts: 3, lockoutDurationMinutes: 10, lockoutEnabled: true);
+            var userLoginRequest = new UserLoginRequest { Identifier = "testuser", Password = "password123" };
+            var user = new User { Id = 1, Username = "testuser", Salt = "salt", Password = PasswordHelper.HashPassword("password123", "salt"), Roles = new List<string> { "User" } };
+            _mockUserService.Setup(us => us.GetUser(userLoginRequest.Identifier)).ReturnsAsync(user);
+            _mockSessionService.Setup(s => s.InsertSession(It.IsAny<SessionModel>())).Returns(Task.CompletedTask);
+            _mockVerificationService.Setup(vs => vs.GenerateTokenAsync(user.Id, "Refresh")).ReturnsAsync("refreshtoken.value");
+
+
+            // Simulate existing login attempt cookie
+            MockCookieRead("LoginAttempts", "protected_attempts_value", "1"); // Any existing value
+
+            // Act
+            await _authService.LoginAsync(userLoginRequest, "127.0.0.1", "TestAgent");
+
+            // Assert
+            VerifyCookieDeleted("LoginAttempts");
+        }
+
+        [TestMethod]
+        public async Task LoginAsync_Failed_FirstAttempt_IncrementsAndSetsCookie()
+        {
+            // Arrange
+            SetupLoginSettings(maxAttempts: 3, lockoutDurationMinutes: 10, lockoutEnabled: true, cookieExpiryMinutes: 20);
+            var userLoginRequest = new UserLoginRequest { Identifier = "testuser", Password = "wrongpassword" };
+            var user = new User { Id = 1, Username = "testuser", Salt = "salt", Password = "correct_hashed_password" }; // Assume password check fails
+            _mockUserService.Setup(us => us.GetUser(userLoginRequest.Identifier)).ReturnsAsync(user);
+
+            // Simulate no existing cookie
+            MockCookieRead("LoginAttempts", null, null);
+            MockCookieWrite("1", "1_protected"); // Expect '1' attempt to be written
+
+            // Act & Assert
+            await Assert.ThrowsExceptionAsync<InvalidCredentialsException>(() =>
+                _authService.LoginAsync(userLoginRequest, "127.0.0.1", "TestAgent"));
+
+            // Verify cookie was set to 1 attempt
+            VerifyCookieAppended("LoginAttempts", "1_protected", TimeSpan.FromMinutes(20));
+        }
+
+        [TestMethod]
+        public async Task LoginAsync_Failed_IncrementsExistingAttemptCookie()
+        {
+            // Arrange
+            SetupLoginSettings(maxAttempts: 3, lockoutDurationMinutes: 10, lockoutEnabled: true, cookieExpiryMinutes: 20);
+            var userLoginRequest = new UserLoginRequest { Identifier = "testuser", Password = "wrongpassword" };
+            var user = new User { Id = 1, Username = "testuser", Salt = "salt", Password = "correct_hashed_password" };
+            _mockUserService.Setup(us => us.GetUser(userLoginRequest.Identifier)).ReturnsAsync(user);
+
+            // Simulate existing cookie with 1 attempt
+            MockCookieRead("LoginAttempts", "1_protected_from_request", "1");
+            MockCookieWrite("2", "2_protected_to_response"); // Expect '2' attempts to be written
+
+            // Act & Assert
+            await Assert.ThrowsExceptionAsync<InvalidCredentialsException>(() =>
+                _authService.LoginAsync(userLoginRequest, "127.0.0.1", "TestAgent"));
+
+            // Verify cookie was updated to 2 attempts
+            VerifyCookieAppended("LoginAttempts", "2_protected_to_response", TimeSpan.FromMinutes(20));
+        }
+
+        [TestMethod]
+        public async Task LoginAsync_Failed_ExceedsMaxAttempts_ThrowsAccountLockedException_AndSetsLockoutCookie()
+        {
+            // Arrange
+            int maxAttempts = 2;
+            int lockoutDurationMinutes = 10;
+            int cookieExpiryMinutes = 20; // General cookie expiry
+            SetupLoginSettings(maxAttempts, lockoutDurationMinutes, true, cookieExpiryMinutes);
+
+            var userLoginRequest = new UserLoginRequest { Identifier = "testuser", Password = "wrongpassword" };
+            var user = new User { Id = 1, Username = "testuser", Salt = "salt", Password = "correct_hashed_password" };
+            _mockUserService.Setup(us => us.GetUser(userLoginRequest.Identifier)).ReturnsAsync(user);
+
+            // Simulate existing cookie with 1 attempt (maxAttempts is 2, so this is the attempt *before* exceeding)
+            MockCookieRead("LoginAttempts", "1_protected_from_request", "1");
+
+            // Expected attempts after this failure will be 2. Since this equals maxAttempts, next attempt will lock.
+            // Actually, the logic is: currentAttempts becomes 2. If 2 > maxAttempts (which is 2 > 2, false), no lock.
+            // So, we need to simulate attempts = maxAttempts -1.
+            // Let's re-evaluate:
+            // Cookie has "1". currentAttempts becomes 1.
+            // This login fails. currentAttempts becomes 1+1 = 2.
+            // Check: is 2 > maxAttempts (2)? No. So, it just stores "2".
+
+            // To trigger lockout: Cookie should have (maxAttempts - 1) value.
+            // e.g. maxAttempts = 2. Cookie has "1". currentAttempts = 1. Login fails -> currentAttempts becomes 2.
+            // Still not locked. Cookie becomes "2".
+            // Next login: Cookie has "2". currentAttempts = 2. Login fails -> currentAttempts becomes 3.
+            // Is 3 > maxAttempts (2)? Yes. Lockout.
+
+            // So, for this test, cookie should have maxAttempts value, which is 2 in this setup.
+            MockCookieRead("LoginAttempts", "2_protected_from_request", maxAttempts.ToString());
+
+            // Expected data to be stored in cookie: new attempt count (3) and lockout expiry
+            long expectedLockoutExpiryTicks = DateTimeOffset.UtcNow.AddMinutes(lockoutDurationMinutes).UtcTicks;
+            string expectedCookieValue = $"{maxAttempts + 1}|{expectedLockoutExpiryTicks}";
+            string expectedProtectedCookieValue = "3_and_lockout_protected";
+            MockCookieWrite(expectedCookieValue, expectedProtectedCookieValue);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsExceptionAsync<AccountLockedException>(() =>
+                _authService.LoginAsync(userLoginRequest, "127.0.0.1", "TestAgent"));
+
+            // Assert exception message
+            Assert.AreEqual($"Too many login attempts. Account locked for {lockoutDurationMinutes} minutes.", exception.Message);
+
+            // Verify cookie was set with lockout information
+            // The cookie expiry should be Max(cookieExpiryMinutes, lockoutDurationMinutes + 5)
+            var overallCookieExpiry = Math.Max(cookieExpiryMinutes, lockoutDurationMinutes + 5);
+            VerifyCookieAppended("LoginAttempts", expectedProtectedCookieValue, TimeSpan.FromMinutes(overallCookieExpiry));
+        }
+
+        [TestMethod]
+        public async Task Login_Failed_WhileLockedOut_ThrowsAccountLockedException_WithCorrectRemainingTime()
+        {
+            // Arrange
+            int maxAttempts = 2;
+            int lockoutDurationMinutes = 10;
+            SetupLoginSettings(maxAttempts, lockoutDurationMinutes, true);
+
+            var userLoginRequest = new UserLoginRequest { Identifier = "testuser", Password = "wrongpassword" };
+            var user = new User { Id = 1, Username = "testuser", Salt = "salt", Password = "correct_hashed_password" };
+            _mockUserService.Setup(us => us.GetUser(userLoginRequest.Identifier)).ReturnsAsync(user);
+
+            // Simulate an existing lockout cookie
+            // Attempts count is already > maxAttempts, and lockout timestamp is in the future
+            int currentAttemptsInCookie = maxAttempts + 1; // e.g., 3
+            DateTimeOffset lockoutExpiry = DateTimeOffset.UtcNow.AddMinutes(lockoutDurationMinutes - 2); // Locked out for 8 more minutes
+            string lockoutCookieValue = $"{currentAttemptsInCookie}|{lockoutExpiry.UtcTicks}";
+            MockCookieRead("LoginAttempts", "locked_cookie_protected", lockoutCookieValue);
+
+            // Act & Assert
+            var exception = await Assert.ThrowsExceptionAsync<AccountLockedException>(() =>
+                _authService.LoginAsync(userLoginRequest, "127.0.0.1", "TestAgent"));
+
+            // Assert exception message for remaining time
+            // The message should be "Account locked. Try again in X minutes."
+            // We check if the message contains "Try again in" and "minutes".
+            // Calculating exact remaining minutes can be flaky due to timing, so we check for a reasonable range.
+            Assert.IsTrue(exception.Message.StartsWith("Account locked. Try again in"));
+            Assert.IsTrue(exception.Message.EndsWith("minutes."));
+            // Example: "Account locked. Try again in 8 minutes."
+            // We can parse the number from the message to check if it's close to lockoutDurationMinutes - 2
+            string minutesString = exception.Message.Split(" ")[5];
+            Assert.IsTrue(int.TryParse(minutesString, out int reportedMinutes));
+            Assert.IsTrue(reportedMinutes <= lockoutDurationMinutes - 2 && reportedMinutes > lockoutDurationMinutes - 3, $"Reported minutes {reportedMinutes} not in expected range.");
+
+
+            // Verify that the cookie was NOT changed (important)
+            var responseCookiesMock = Mock.Get(_mockHttpContextAccessor.Object.HttpContext.Response.Cookies);
+            responseCookiesMock.Verify(c => c.Append(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CookieOptions>()), Times.Never);
+            responseCookiesMock.Verify(c => c.Delete(It.IsAny<string>(), It.IsAny<CookieOptions>()), Times.Never);
+        }
+
+        [TestMethod]
+        public async Task Login_Failed_AfterLockoutExpired_ResetsAttemptsAndAllowsLoginAttempt_ThenFailsCredentials()
+        {
+            // Arrange
+            int maxAttempts = 2;
+            int lockoutDurationMinutes = 10; // Lockout was for 10 mins
+            int cookieExpiryMinutes = 20;
+            SetupLoginSettings(maxAttempts, lockoutDurationMinutes, true, cookieExpiryMinutes);
+
+            var userLoginRequest = new UserLoginRequest { Identifier = "testuser", Password = "wrongpassword" };
+            var user = new User { Id = 1, Username = "testuser", Salt = "salt", Password = "correct_hashed_password" };
+            _mockUserService.Setup(us => us.GetUser(userLoginRequest.Identifier)).ReturnsAsync(user);
+
+            // Simulate an existing lockout cookie where lockout has EXPIRED
+            int attemptsInOldCookie = maxAttempts + 1; // e.g., 3
+            DateTimeOffset pastLockoutExpiry = DateTimeOffset.UtcNow.AddMinutes(-(lockoutDurationMinutes + 5)); // Expired 5 mins ago
+            string expiredLockoutCookieValue = $"{attemptsInOldCookie}|{pastLockoutExpiry.UtcTicks}";
+            MockCookieRead("LoginAttempts", "expired_lockout_cookie_protected", expiredLockoutCookieValue);
+
+            // After reset, this is the first new failed attempt, so cookie should store "1"
+            string expectedNewAttemptValue = "1";
+            string expectedProtectedNewAttemptValue = "1_after_expiry_protected";
+            MockCookieWrite(expectedNewAttemptValue, expectedProtectedNewAttemptValue);
+
+            var responseCookiesMock = Mock.Get(_mockHttpContextAccessor.Object.HttpContext.Response.Cookies);
+
+            // Act & Assert
+            // The login will still fail due to InvalidCredentials, but after lockout logic has reset attempts.
+            await Assert.ThrowsExceptionAsync<InvalidCredentialsException>(() =>
+                _authService.LoginAsync(userLoginRequest, "127.0.0.1", "TestAgent"));
+
+            // Verify that the old lockout cookie was deleted
+            responseCookiesMock.Verify(c => c.Delete("LoginAttempts", It.IsAny<CookieOptions>()), Times.Once);
+
+            // Verify new cookie is set to 1 attempt with normal cookie expiry
+            VerifyCookieAppended("LoginAttempts", expectedProtectedNewAttemptValue, TimeSpan.FromMinutes(cookieExpiryMinutes));
+        }
+
+
+        [TestMethod]
+        public async Task Login_Failed_LockoutDisabled_DoesNotLockAccount_AndOnlyIncrementsAttempt()
+        {
+            // Arrange
+            int maxAttempts = 2;
+            int lockoutDurationMinutes = 10;
+            int cookieExpiryMinutes = 20;
+            SetupLoginSettings(maxAttempts, lockoutDurationMinutes, false, cookieExpiryMinutes); // LockoutEnabled = false
+
+            var userLoginRequest = new UserLoginRequest { Identifier = "testuser", Password = "wrongpassword" };
+            var user = new User { Id = 1, Username = "testuser", Salt = "salt", Password = "correct_hashed_password" };
+            _mockUserService.Setup(us => us.GetUser(userLoginRequest.Identifier)).ReturnsAsync(user);
+
+            // Simulate cookie with maxAttempts already reached
+            MockCookieRead("LoginAttempts", "2_protected_from_request_lockout_disabled", maxAttempts.ToString());
+
+            // Expect attempts to increment to 3, but no lockout info in cookie
+            string expectedCookieValue = (maxAttempts + 1).ToString(); // "3"
+            string expectedProtectedCookieValue = "3_protected_lockout_disabled";
+            MockCookieWrite(expectedCookieValue, expectedProtectedCookieValue);
+
+            // Act & Assert
+            // Should throw InvalidCredentialsException, NOT AccountLockedException
+            await Assert.ThrowsExceptionAsync<InvalidCredentialsException>(() =>
+                _authService.LoginAsync(userLoginRequest, "127.0.0.1", "TestAgent"));
+
+            // Verify cookie was set with incremented attempts and normal expiry, no lockout data
+            VerifyCookieAppended("LoginAttempts", expectedProtectedCookieValue, TimeSpan.FromMinutes(cookieExpiryMinutes));
+        }
+
+        #endregion
     }
 }

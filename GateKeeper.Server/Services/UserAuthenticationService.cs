@@ -506,50 +506,92 @@ namespace GateKeeper.Server.Services
             int cookieExpiryMinutes = _loginSettings.CookieExpiryMinutes;
             // bool lockoutEnabled = _loginSettings.LockoutEnabled; // LockoutEnabled is not directly used in the following logic, but MaxFailedAccessAttempts implies it.
 
-            // Read the current attempt count from encrypted cookie
+            // Read the current attempt count and lockout timestamp from encrypted cookie
             var attemptsCookie = _httpContextAccessor.HttpContext.Request.Cookies[cookieName];
+            string decryptedValue = "";
+            DateTimeOffset? lockoutExpiry = null;
+            int currentAttempts = 0;
+
             if (!string.IsNullOrEmpty(attemptsCookie))
             {
                 try
                 {
-                    // Decrypt the cookie value
-                    var decryptedValue = _protector.Unprotect(attemptsCookie); // Now uses string version
-                    if (int.TryParse(decryptedValue, out int parsedAttempts))
-                        loginResponse.Attempts = parsedAttempts;
+                    decryptedValue = _protector.Unprotect(attemptsCookie);
+                    var parts = decryptedValue.Split('|');
+                    if (parts.Length == 1) // Old format or just attempts
+                    {
+                        if (int.TryParse(parts[0], out int parsedAttempts))
+                            currentAttempts = parsedAttempts;
+                    }
+                    else if (parts.Length == 2) // Attempts|LockoutExpiry format
+                    {
+                        if (int.TryParse(parts[0], out int parsedAttempts))
+                            currentAttempts = parsedAttempts;
+                        if (long.TryParse(parts[1], out long timestampTicks))
+                            lockoutExpiry = new DateTimeOffset(timestampTicks, TimeSpan.Zero);
+                    }
                 }
                 catch
                 {
-                    // If decryption fails or data is tampered, we treat it as invalid
-                    // (Optionally reset to 0 or handle differently)
-                    // Setting to a high number to likely trigger lockout on next attempt if cookie was tampered.
-                    loginResponse.Attempts = maxAttempts + 1;
+                    // If decryption fails or data is tampered, reset.
+                    currentAttempts = 0; // Or maxAttempts + 1 to force lockout immediately
+                    lockoutExpiry = null;
                 }
             }
 
-            // Increment and protect (encrypt) the new attempt count
-            loginResponse.Attempts++;
-            var encryptedAttempts = _protector.Protect(loginResponse.Attempts.ToString()); // Now uses string version
-
-            // Build secure cookie options
-            var cookieOptions = new CookieOptions
+            // Check if currently locked out
+            if (lockoutExpiry.HasValue && DateTimeOffset.UtcNow < lockoutExpiry.Value)
             {
-                Expires = DateTime.UtcNow.AddMinutes(cookieExpiryMinutes),
-                HttpOnly = true,      // Prevents JavaScript from accessing the cookie
-                Secure = true,        // Ensures the cookie is only sent over HTTPS
-                IsEssential = true    // Ensures the cookie is sent even if the user hasn't consented
+                TimeSpan remainingLockout = lockoutExpiry.Value - DateTimeOffset.UtcNow;
+                if (user != null) await user.ClearPHIAsync();
+                throw new AccountLockedException($"Account locked. Try again in {Math.Ceiling(remainingLockout.TotalMinutes)} minutes.");
+            }
+
+            // If lockout has expired, reset attempts
+            if (lockoutExpiry.HasValue && DateTimeOffset.UtcNow >= lockoutExpiry.Value)
+            {
+                currentAttempts = 0;
+                lockoutExpiry = null;
+                // Clear the cookie explicitly here or let it be overwritten
+                _httpContextAccessor.HttpContext.Response.Cookies.Delete(cookieName);
+            }
+
+            // Increment attempts
+            currentAttempts++;
+            loginResponse.Attempts = currentAttempts; // Update LoginResponse for other potential uses, though not directly used here
+
+            string cookieValueToStore;
+            CookieOptions cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true, // Ensure this is true for production
+                IsEssential = true,
+                // Cookie expiry should be longer than lockout to maintain lockout state
+                Expires = DateTime.UtcNow.AddMinutes(Math.Max(cookieExpiryMinutes, _loginSettings.LockoutDurationInMinutes + 5))
             };
 
-            // Write the updated (encrypted) attempts back to the cookie
-            _httpContextAccessor.HttpContext.Response.Cookies.Append(cookieName, encryptedAttempts, cookieOptions);
-            loginResponse.ToMany = loginResponse.Attempts > maxAttempts;
-
-            if (loginResponse.ToMany)
+            if (currentAttempts > maxAttempts && _loginSettings.LockoutEnabled)
             {
-                if (user != null) // Use the passed user object
-                    await user.ClearPHIAsync();
-                throw new AccountLockedException("Too many login attempts. Account locked.");
+                lockoutExpiry = DateTimeOffset.UtcNow.AddMinutes(_loginSettings.LockoutDurationInMinutes);
+                cookieValueToStore = $"{currentAttempts}|{lockoutExpiry.Value.UtcTicks}";
+
+                TimeSpan currentLockoutDuration = lockoutExpiry.Value - DateTimeOffset.UtcNow;
+                if (user != null) await user.ClearPHIAsync();
+                throw new AccountLockedException($"Too many login attempts. Account locked for {Math.Ceiling(currentLockoutDuration.TotalMinutes)} minutes.");
             }
-            // No return loginResponse; as the method is void
+            else
+            {
+                // Store only attempts if not locked out or lockout is disabled
+                cookieValueToStore = currentAttempts.ToString();
+                 // If lockout is not enabled, or not yet exceeding max attempts, cookie lasts for CookieExpiryMinutes
+                cookieOptions.Expires = DateTime.UtcNow.AddMinutes(cookieExpiryMinutes);
+            }
+
+            var encryptedCookieValue = _protector.Protect(cookieValueToStore);
+            _httpContextAccessor.HttpContext.Response.Cookies.Append(cookieName, encryptedCookieValue, cookieOptions);
+
+            // This specific assignment to loginResponse.ToMany seems redundant now with exception throwing
+            // loginResponse.ToMany = currentAttempts > maxAttempts && _loginSettings.LockoutEnabled;
         }
 
         // OriginalLoginAttemptsForRefreshAsync method removed
