@@ -320,16 +320,30 @@ export class AuthService {
 
   // Error Handling
   private handleError(error: HttpErrorResponse) {
-    let errorMsg = 'An unknown error occurred.';
+    let errorMsg = 'An unknown error occurred. Please try again.'; // Default generic message
+
     if (error.error instanceof ErrorEvent) {
-      // Client-side/network error
-      errorMsg = `Error: ${error.error.message}`;
-    } else if (error.error?.error) {
-      // Server-side error with error message
-      errorMsg = error.error.error;
-    } else if (error.message) {
-      // Other server-side error
-      errorMsg = error.message;
+      // A client-side or network error occurred. Handle it accordingly.
+      // console.error('An error occurred:', error.error.message); // Optional: for debugging
+      errorMsg = `Network error: ${error.error.message}`;
+    } else {
+      // The backend returned an unsuccessful response code.
+      // The response body may contain clues as to what went wrong.
+      // console.error( // Optional: for debugging
+      //  `Backend returned code ${error.status}, ` +
+      //  `body was: ${JSON.stringify(error.error)}`);
+
+      // Check for our custom ErrorResponse structure first
+      if (error.error?.message) {
+        errorMsg = error.error.message; // This will handle 429 and others if message field is present
+      } else if (error.error?.error) { // Check for { "error": "message" } structure
+        errorMsg = error.error.error;
+      } else if (error.statusText && error.status !== 0) { // error.status === 0 can be a CORS issue or network problem
+        errorMsg = `Error ${error.status}: ${error.statusText}`;
+      } else if (error.message) {
+        // Fallback to the main error message if other more specific messages aren't available
+        errorMsg = error.message;
+      }
     }
     return throwError(() => errorMsg);
   }

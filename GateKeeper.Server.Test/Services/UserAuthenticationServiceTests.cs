@@ -937,5 +937,90 @@ namespace GateKeeper.Server.Test.Services
                 It.IsAny<CookieOptions>() // Simplified predicate
             ), Times.Once);
         }
+
+        [TestMethod]
+        public async Task LoginAsync_ShouldLockAccount_AfterExceedingMaxFailedAttempts()
+        {
+            // Arrange
+            var loginSettingsConfig = new LoginSettingsConfig { MaxFailedAccessAttempts = 3, LockoutEnabled = true, CookieExpiryMinutes = 10, LockoutDurationInMinutes = 15 };
+            _mockLoginSettingsOptions.Setup(s => s.Value).Returns(loginSettingsConfig);
+
+            // Re-initialize authService to pick up the new LoginSettingsConfig
+             _authService = new UserAuthenticationService(
+                _mockUserService.Object,
+                _mockVerificationService.Object,
+                _mockJwtSettingsOptions.Object,
+                _mockPasswordSettingsOptions.Object,
+                _mockRegisterSettingsOptions.Object,
+                _mockLoginSettingsOptions.Object,
+                _mockDbHelper.Object,
+                _mockLogger.Object,
+                _mockSettingsService.Object,
+                _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object,
+                _mockHttpContextAccessor.Object,
+                _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object,
+                _mockSessionService.Object
+            );
+
+            _mockUserService.Setup(s => s.GetUser(It.IsAny<string>())).ReturnsAsync(new User { Id = 1, Username = "testuser", Email = "test@example.com", Salt = "testsalt", Password = PasswordHelper.HashPassword("correctpassword", "testsalt"), Roles = new List<string> { "User" } });
+            _mockSettingsService.Setup(s => s.GetAllSettingsAsync(It.IsAny<int?>())).ReturnsAsync(new List<Setting>());
+
+            var mockHttpContext = _mockHttpContextAccessor.Object.HttpContext;
+            var requestCookiesDict = new Dictionary<string, string>();
+
+            var reqCookiesMock = Mock.Get(mockHttpContext.Request.Cookies);
+            reqCookiesMock.Setup(c => c[It.IsAny<string>()]).Returns((string key) => requestCookiesDict.TryGetValue(key, out var value) ? value : null);
+
+            var respCookiesMock = Mock.Get(mockHttpContext.Response.Cookies);
+            respCookiesMock.Setup(c => c.Append(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CookieOptions>()))
+                .Callback<string, string, CookieOptions>((key, value, options) => {
+                    requestCookiesDict[key] = value; // Simulate browser behavior
+                });
+            respCookiesMock.Setup(c => c.Delete(It.IsAny<string>()))
+                .Callback<string>(key => {
+                    requestCookiesDict.Remove(key);
+                });
+
+            // Use distinct strings for protected/unprotected to avoid mock confusion if values are the same.
+            _mockStringDataProtector.Setup(p => p.Protect(It.IsAny<string>())).Returns<string>(s => "protected_" + s);
+            _mockStringDataProtector.Setup(p => p.Unprotect(It.IsAny<string>())).Returns<string>(s => (s != null && s.StartsWith("protected_")) ? s.Substring("protected_".Length) : s);
+
+
+            var loginRequest = new UserLoginRequest { Identifier = "testuser", Password = "wrongpassword" };
+            int maxAttempts = loginSettingsConfig.MaxFailedAccessAttempts;
+
+            // Act & Assert
+            for (int i = 1; i <= maxAttempts; i++)
+            {
+                var ex = await Assert.ThrowsExceptionAsync<InvalidCredentialsException>(() => _authService.LoginAsync(loginRequest, "127.0.0.1", "test-agent"));
+                Assert.IsNotNull(requestCookiesDict["LoginAttempts"], $"Cookie should be set on attempt {i}");
+                string protectedCookie = requestCookiesDict["LoginAttempts"];
+                string cookieValue = _mockStringDataProtector.Object.Unprotect(protectedCookie);
+                Assert.AreEqual(i.ToString(), cookieValue, $"Cookie attempt count mismatch on attempt {i}");
+            }
+
+            // The lockout attempt
+            var lockedException = await Assert.ThrowsExceptionAsync<AccountLockedException>(() => _authService.LoginAsync(loginRequest, "127.0.0.1", "test-agent"));
+            Assert.IsTrue(lockedException.Message.Contains("Account locked"), "Exception message does not indicate account locked.");
+
+            Assert.IsNotNull(requestCookiesDict["LoginAttempts"], "Cookie should exist after lockout.");
+            string finalProtectedCookie = requestCookiesDict["LoginAttempts"];
+            string finalCookieValue = _mockStringDataProtector.Object.Unprotect(finalProtectedCookie);
+            Assert.IsNotNull(finalCookieValue, "Final cookie value should not be null after unprotection.");
+
+            var parts = finalCookieValue.Split('|');
+            Assert.AreEqual(2, parts.Length, "Cookie value should be in 'attempts|timestamp' format.");
+            Assert.AreEqual((maxAttempts + 1).ToString(), parts[0], "Attempt count in cookie is not maxAttempts + 1.");
+
+            long timestampTicks = long.Parse(parts[1]);
+            var lockoutExpiry = new DateTimeOffset(timestampTicks, TimeSpan.Zero);
+            var expectedExpiry = DateTimeOffset.UtcNow.AddMinutes(loginSettingsConfig.LockoutDurationInMinutes);
+
+            // Allow a small delta (e.g., 5-10 seconds) for clock differences/execution time
+            Assert.IsTrue((expectedExpiry - lockoutExpiry).TotalSeconds < 10 && (expectedExpiry - lockoutExpiry).TotalSeconds > -10,
+                $"Lockout expiry time is not as expected. Expected: {expectedExpiry}, Actual: {lockoutExpiry}, Difference: {(expectedExpiry - lockoutExpiry).TotalSeconds}s");
+        }
     }
 }

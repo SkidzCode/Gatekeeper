@@ -588,6 +588,7 @@ namespace GateKeeper.Server.Services
             }
 
             var encryptedCookieValue = _protector.Protect(cookieValueToStore);
+            _httpContextAccessor.HttpContext.Response.Cookies.Delete(cookieName); // Delete old one first
             _httpContextAccessor.HttpContext.Response.Cookies.Append(cookieName, encryptedCookieValue, cookieOptions);
 
             // This specific assignment to loginResponse.ToMany seems redundant now with exception throwing
