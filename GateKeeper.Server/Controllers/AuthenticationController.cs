@@ -91,16 +91,6 @@ namespace GateKeeper.Server.Controllers
 
                 return StatusCode(201, new { message = UserRegisteredSuccessfully });
             }
-            catch (InvalidTokenException ex)
-            {
-                _logger.LogWarning(ex, "User registration failed: Invalid token. IP: {IpAddress}, UserAgent: {UserAgent}. Email: {Email}, Username: {Username}", userIp, userAgent, registerRequest.Email.SanitizeForLogging(), registerRequest.Username.SanitizeForLogging());
-                return BadRequest(new { error = ex.Message });
-            }
-            catch (RegistrationException ex) // This is our custom general registration exception
-            {
-                _logger.LogWarning(ex, "User registration failed: {RegistrationError}. IP: {IpAddress}, UserAgent: {UserAgent}. Email: {Email}, Username: {Username}", ex.Message, userIp, userAgent, registerRequest.Email.SanitizeForLogging(), registerRequest.Username.SanitizeForLogging());
-                return BadRequest(new { error = ex.Message });
-            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An unexpected error occurred during user registration. IP: {IpAddress}, UserAgent: {UserAgent}. Email: {Email}, Username: {Username}", userIp, userAgent, registerRequest.Email.SanitizeForLogging(), registerRequest.Username.SanitizeForLogging());
@@ -128,11 +118,6 @@ namespace GateKeeper.Server.Controllers
                 _logger.LogInformation("User verification successful: {UserId}, IP: {IpAddress}, Device: {UserAgent}",
                     verificationResponse.User?.Id, userIp, userAgent);
                 return Ok(new { message = UserVerificationSuccessful });
-            }
-            catch (InvalidTokenException ex)
-            {
-                _logger.LogWarning(ex, "User verification failed: {FailureReason}. IP: {IpAddress}, UserAgent: {UserAgent}, Code: {VerificationCode}", ex.Message, userIp, userAgent, request.VerificationCode.SanitizeForLogging());
-                return BadRequest(new { error = ex.Message }); // Or InvalidVerificationCode
             }
             catch (Exception ex)
             {
@@ -171,21 +156,6 @@ namespace GateKeeper.Server.Controllers
                     loginResponse.SessionId
                 });
             }
-            catch (UserNotFoundException ex)
-            {
-                _logger.LogWarning(ex, "Login attempt failed for identifier {Identifier}: User not found or invalid credentials. IP: {IpAddress}. UserAgent: {UserAgent}", loginRequest.Identifier.SanitizeForLogging(), userIp, userAgent);
-                return Unauthorized(new { error = InvalidCredentials }); // Generic message
-            }
-            catch (InvalidCredentialsException ex)
-            {
-                _logger.LogWarning(ex, "Login attempt failed for identifier {Identifier}: Invalid credentials. IP: {IpAddress}. UserAgent: {UserAgent}", loginRequest.Identifier.SanitizeForLogging(), userIp, userAgent);
-                return Unauthorized(new { error = InvalidCredentials }); // Generic message
-            }
-            catch (AccountLockedException ex)
-            {
-                _logger.LogWarning(ex, "Login attempt failed for identifier {Identifier}: Account locked. IP: {IpAddress}. UserAgent: {UserAgent}", loginRequest.Identifier.SanitizeForLogging(), userIp, userAgent);
-                return Unauthorized(new { error = ExceededLoginAttempts });
-            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An unexpected error occurred during login for identifier {Identifier}. IP: {IpAddress}. UserAgent: {UserAgent}", loginRequest.Identifier.SanitizeForLogging(), userIp, userAgent);
@@ -221,21 +191,6 @@ namespace GateKeeper.Server.Controllers
                     loginResponse.SessionId
                 });
             }
-            catch (InvalidTokenException ex)
-            {
-                _logger.LogWarning(ex, "Token refresh failed: Invalid token. IP: {IpAddress}, UserAgent: {UserAgent}", userIp, userAgent);
-                return Unauthorized(new { error = InvalidRefreshToken });
-            }
-            catch (UserNotFoundException ex)
-            {
-                _logger.LogWarning(ex, "Token refresh failed: User not found for token. IP: {IpAddress}, UserAgent: {UserAgent}", userIp, userAgent);
-                return Unauthorized(new { error = InvalidRefreshToken });
-            }
-            catch (AccountLockedException ex)
-            {
-                _logger.LogWarning(ex, "Token refresh failed: Account locked. IP: {IpAddress}, UserAgent: {UserAgent}", userIp, userAgent);
-                return Unauthorized(new { error = ExceededLoginAttempts });
-            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An unexpected error occurred during token refresh. IP: {IpAddress}, UserAgent: {UserAgent}", userIp, userAgent);
@@ -261,11 +216,6 @@ namespace GateKeeper.Server.Controllers
                 userId = GetUserIdFromClaims();
                 revokedCount = await _authService.LogoutAsync(logoutRequest.Token, userId);
                 return Ok(new { message = string.Format(TokensRevokedSuccessfully, revokedCount) });
-            }
-            catch (InvalidTokenException ex)
-            {
-                _logger.LogWarning(ex, "User logout failed: Invalid token. UserId: {UserId}, IP: {IpAddress}, Token: {Token}", userId, userIp, logoutRequest.Token.SanitizeForLogging());
-                return BadRequest(new { error = "Logout failed due to an invalid token." });
             }
             catch (Exception ex)
             {
@@ -360,11 +310,6 @@ namespace GateKeeper.Server.Controllers
                  _logger.LogInformation("Password changed for {UserId}, IP: {IpAddress}, Method: {Method}, Device: {Device}",
                     verificationResponse.User?.Id, userIp, "Token verification", userAgent);
                 return Ok(new { message = PasswordResetSuccessful });
-            }
-            catch (InvalidTokenException ex)
-            {
-                _logger.LogWarning(ex, "Password reset failed: {FailureReason}. IP: {IpAddress}, UserAgent: {UserAgent}", ex.Message, userIp, userAgent);
-                return BadRequest(new { error = ex.Message }); // Or PasswordResetError
             }
             catch (Exception ex)
             {
