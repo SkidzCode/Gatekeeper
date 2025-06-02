@@ -37,20 +37,22 @@ export class UserLoginComponent {
         },
         error: (error) => {
           console.error('Login failed:', error);
-          if (error.status === 429) {
-            // Assuming the server sends a JSON response like { "Message": "Specific message from server" }
-            // The AccountLockedException message is "Account locked. Try again in X minutes."
-            // or "Too many login attempts. Account locked for X minutes."
+          if (error.status === 401 || error.status === 403) {
             if (error.error && error.error.Message) {
               this.errorMessage = error.error.Message;
             } else {
-              // Fallback if the detailed message structure is not as expected
-              this.errorMessage = "You have exceeded the maximum number of login attempts. Please try again after some time.";
+              this.errorMessage = 'Login failed. Please check your username and password, or contact support if you believe your access is restricted.';
+            }
+          } else if (error.status === 429) {
+            if (error.error && error.error.Message) {
+              this.errorMessage = error.error.Message; // This should be the "Account locked..." message
+            } else {
+              this.errorMessage = 'Your account is temporarily locked due to too many failed login attempts. Please try again later.';
             }
           } else {
-            this.errorMessage = "Login failed. Please check your username and password and try again.";
+            this.errorMessage = 'An unexpected error occurred during login. Please try again.';
           }
-        },
+        }
       });
     }
   }

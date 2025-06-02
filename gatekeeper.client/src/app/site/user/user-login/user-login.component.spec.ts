@@ -66,72 +66,88 @@ describe('UserLoginComponent', () => { // Changed describe name to UserLoginComp
 
   it('should display specific lockout message on 429 error with error.error.Message', fakeAsync(() => {
     component.loginForm.controls['identifier'].setValue('testuser');
-    component.loginF.error.Message', fakeAsync(() => {
-+    component.loginForm.controls['identifier'].setValue('testuser');
-+    component.loginForm.controls['password'].setValue('password');
-+
-+    const errorResponse = new HttpErrorResponse({
-+      status: 429,
-+      error: { Message: 'Account locked. Try again in 5 minutes.' }
-+    });
-+    mockAuthService.login.and.returnValue(throwError(() => errorResponse));
-+
-+    component.onSubmit();
-+    tick();
-+
-+    expect(mockAuthService.login).toHaveBeenCalledWith('testuser', 'password');
-+    expect(component.errorMessage).toBe('Account locked. Try again in 5 minutes.');
-+    expect(mockRouter.navigate).not.toHaveBeenCalled();
-+  }));
-+
-+  it('should display default lockout message on 429 error if error.error.Message is missing', fakeAsync(() => {
-+    component.loginForm.controls['identifier'].setValue('testuser');
-+    component.loginForm.controls['password'].setValue('password');
-+
-+    // Simulate a 429 error where the 'Message' might be in a different structure or missing
-+    const errorResponse = new HttpErrorResponse({
-+      status: 429,
-+      error: { someOtherErrorProperty: 'details' } // No 'Message' property here
-+    });
-+    mockAuthService.login.and.returnValue(throwError(() => errorResponse));
-+
-+    component.onSubmit();
-+    tick();
-+
-+    expect(mockAuthService.login).toHaveBeenCalledWith('testuser', 'password');
-+    expect(component.errorMessage).toBe('You have exceeded the maximum number of login attempts. Please try again after some time.');
-+    expect(mockRouter.navigate).not.toHaveBeenCalled();
-+  }));
-+
-+  it('should display generic error message on other error statuses (e.g., 401)', fakeAsync(() => {
-+    component.loginForm.controls['identifier'].setValue('testuser');
-+    component.loginForm.controls['password'].setValue('password');
-+
-+    const errorResponse = new HttpErrorResponse({
-+      status: 401, // Simulate a generic unauthorized error
-+      error: { Message: 'Invalid credentials' } // Server might still send a message
-+    });
-+    mockAuthService.login.and.returnValue(throwError(() => errorResponse));
-+
-+    component.onSubmit();
-+    tick();
-+
-+    expect(mockAuthService.login).toHaveBeenCalledWith('testuser', 'password');
-+    expect(component.errorMessage).toBe('Login failed. Please check your username and password and try again.');
-+    expect(mockRouter.navigate).not.toHaveBeenCalled();
-+  }));
-+
-+   it('should navigate to /portal if user is already logged in (currentUser$ emits)', fakeAsync(() => {
-+    currentUserSubject.next({ id: 1, username: 'test' }); // Simulate user being logged in
-+    tick(); // Allow subscription to process
-+    fixture.detectChanges(); // Re-run change detection if needed after async operation
-+
-+    // This test primarily verifies the constructor/ngOnInit logic for redirection
-+    // If the component is created and user is already logged in, it should navigate.
-+    // Note: This specific check might be more of an integration test of the constructor logic.
-+    // For UserLoginComponent, the primary navigation happens AFTER successful login,
-+    // but the constructor does have a subscription to currentUser$.
-+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/portal']);
-+  }));
-+
-+});
+    component.loginForm.controls['password'].setValue('password');
+
+    const errorResponse = new HttpErrorResponse({
+      status: 429,
+      error: { Message: 'Account locked. Try again in 5 minutes.' }
+    });
+    mockAuthService.login.and.returnValue(throwError(() => errorResponse));
+
+    component.onSubmit();
+    tick();
+
+    expect(mockAuthService.login).toHaveBeenCalledWith('testuser', 'password');
+    expect(component.errorMessage).toBe('Account locked. Try again in 5 minutes.');
+    expect(mockRouter.navigate).not.toHaveBeenCalled();
+  }));
+
+  it('should display default lockout message on 429 error if error.error.Message is missing', fakeAsync(() => {
+    component.loginForm.controls['identifier'].setValue('testuser');
+    component.loginForm.controls['password'].setValue('password');
+
+    // Simulate a 429 error where the 'Message' might be in a different structure or missing
+    const errorResponse = new HttpErrorResponse({
+      status: 429,
+      error: { someOtherErrorProperty: 'details' } // No 'Message' property here
+    });
+    mockAuthService.login.and.returnValue(throwError(() => errorResponse));
+
+    component.onSubmit();
+    tick();
+
+    expect(mockAuthService.login).toHaveBeenCalledWith('testuser', 'password');
+    expect(component.errorMessage).toBe('Your account is temporarily locked due to too many failed login attempts. Please try again later.');
+    expect(mockRouter.navigate).not.toHaveBeenCalled();
+  }));
+
+  it('should display specific message on 401 error with error.error.Message', fakeAsync(() => {
+    component.loginForm.controls['identifier'].setValue('testuser');
+    component.loginForm.controls['password'].setValue('password');
+
+    const errorResponse = new HttpErrorResponse({
+      status: 401,
+      error: { Message: 'Invalid username or password.' }
+    });
+    mockAuthService.login.and.returnValue(throwError(() => errorResponse));
+
+    component.onSubmit();
+    tick();
+
+    expect(mockAuthService.login).toHaveBeenCalledWith('testuser', 'password');
+    expect(component.errorMessage).toBe('Invalid username or password.');
+    expect(mockRouter.navigate).not.toHaveBeenCalled();
+  }));
+
+  it('should display fallback message on 401 error if error.error.Message is missing', fakeAsync(() => {
+    component.loginForm.controls['identifier'].setValue('testuser');
+    component.loginForm.controls['password'].setValue('password');
+
+    const errorResponse = new HttpErrorResponse({
+      status: 401,
+      error: {} // No 'Message' property
+    });
+    mockAuthService.login.and.returnValue(throwError(() => errorResponse));
+
+    component.onSubmit();
+    tick();
+
+    expect(mockAuthService.login).toHaveBeenCalledWith('testuser', 'password');
+    expect(component.errorMessage).toBe('Login failed. Please check your username and password, or contact support if you believe your access is restricted.');
+    expect(mockRouter.navigate).not.toHaveBeenCalled();
+  }));
+
+   it('should navigate to /portal if user is already logged in (currentUser$ emits)', fakeAsync(() => {
+    currentUserSubject.next({ id: 1, username: 'test' }); // Simulate user being logged in
+    tick(); // Allow subscription to process
+    fixture.detectChanges(); // Re-run change detection if needed after async operation
+
+    // This test primarily verifies the constructor/ngOnInit logic for redirection
+    // If the component is created and user is already logged in, it should navigate.
+    // Note: This specific check might be more of an integration test of the constructor logic.
+    // For UserLoginComponent, the primary navigation happens AFTER successful login,
+    // but the constructor does have a subscription to currentUser$.
+    expect(mockRouter.navigate).toHaveBeenCalledWith(['/portal']);
+  }));
+
+});
