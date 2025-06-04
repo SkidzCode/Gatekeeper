@@ -156,22 +156,31 @@ describe('AuthService', () => {
       expect(service.getUser()).toBeNull();
     });
 
-    it('should clear tokens and user even if logout API call fails', () => {
+    it('should clear tokens and user even if logout API call fails', (done) => { // Add done for async
       // Simulate a logged-in state
       store['accessToken'] = mockAuthResponse.accessToken;
       store['refreshToken'] = mockAuthResponse.refreshToken;
       store['currentUser'] = JSON.stringify(mockAuthResponse.user);
 
-      service.logout();
+      service.logout().subscribe({ // Subscribe to handle the observable
+        next: () => fail('should have failed with an error'),
+        error: (err) => {
+          // err will be the HttpErrorResponse object due to how handleError is structured in the service for this path
+          expect(err instanceof HttpErrorResponse).toBeTrue();
+          expect(err.status).toBe(500);
+
+          // Verify localStorage changes after the error is handled
+          expect(localStorage.removeItem).toHaveBeenCalledWith('accessToken');
+          expect(localStorage.removeItem).toHaveBeenCalledWith('refreshToken');
+          expect(localStorage.removeItem).toHaveBeenCalledWith('currentUser');
+          expect(service.getAccessToken()).toBeNull();
+          expect(service.getUser()).toBeNull();
+          done(); // Call done in the error callback
+        }
+      });
 
       const req = httpMock.expectOne('/api/Authentication/logout');
       req.flush({ message: 'Logout failed' }, { status: 500, statusText: 'Server Error' });
-
-      expect(localStorage.removeItem).toHaveBeenCalledWith('accessToken');
-      expect(localStorage.removeItem).toHaveBeenCalledWith('refreshToken');
-      expect(localStorage.removeItem).toHaveBeenCalledWith('currentUser');
-      expect(service.getAccessToken()).toBeNull();
-      expect(service.getUser()).toBeNull();
     });
   });
 
