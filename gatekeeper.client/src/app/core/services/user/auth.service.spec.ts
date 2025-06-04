@@ -19,53 +19,58 @@ interface MockAuthResponse {
 describe('AuthService', () => {
   let service: AuthService;
   let httpMock: HttpTestingController;
-  let getItemSpy: jasmine.Spy;
-  let setItemSpy: jasmine.Spy;
-  let removeItemSpy: jasmine.Spy;
+  // Spies are now directly on localStorage, individual variables like getItemSpy might not be needed
+  // unless used for specific `withArgs` setups not replaced by direct store manipulation.
+  // For this refactor, we assume direct store manipulation for setup.
+
+  let store: { [key: string]: string | null };
 
   const mockUser: User = {
     id: 1,
-    username: 'testuser', // Corrected to username
+    username: 'testuser',
     email: 'test@example.com',
     roles: ['user'],
-    // emailConfirmed removed as it's not in User model
-    // Add other mandatory User fields if any, e.g., firstName, lastName
     firstName: 'Test',
     lastName: 'User',
-    phone: '123-456-7890', // Added phone as it's in User model
-    isActive: true         // Added isActive as it's in User model
+    phone: '123-456-7890',
+    isActive: true
   };
 
   const mockAuthResponse: MockAuthResponse = {
     accessToken: 'fake-access-token',
     refreshToken: 'fake-refresh-token',
     user: mockUser,
-    settings: [], // Assuming empty settings for now
+    settings: [],
     sessionId: 'fake-session-id'
   };
 
   beforeEach(() => {
-    getItemSpy = spyOn(localStorage, 'getItem').and.callFake(() => null);
-    setItemSpy = spyOn(localStorage, 'setItem').and.callFake(() => {});
-    removeItemSpy = spyOn(localStorage, 'removeItem').and.callFake(() => {});
+    store = {}; // Reset store for each test for isolation
+
+    spyOn(localStorage, 'getItem').and.callFake((key: string): string | null => {
+      return store[key] || null;
+    });
+    spyOn(localStorage, 'setItem').and.callFake((key: string, value: string): void => {
+      store[key] = value;
+    });
+    spyOn(localStorage, 'removeItem').and.callFake((key: string): void => {
+      delete store[key];
+    });
+    // Optionally spy on localStorage.clear if the service uses it
+    // spyOn(localStorage, 'clear').and.callFake(() => {
+    //   store = {};
+    // });
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
-      providers: [AuthService] // No LocalStorageService mock needed
+      providers: [AuthService]
     });
     service = TestBed.inject(AuthService);
     httpMock = TestBed.inject(HttpTestingController);
-
-    // Initialize service's internal state by calling its own methods that read from localStorage
-    // This simulates the constructor's behavior or direct calls in a real app scenario.
-    // However, AuthService constructor itself calls getUser(), getAccessToken() which use the spies.
-    // So, spies must be set up BEFORE TestBed.inject(AuthService).
   });
 
   afterEach(() => {
-    httpMock.verify(); // Verify that no unmatched requests are outstanding.
-    // No need to reset localStorageServiceMock
-    // localStorage spies are reset automatically by Jasmine between tests if created with spyOn in beforeEach.
+    httpMock.verify();
   });
 
   it('should be created', () => {
@@ -87,12 +92,15 @@ describe('AuthService', () => {
       expect(req.request.body).toEqual({ identifier: testEmail, password: testPassword });
       req.flush(mockAuthResponse);
 
-      expect(setItemSpy).toHaveBeenCalledWith('accessToken', mockAuthResponse.accessToken);
-      expect(setItemSpy).toHaveBeenCalledWith('refreshToken', mockAuthResponse.refreshToken);
-      expect(setItemSpy).toHaveBeenCalledWith('sessionId', mockAuthResponse.sessionId);
-      expect(setItemSpy).toHaveBeenCalledWith('currentUser', JSON.stringify(mockAuthResponse.user));
-      expect(setItemSpy).toHaveBeenCalledWith('currentSettings', JSON.stringify(mockAuthResponse.settings));
+      // Use localStorage.setItem directly which will use the spy and update the store
+      // Or check the store content directly if setItem spy verification is too broad.
+      expect(localStorage.setItem).toHaveBeenCalledWith('accessToken', mockAuthResponse.accessToken);
+      expect(localStorage.setItem).toHaveBeenCalledWith('refreshToken', mockAuthResponse.refreshToken);
+      expect(localStorage.setItem).toHaveBeenCalledWith('sessionId', mockAuthResponse.sessionId);
+      expect(localStorage.setItem).toHaveBeenCalledWith('currentUser', JSON.stringify(mockAuthResponse.user));
+      expect(localStorage.setItem).toHaveBeenCalledWith('currentSettings', JSON.stringify(mockAuthResponse.settings));
 
+      // These getters will now read from the 'store' via the spied localStorage.getItem
       expect(service.getAccessToken()).toBe(mockAuthResponse.accessToken);
       expect(service.getUser()).toEqual(mockAuthResponse.user);
     });
@@ -110,13 +118,10 @@ describe('AuthService', () => {
       expect(req.request.method).toBe('POST');
       req.flush({ message: 'Invalid credentials' }, errorResponse);
 
-      // setItemSpy for tokens should not have been called after initial setup if error occurs
-      // Count calls precisely if needed, or check specific token calls are absent.
-      // For simplicity, check that current state reflects no login:
-      expect(service.getAccessToken()).toBeNull(); // Assumes getItemSpy returns null for 'accessToken'
-      expect(service.getUser()).toBeNull(); // Assumes getItemSpy returns null for 'currentUser'
+      // Check that tokens were not stored by inspecting the 'store' or spy calls
+      expect(store['accessToken']).toBeUndefined();
+      expect(store['currentUser']).toBeUndefined();
       expect(actualError).toBeTruthy();
-      // The error returned by handleError is the HttpErrorResponse itself
       expect(actualError instanceof HttpErrorResponse).toBeTrue();
       expect(actualError.status).toBe(401);
     }); // Closes it('should handle login error...')
@@ -124,50 +129,47 @@ describe('AuthService', () => {
 
   describe('logout', () => {
     it('should call logoutCurrentSession, clear tokens and user on logout', () => {
-      // Simulate a logged-in state
-      getItemSpy.withArgs('accessToken').and.returnValue(mockAuthResponse.accessToken);
-      getItemSpy.withArgs('refreshToken').and.returnValue(mockAuthResponse.refreshToken);
-      service = TestBed.inject(AuthService); // Re-inject to pick up new getItem state for constructor
+      // Simulate a logged-in state by populating the store
+      store['accessToken'] = mockAuthResponse.accessToken;
+      store['refreshToken'] = mockAuthResponse.refreshToken;
+      store['currentUser'] = JSON.stringify(mockAuthResponse.user); // User also needs to be in store for some checks
+      // service = TestBed.inject(AuthService); // No re-injection needed as store is read dynamically
 
-      // Spy on logoutCurrentSession which is called by logout()
-      // Since logoutCurrentSession is private, we test the public logout() effects.
-      // We expect logout() to eventually call clearTokens and clearUser.
+      service.logout();
 
-      service.logout(); // This is void
-
-      // logout() calls logoutCurrentSession().subscribe().
-      // The .tap() and .catchError() in logoutCurrentSession handle clearing.
       const req = httpMock.expectOne('/api/Authentication/logout');
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ token: mockAuthResponse.refreshToken });
-      req.flush({ message: 'Logged out successfully' }); // Simulate successful API response
+      expect(req.request.body).toEqual({ token: mockAuthResponse.refreshToken }); // Uses refreshToken from store
+      req.flush({ message: 'Logged out successfully' });
 
-      expect(removeItemSpy).toHaveBeenCalledWith('accessToken');
-      expect(removeItemSpy).toHaveBeenCalledWith('refreshToken');
-      // removeItemSpy is called twice for 'refreshToken' in clearTokens(), once for 'accessToken' and once for 'refreshToken'.
-      // This is a bug in AuthService's clearTokens: localStorage.removeItem('refreshToken'); is repeated.
-      // The test will reflect this actual behavior.
-      expect(removeItemSpy.calls.allArgs()).toContain(['refreshToken']);
-      expect(removeItemSpy).toHaveBeenCalledWith('currentUser');
-      // expect(removeItemSpy).toHaveBeenCalledWith('sessionId'); // sessionId is NOT cleared by clearTokens
+      // removeItemSpy is now just spyOn(localStorage, 'removeItem')
+      expect(localStorage.removeItem).toHaveBeenCalledWith('accessToken');
+      expect(localStorage.removeItem).toHaveBeenCalledWith('refreshToken');
+      // The bug of duplicate removeItem('refreshToken') call in service.clearTokens() would still be reflected here.
+      // To be precise:
+      // expect(localStorage.removeItem.calls.allArgs()).toContain(['refreshToken']);
+      expect(localStorage.removeItem).toHaveBeenCalledWith('currentUser');
+      // expect(localStorage.removeItem).toHaveBeenCalledWith('sessionId'); // sessionId is NOT cleared by clearTokens
 
+      // These getters will now read from the updated 'store'
       expect(service.getAccessToken()).toBeNull();
       expect(service.getUser()).toBeNull();
     });
 
     it('should clear tokens and user even if logout API call fails', () => {
-      getItemSpy.withArgs('accessToken').and.returnValue(mockAuthResponse.accessToken);
-      getItemSpy.withArgs('refreshToken').and.returnValue(mockAuthResponse.refreshToken);
-      service = TestBed.inject(AuthService);
+      // Simulate a logged-in state
+      store['accessToken'] = mockAuthResponse.accessToken;
+      store['refreshToken'] = mockAuthResponse.refreshToken;
+      store['currentUser'] = JSON.stringify(mockAuthResponse.user);
 
       service.logout();
 
       const req = httpMock.expectOne('/api/Authentication/logout');
       req.flush({ message: 'Logout failed' }, { status: 500, statusText: 'Server Error' });
 
-      expect(removeItemSpy).toHaveBeenCalledWith('accessToken');
-      expect(removeItemSpy).toHaveBeenCalledWith('refreshToken');
-      expect(removeItemSpy).toHaveBeenCalledWith('currentUser');
+      expect(localStorage.removeItem).toHaveBeenCalledWith('accessToken');
+      expect(localStorage.removeItem).toHaveBeenCalledWith('refreshToken');
+      expect(localStorage.removeItem).toHaveBeenCalledWith('currentUser');
       expect(service.getAccessToken()).toBeNull();
       expect(service.getUser()).toBeNull();
     });
@@ -179,14 +181,13 @@ describe('AuthService', () => {
       refreshToken: 'new-fake-refresh-token',
       user: mockUser, // Assuming user details don't change on refresh for this test
       settings: [],
-      sessionId: 'new-fake-session-id' // Session ID might also be refreshed
+      sessionId: 'new-fake-session-id'
     };
 
     it('should send a POST request to "api/Authentication/refresh-token" and update tokens on success', () => {
-      getItemSpy.withArgs('refreshToken').and.returnValue(mockAuthResponse.refreshToken);
-      // service.loadInitialAuthState(); // Not needed, getItemSpy handles initial state.
-      service = TestBed.inject(AuthService);
-
+      // Simulate initial state: a refresh token exists
+      store['refreshToken'] = mockAuthResponse.refreshToken;
+      // service = TestBed.inject(AuthService); // Not needed, store is dynamic
 
       service.refreshToken().subscribe(response => {
         expect(response.accessToken).toBe(newMockAuthResponse.accessToken);
@@ -194,32 +195,28 @@ describe('AuthService', () => {
 
       const req = httpMock.expectOne('/api/Authentication/refresh-token');
       expect(req.request.method).toBe('POST');
-      // The actual service sends { refreshToken: string }
-      expect(req.request.body).toEqual({ refreshToken: mockAuthResponse.refreshToken });
+      expect(req.request.body).toEqual({ refreshToken: mockAuthResponse.refreshToken }); // Uses refreshToken from store
 
-      // The actual service's AuthResponse for refresh does not include user/settings,
-      // but the tap operator in refreshToken() calls setTokens, setUser, setSettings.
-      // This means the flush below should match the actual API response,
-      // and then we test that setTokens etc. were called with the new data.
-      // The AuthResponse interface in AuthService.ts is for the whole object.
-      // Let's assume the refresh endpoint returns the full AuthResponse for now.
-      req.flush(newMockAuthResponse);
+      req.flush(newMockAuthResponse); // Simulate API response
 
-      expect(setItemSpy).toHaveBeenCalledWith('accessToken', newMockAuthResponse.accessToken);
-      expect(setItemSpy).toHaveBeenCalledWith('refreshToken', newMockAuthResponse.refreshToken);
-      expect(setItemSpy).toHaveBeenCalledWith('sessionId', newMockAuthResponse.sessionId);
-      // User and settings might be updated if the refresh token response includes them
-      expect(setItemSpy).toHaveBeenCalledWith('currentUser', JSON.stringify(newMockAuthResponse.user));
-      expect(setItemSpy).toHaveBeenCalledWith('currentSettings', JSON.stringify(newMockAuthResponse.settings));
+      // Check that setItem was called via the spy, which updates the 'store'
+      expect(localStorage.setItem).toHaveBeenCalledWith('accessToken', newMockAuthResponse.accessToken);
+      expect(localStorage.setItem).toHaveBeenCalledWith('refreshToken', newMockAuthResponse.refreshToken);
+      expect(localStorage.setItem).toHaveBeenCalledWith('sessionId', newMockAuthResponse.sessionId);
+      expect(localStorage.setItem).toHaveBeenCalledWith('currentUser', JSON.stringify(newMockAuthResponse.user));
+      expect(localStorage.setItem).toHaveBeenCalledWith('currentSettings', JSON.stringify(newMockAuthResponse.settings));
+
+      // Verify by reading from service, which reads from 'store'
       expect(service.getAccessToken()).toBe(newMockAuthResponse.accessToken);
     });
 
     it('should handle refresh token failure (e.g. API error)', () => {
-      getItemSpy.withArgs('refreshToken').and.returnValue(mockAuthResponse.refreshToken);
-      getItemSpy.withArgs('accessToken').and.returnValue(mockAuthResponse.accessToken); // User initially logged in
-      service = TestBed.inject(AuthService);
+      // Simulate initial state: access and refresh tokens exist
+      store['refreshToken'] = mockAuthResponse.refreshToken;
+      store['accessToken'] = mockAuthResponse.accessToken;
+      // service = TestBed.inject(AuthService);
 
-      expect(service.getAccessToken()).toBeTruthy(); // Pre-condition
+      expect(service.getAccessToken()).toBeTruthy(); // Pre-condition: token exists
 
       service.refreshToken().subscribe({
         next: () => fail('should have failed to refresh token'),
@@ -232,100 +229,83 @@ describe('AuthService', () => {
       const req = httpMock.expectOne('/api/Authentication/refresh-token');
       req.flush({ message: 'Invalid refresh token' }, { status: 401, statusText: 'Unauthorized' });
 
-      // In case of refresh failure, the service does not automatically logout/clear tokens.
-      // This behavior might need review in the AuthService itself.
-      // Based on current AuthService.refreshToken, it just lets the error propagate.
-      // So, tokens would NOT be cleared automatically by refreshToken() itself on error.
-      // Let's verify this:
-      expect(removeItemSpy).not.toHaveBeenCalledWith('accessToken'); // No automatic logout
-      expect(service.getAccessToken()).toBe(mockAuthResponse.accessToken); // Token still there
+      // Check that tokens were not cleared automatically
+      expect(localStorage.removeItem).not.toHaveBeenCalledWith('accessToken');
+      expect(service.getAccessToken()).toBe(mockAuthResponse.accessToken); // Token still there in store
     });
 
     it('should return an error observable if no refresh token is present in storage', (done) => {
-      getItemSpy.withArgs('refreshToken').and.returnValue(null);
-      service = TestBed.inject(AuthService); // Re-inject to pick up this specific spy state
+      // store['refreshToken'] is already null/undefined as store is {} initially
+      // service = TestBed.inject(AuthService);
 
       service.refreshToken().subscribe({
         next: () => fail('should not have attempted refresh and emitted value'),
-        error: (errMessage) => { // Error is string 'No refresh token stored.'
+        error: (errMessage) => {
           expect(errMessage).toBe('No refresh token stored.');
           done();
         }
       });
-      httpMock.expectNone('/api/Authentication/refresh-token');
-      expect(service.getAccessToken()).toBeNull(); // No change to access token status
+      httpMock.expectNone('/api/Authentication/refresh-token'); // No HTTP call
+      expect(service.getAccessToken()).toBeNull();
     });
   });
 
-  // This is the start of the corrected Getters and Observables section
   describe('getters', () => {
     it('getAccessToken should return token from localStorage', () => {
-      getItemSpy.withArgs('accessToken').and.returnValue('test-token');
+      store['accessToken'] = 'test-token';
       expect(service.getAccessToken()).toBe('test-token');
     });
 
     it('getRefreshToken should return token from localStorage', () => {
-      getItemSpy.withArgs('refreshToken').and.returnValue('test-refresh-token');
+      store['refreshToken'] = 'test-refresh-token';
       expect(service.getRefreshToken()).toBe('test-refresh-token');
     });
 
     it('getSessionId should return session ID from localStorage', () => {
-      getItemSpy.withArgs('sessionId').and.returnValue('test-session-id');
+      store['sessionId'] = 'test-session-id';
       expect(service.getSessionId()).toBe('test-session-id');
     });
 
     it('getUser should return user from localStorage', () => {
-      getItemSpy.withArgs('currentUser').and.returnValue(JSON.stringify(mockUser));
+      store['currentUser'] = JSON.stringify(mockUser);
       expect(service.getUser()).toEqual(mockUser);
     });
 
     it('getSettings should return settings from localStorage', () => {
-      const originalDate = new Date(); // Use a fixed date for consistent string representation
-      const mockSettingsArray: Setting[] = [{ // Renamed to mockSettingsArray for clarity in this example
-        id: 1,
-        name: 'setting1',
-        settingValue: 'val1',
-        settingValueType: 'string',
-        defaultSettingValue: 'default',
-        createdBy: 1,
-        updatedBy: 1,
-        createdAt: originalDate, // Date object
-        updatedAt: originalDate  // Date object
+      const originalDate = new Date();
+      const mockSettingsArray: Setting[] = [{
+        id: 1, name: 'setting1', settingValue: 'val1', settingValueType: 'string',
+        defaultSettingValue: 'default', createdBy: 1, updatedBy: 1,
+        createdAt: originalDate, updatedAt: originalDate
       }];
+      store['currentSettings'] = JSON.stringify(mockSettingsArray);
 
-      // Simulate localStorage returning stringified dates
-      getItemSpy.withArgs('currentSettings').and.returnValue(JSON.stringify(mockSettingsArray));
+      const retrievedSettings = service.getSettings();
 
-      const retrievedSettings = service.getSettings(); // Returns Setting[] | null, but dates are strings at runtime
-
-      // This is what we expect after JSON.parse (dates as ISO strings)
       const expectedSettings_withStringDates = mockSettingsArray.map(setting => ({
         ...setting,
-        createdAt: originalDate.toISOString(), // String date
-        updatedAt: originalDate.toISOString()  // String date
+        createdAt: originalDate.toISOString(),
+        updatedAt: originalDate.toISOString()
       }));
-
-      // Use 'as any' to tell TypeScript that we are intentionally comparing
-      // with an object that has string dates, matching the runtime behavior.
       expect(retrievedSettings).toEqual(expectedSettings_withStringDates as any);
     });
 
     it('getRoles (derived from getUser) should return user roles if user is available', () => {
-      getItemSpy.withArgs('currentUser').and.returnValue(JSON.stringify(mockUser));
+      store['currentUser'] = JSON.stringify(mockUser);
       let user = service.getUser();
       expect(user?.roles).toEqual(mockUser.roles);
 
-      getItemSpy.withArgs('currentUser').and.returnValue(null);
+      store['currentUser'] = null; // Simulate no user
       user = service.getUser();
-      expect(user?.roles).toBeUndefined();
+      expect(user?.roles).toBeUndefined(); // Or expect(user).toBeNull(); then user?.roles
 
       const userWithoutRoles = { ...mockUser, roles: undefined };
-      getItemSpy.withArgs('currentUser').and.returnValue(JSON.stringify(userWithoutRoles));
+      store['currentUser'] = JSON.stringify(userWithoutRoles);
       user = service.getUser();
       expect(user?.roles).toBeUndefined();
 
       const userWithEmptyRoles = { ...mockUser, roles: [] };
-      getItemSpy.withArgs('currentUser').and.returnValue(JSON.stringify(userWithEmptyRoles));
+      store['currentUser'] = JSON.stringify(userWithEmptyRoles);
       user = service.getUser();
       expect(user?.roles).toEqual([]);
     });
@@ -336,13 +316,12 @@ describe('AuthService', () => {
       const testEmail = 'test@example.com';
       const testPassword = 'password';
       let emissions = 0;
+      // store is empty initially, so service.getAccessToken() called by constructor via loadInitialAuthState will be null.
 
-      // Service is injected in global beforeEach, where getItemSpy for 'accessToken' returns null.
-      // So, currentAccessToken$ initially emits null.
       service.currentAccessToken$.subscribe((token: string | null) => {
         emissions++;
         if (emissions === 1) {
-          expect(token).toBeNull(); // Initial value from BehaviorSubject
+          expect(token).toBeNull(); // Initial: store is empty
         } else if (emissions === 2) {
           expect(token).toBe(mockAuthResponse.accessToken); // After login
         } else if (emissions === 3) {
@@ -354,13 +333,14 @@ describe('AuthService', () => {
       // Login
       service.login(testEmail, testPassword).subscribe();
       const loginReq = httpMock.expectOne('/api/Authentication/login');
-      loginReq.flush(mockAuthResponse);
+      loginReq.flush(mockAuthResponse); // This calls setItem, updates store, triggers observable
 
       // Logout
-      getItemSpy.withArgs('refreshToken').and.returnValue(mockAuthResponse.refreshToken);
+      // refreshToken is needed for logout API call, ensure it's in store
+      store['refreshToken'] = mockAuthResponse.refreshToken;
       service.logout();
       const logoutReq = httpMock.expectOne('/api/Authentication/logout');
-      logoutReq.flush({ message: 'ok' });
+      logoutReq.flush({ message: 'ok' }); // This calls removeItem, updates store, triggers observable
     });
 
     it('currentUser$ should emit user from localStorage on init, after login, and null after logout', (done) => {
@@ -368,15 +348,14 @@ describe('AuthService', () => {
       const testPassword = 'password';
       let emissions = 0;
 
-      const anotherMockUser: User = {...mockUser, id: 2, username: 'anotherUser', email: 'another@example.com', firstName: 'Ano', lastName: 'Ther'}; // Corrected to username
+      const anotherMockUser: User = {...mockUser, id: 2, username: 'anotherUser', email: 'another@example.com', firstName: 'Ano', lastName: 'Ther'};
       const loginResponse: MockAuthResponse = {...mockAuthResponse, user: anotherMockUser, accessToken: 'newAccess', refreshToken: 'newRefresh', sessionId: 'newSession'};
+      // store is empty initially
 
-      // Service is injected in global beforeEach, where getItemSpy for 'currentUser' returns null.
-      // So, currentUser$ initially emits null.
       service.currentUser$.subscribe((user: User | null) => {
         emissions++;
         if (emissions === 1) {
-          expect(user).toBeNull(); // Initial value
+          expect(user).toBeNull(); // Initial
         } else if (emissions === 2) {
           expect(user).toEqual(anotherMockUser); // After login
         } else if (emissions === 3) {
@@ -389,7 +368,7 @@ describe('AuthService', () => {
       const loginReq = httpMock.expectOne('/api/Authentication/login');
       loginReq.flush(loginResponse);
 
-      getItemSpy.withArgs('refreshToken').and.returnValue(loginResponse.refreshToken);
+      store['refreshToken'] = loginResponse.refreshToken; // For logout call
       service.logout();
       const logoutReq = httpMock.expectOne('/api/Authentication/logout');
       logoutReq.flush({ message: 'ok' });
