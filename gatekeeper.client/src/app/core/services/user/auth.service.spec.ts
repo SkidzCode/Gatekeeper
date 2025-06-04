@@ -281,33 +281,33 @@ describe('AuthService', () => {
 
     it('getSettings should return settings from localStorage', () => {
       const originalDate = new Date(); // Use a fixed date for consistent string representation
-      const mockSettings: Setting[] = [{
+      const mockSettingsArray: Setting[] = [{ // Renamed to mockSettingsArray for clarity in this example
         id: 1,
         name: 'setting1',
-        settingValue: 'val1', // Corrected to settingValue
-        // domain, type, subType removed as they are not in Setting model
+        settingValue: 'val1',
         settingValueType: 'string',
         defaultSettingValue: 'default',
         createdBy: 1,
         updatedBy: 1,
-        createdAt: originalDate, // Still a Date object here
-        updatedAt: originalDate  // Still a Date object here
-        // parentId, userId, category are optional
+        createdAt: originalDate, // Date object
+        updatedAt: originalDate  // Date object
       }];
 
-      // This is what getItem will return from localStorage (dates as ISO strings)
-      getItemSpy.withArgs('currentSettings').and.returnValue(JSON.stringify(mockSettings));
+      // Simulate localStorage returning stringified dates
+      getItemSpy.withArgs('currentSettings').and.returnValue(JSON.stringify(mockSettingsArray));
 
-      const retrievedSettings = service.getSettings();
+      const retrievedSettings = service.getSettings(); // Returns Setting[] | null, but dates are strings at runtime
 
-      // Create an expected object that mirrors what JSON.parse would produce from mockSettings
-      const expectedSettings = mockSettings.map(setting => ({
+      // This is what we expect after JSON.parse (dates as ISO strings)
+      const expectedSettings_withStringDates = mockSettingsArray.map(setting => ({
         ...setting,
-        createdAt: originalDate.toISOString(), // Compare with ISO string
-        updatedAt: originalDate.toISOString()  // Compare with ISO string
+        createdAt: originalDate.toISOString(), // String date
+        updatedAt: originalDate.toISOString()  // String date
       }));
 
-      expect(retrievedSettings).toEqual(expectedSettings);
+      // Use 'as any' to tell TypeScript that we are intentionally comparing
+      // with an object that has string dates, matching the runtime behavior.
+      expect(retrievedSettings).toEqual(expectedSettings_withStringDates as any);
     });
 
     it('getRoles (derived from getUser) should return user roles if user is available', () => {
