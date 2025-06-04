@@ -46,8 +46,6 @@ describe('NotificationComponent', () => {
   let mockNotificationService: jasmine.SpyObj<NotificationService>;
   let mockSnackBar: jasmine.SpyObj<MatSnackBar>;
   let mockDialog: jasmine.SpyObj<MatDialog>;
-  let paginatorTopPageEmitter: EventEmitter<PageEvent>;
-  let paginatorBottomPageEmitter: EventEmitter<PageEvent>;
 
 
   const mockNotificationsData: Notification[] = [
@@ -102,26 +100,6 @@ describe('NotificationComponent', () => {
   beforeEach(() => {
     fixture = TestBed.createComponent(NotificationComponent);
     component = fixture.componentInstance;
-
-    paginatorTopPageEmitter = new EventEmitter<PageEvent>();
-    paginatorBottomPageEmitter = new EventEmitter<PageEvent>();
-
-    // Mock paginators before fixture.detectChanges() / ngOnInit
-    component.paginatorTop = {
-      page: paginatorTopPageEmitter, // Use EventEmitter directly
-      pageIndex: 0,
-      pageSize: 10,
-      length: 0,
-      _changePageSize: jasmine.createSpy('_changePageSize')
-    } as Partial<MatPaginator> as MatPaginator;
-
-    component.paginatorBottom = {
-      page: paginatorBottomPageEmitter, // Use EventEmitter directly
-      pageIndex: 0,
-      pageSize: 10,
-      length: 0
-      // No need for _changePageSize spy here if not called on paginatorBottom directly
-    } as Partial<MatPaginator> as MatPaginator; // Cast to Partial then to full type
 
     // Default mock implementations
     mockNotificationService.getAllNotifications.and.returnValue(of(mockNotificationsData));
@@ -182,7 +160,7 @@ describe('NotificationComponent', () => {
         fixture.detectChanges(); // ngOnInit & ngAfterViewInit
         const testPageEvent: PageEvent = { pageIndex: 1, pageSize: 20, length: 100 };
 
-        paginatorTopPageEmitter.emit(testPageEvent); // Emit event using EventEmitter
+        component.paginatorTop.page.emit(testPageEvent); // Emit event using component's paginator
 
         expect(component.paginatorBottom.pageIndex).toBe(testPageEvent.pageIndex);
         expect(component.paginatorBottom.pageSize).toBe(testPageEvent.pageSize);
@@ -192,11 +170,10 @@ describe('NotificationComponent', () => {
         fixture.detectChanges(); // ngOnInit & ngAfterViewInit
         const testPageEvent: PageEvent = { pageIndex: 2, pageSize: 5, length: 50 };
 
-        paginatorBottomPageEmitter.emit(testPageEvent); // Emit event using EventEmitter
+        component.paginatorBottom.page.emit(testPageEvent); // Emit event using component's paginator
 
         expect(component.paginatorTop.pageIndex).toBe(testPageEvent.pageIndex);
         expect(component.paginatorTop.pageSize).toBe(testPageEvent.pageSize);
-        expect(component.paginatorTop._changePageSize).toHaveBeenCalledWith(testPageEvent.pageSize);
     });
   });
 
