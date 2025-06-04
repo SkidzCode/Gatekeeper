@@ -4,12 +4,20 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { PageEvent } from '@angular/material/paginator'; // Import PageEvent
+import { ReactiveFormsModule } from '@angular/forms';
 
 // Import services to be mocked
 import { NotificationService } from '../../../core/services/site/notification.service';
+import { NotificationTemplateService } from '../../../core/services/site/notification-template.service';
+import { UserService } from '../../../core/services/user/user.service';
+import { AuthService } from '../../../core/services/user/auth.service';
 
 // Import the component to be tested
 import { NotificationComponent } from './notification.component';
+import { NotificationSendComponent } from '../notification-send/notification-send.component';
+import { TemplatePreviewIframeComponent } from '../template-preview-iframe/template-preview-iframe.component';
+import { NotificationTemplatesComponent } from '../notification-templates/notification-templates.component';
+
 
 // Import models - Corrected path
 import { Notification } from '../../../../../src/app/shared/models/notification.model'; // Adjusted path
@@ -48,7 +56,12 @@ describe('NotificationComponent', () => {
     mockDialog = jasmine.createSpyObj('MatDialog', ['open']);
 
     TestBed.configureTestingModule({
-      declarations: [NotificationComponent],
+      declarations: [
+        NotificationComponent,
+        NotificationSendComponent,
+        TemplatePreviewIframeComponent,
+        NotificationTemplatesComponent
+      ],
       imports: [
         HttpClientTestingModule,
         NoopAnimationsModule,
@@ -57,12 +70,16 @@ describe('NotificationComponent', () => {
         MatSnackBarModule,
         MatDialogModule,
         MatTabsModule, // Added for tab change
-        MatCardModule // Added
+        MatCardModule, // Added
+        ReactiveFormsModule
       ],
       providers: [
         { provide: NotificationService, useValue: mockNotificationService },
         { provide: MatSnackBar, useValue: mockSnackBar },
-        { provide: MatDialog, useValue: mockDialog }
+        { provide: MatDialog, useValue: mockDialog },
+        NotificationTemplateService,
+        UserService,
+        AuthService
       ]
     }).compileComponents();
   }));

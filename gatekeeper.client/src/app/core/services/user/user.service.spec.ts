@@ -260,8 +260,11 @@ describe('UserService', () => {
       // Note: updateUserWithImage uses the generic handleError from the service.
       service.updateUserWithImage(mockFormData).subscribe({
         next: () => fail('should have failed with an error'),
-        error: (error: string) => {
-          expect(error).toContain('Image update failed');
+        error: (errorResponse: HttpErrorResponse) => { // Changed type to HttpErrorResponse
+          // The flushed body is { error: "Image update failed" }
+          // So, errorResponse.error is { error: "Image update failed" }
+          // And errorResponse.error.error is "Image update failed"
+          expect(errorResponse.error.error).toBe(errorMessage); // Adjusted assertion
         }
       });
 

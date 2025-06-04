@@ -17,7 +17,8 @@ export class AdminGuard implements CanActivate {
     return this.authService.currentUser$.pipe(
       take(1), // unsubscribe automatically after the first emission
       map(user => {
-        const isAdmin = user?.roles.includes('Admin') || false;
+        // Safely check user, user.roles, ensure it's an array, then call includes
+        const isAdmin = !!(user && user.roles && Array.isArray(user.roles) && user.roles.includes('Admin'));
         if (!isAdmin) {
           // If the user isn’t an admin, redirect or do something else
           this.router.navigate(['/forbidden']); // or wherever you want to redirect
