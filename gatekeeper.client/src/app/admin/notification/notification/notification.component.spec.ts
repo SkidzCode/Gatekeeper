@@ -20,6 +20,7 @@ import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatCardModule } from '@angular/material/card'; // Added
 import { EventEmitter } from '@angular/core'; // Import EventEmitter
 
 import { of, throwError, Subject } from 'rxjs';
@@ -55,7 +56,8 @@ describe('NotificationComponent', () => {
         MatPaginatorModule,
         MatSnackBarModule,
         MatDialogModule,
-        MatTabsModule // Added for tab change
+        MatTabsModule, // Added for tab change
+        MatCardModule // Added
       ],
       providers: [
         { provide: NotificationService, useValue: mockNotificationService },

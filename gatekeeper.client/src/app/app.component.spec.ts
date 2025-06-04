@@ -1,7 +1,7 @@
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AppComponent } from './app.component';
-import { ThemeSwitchComponent } from '../shared/theme/theme-switch/theme-switch.component'; // Added
+import { ThemeSwitchComponent } from './shared/theme/theme-switch/theme-switch.component'; // Added
 
 describe('AppComponent', () => {
   let component: AppComponent;

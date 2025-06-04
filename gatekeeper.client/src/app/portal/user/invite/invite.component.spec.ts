@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { MatCardModule } from '@angular/material/card';
 
 import { InviteComponent } from './invite.component';
 
@@ -8,7 +10,8 @@ describe('InviteComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [InviteComponent]
+      declarations: [InviteComponent],
+      imports: [HttpClientTestingModule, MatCardModule]
     })
     .compileComponents();
 
