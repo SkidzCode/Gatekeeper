@@ -130,10 +130,8 @@ export class AuthService {
     );
   }
 
-  logout(): void {
-    this.logoutCurrentSession().subscribe(message => {
-      console.log(message);
-    });
+  logout(): Observable<{ message: string }> { // Changed return type
+    return this.logoutCurrentSession(); // Return the observable
   }
 
   getAccessToken(): string | null {
