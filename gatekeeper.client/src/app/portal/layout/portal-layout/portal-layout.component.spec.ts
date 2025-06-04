@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { LoggedInComponent } from './portal-layout.component';
+import { PortalLayoutComponent } from './portal-layout.component';
 
-describe('LoggedInComponent', () => {
-  let component: LoggedInComponent;
-  let fixture: ComponentFixture<LoggedInComponent>;
+describe('PortalLayoutComponent', () => {
+  let component: PortalLayoutComponent;
+  let fixture: ComponentFixture<PortalLayoutComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [LoggedInComponent]
+      declarations: [PortalLayoutComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(LoggedInComponent);
+    fixture = TestBed.createComponent(PortalLayoutComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
