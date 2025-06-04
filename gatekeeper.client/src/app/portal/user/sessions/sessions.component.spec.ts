@@ -18,7 +18,15 @@ describe('SessionsComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [SessionsComponent],
-      imports: [HttpClientTestingModule, MatCardModule]
+      imports: [
+        HttpClientTestingModule,
+        MatCardModule,
+        MatIconModule,
+        NoopAnimationsModule,
+        MatDividerModule,
+        MatButtonModule,
+        RouterTestingModule
+      ]
     })
     .compileComponents();
 

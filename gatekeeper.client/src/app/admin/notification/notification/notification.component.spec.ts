@@ -29,6 +29,12 @@ import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card'; // Added
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
+import { MatInputModule } from '@angular/material/input';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatListModule } from '@angular/material/list';
 import { EventEmitter } from '@angular/core'; // Import EventEmitter
 
 import { of, throwError, Subject } from 'rxjs';
@@ -71,7 +77,13 @@ describe('NotificationComponent', () => {
         MatDialogModule,
         MatTabsModule, // Added for tab change
         MatCardModule, // Added
-        ReactiveFormsModule
+        ReactiveFormsModule,
+        MatFormFieldModule,
+        MatSelectModule,
+        MatInputModule,
+        MatDatepickerModule,
+        MatNativeDateModule,
+        MatListModule
       ],
       providers: [
         { provide: NotificationService, useValue: mockNotificationService },

@@ -20,7 +20,18 @@ describe('AdminSettingsListComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [AdminSettingsListComponent],
-      imports: [HttpClientTestingModule, MatCardModule]
+      imports: [
+        HttpClientTestingModule,
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule,
+        FormsModule,
+        NoopAnimationsModule,
+        MatSnackBarModule,
+        MatButtonModule,
+        MatTableModule,
+        RouterTestingModule
+      ]
     })
     .compileComponents();
 
