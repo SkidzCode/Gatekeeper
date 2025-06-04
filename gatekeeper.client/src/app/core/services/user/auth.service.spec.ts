@@ -135,7 +135,7 @@ describe('AuthService', () => {
       store['currentUser'] = JSON.stringify(mockAuthResponse.user); // User also needs to be in store for some checks
       // service = TestBed.inject(AuthService); // No re-injection needed as store is read dynamically
 
-      service.logout();
+      service.logout().subscribe();
 
       const req = httpMock.expectOne('/api/Authentication/logout');
       expect(req.request.method).toBe('POST');
@@ -347,7 +347,7 @@ describe('AuthService', () => {
       // Logout
       // refreshToken is needed for logout API call, ensure it's in store
       store['refreshToken'] = mockAuthResponse.refreshToken;
-      service.logout();
+      service.logout().subscribe();
       const logoutReq = httpMock.expectOne('/api/Authentication/logout');
       logoutReq.flush({ message: 'ok' }); // This calls removeItem, updates store, triggers observable
     });
@@ -378,7 +378,7 @@ describe('AuthService', () => {
       loginReq.flush(loginResponse);
 
       store['refreshToken'] = loginResponse.refreshToken; // For logout call
-      service.logout();
+      service.logout().subscribe();
       const logoutReq = httpMock.expectOne('/api/Authentication/logout');
       logoutReq.flush({ message: 'ok' });
     });

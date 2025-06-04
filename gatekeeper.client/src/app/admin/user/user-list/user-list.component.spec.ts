@@ -22,7 +22,20 @@ describe('UserListComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [UserListComponent],
-      imports: [HttpClientTestingModule, MatCardModule]
+      imports: [
+        HttpClientTestingModule,
+        MatCardModule,
+        MatDividerModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatTableModule,
+        MatSortModule,
+        MatIconModule,
+        MatButtonModule,
+        MatPaginatorModule,
+        NoopAnimationsModule,
+        RouterTestingModule
+      ]
     })
     .compileComponents();
 

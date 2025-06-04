@@ -4,7 +4,7 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { PageEvent } from '@angular/material/paginator'; // Import PageEvent
-import { ReactiveFormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 // Import services to be mocked
 import { NotificationService } from '../../../core/services/site/notification.service';
@@ -35,6 +35,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatListModule } from '@angular/material/list';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { EventEmitter } from '@angular/core'; // Import EventEmitter
 
 import { of, throwError, Subject } from 'rxjs';
@@ -83,7 +84,9 @@ describe('NotificationComponent', () => {
         MatInputModule,
         MatDatepickerModule,
         MatNativeDateModule,
-        MatListModule
+        MatListModule,
+        FormsModule,
+        MatSlideToggleModule
       ],
       providers: [
         { provide: NotificationService, useValue: mockNotificationService },
