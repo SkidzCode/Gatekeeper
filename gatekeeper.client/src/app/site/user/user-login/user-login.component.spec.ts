@@ -9,6 +9,10 @@ import { User } from '../../../shared/models/user.model';
 import { Setting } from '../../../shared/models/setting.model';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { ForgotPasswordComponent } from '../passwords/forgot-password/forgot-password.component';
 
 describe('UserLoginComponent', () => { // Changed describe name to UserLoginComponent
   let component: UserLoginComponent;
@@ -23,10 +27,13 @@ describe('UserLoginComponent', () => { // Changed describe name to UserLoginComp
     mockRouter = jasmine.createSpyObj('Router', ['navigate']);
 
     await TestBed.configureTestingModule({
-      declarations: [UserLoginComponent],
+      declarations: [UserLoginComponent, ForgotPasswordComponent],
       imports: [
         ReactiveFormsModule,
-        CommonModule // Import CommonModule if your template uses things like ngIf, ngFor etc.
+        CommonModule, // Import CommonModule if your template uses things like ngIf, ngFor etc.
+        MatCardModule,
+        MatFormFieldModule,
+        MatInputModule
       ],
       providers: [
         { provide: AuthService, useValue: mockAuthService },
