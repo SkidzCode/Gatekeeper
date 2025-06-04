@@ -1,4 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { MatCardModule } from '@angular/material/card';
+import { RouterTestingModule } from '@angular/router/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { AuthService } from '../../../core/services/user/auth.service';
+import { SessionService } from '../../../core/services/site/session.service';
+import { MatIconModule } from '@angular/material/icon';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatButtonModule } from '@angular/material/button';
 
 import { SessionsComponent } from './sessions.component';
 
@@ -8,7 +17,16 @@ describe('SessionsComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [SessionsComponent]
+      declarations: [SessionsComponent],
+      imports: [
+        HttpClientTestingModule,
+        MatCardModule,
+        MatIconModule,
+        NoopAnimationsModule,
+        MatDividerModule,
+        MatButtonModule,
+        RouterTestingModule
+      ]
     })
     .compileComponents();
 
