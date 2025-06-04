@@ -71,14 +71,14 @@ describe('UserService', () => {
       const errorMessage = 'Error fetching users';
       service.getUsers().subscribe({
         next: () => fail('should have failed with an error'),
-        error: (error: HttpErrorResponse) => {
-          expect(error.status).toBe(500);
-          expect(error.statusText).toBe('Server Error');
+        error: (error: string) => { // Changed type to string
+          expect(error).toBe(errorMessage); // Assert the string message
         }
       });
 
       const req = httpMock.expectOne(`${baseUrl}/users`); // Corrected endpoint
-      req.flush({ message: errorMessage }, { status: 500, statusText: 'Server Error' });
+      // Ensure the flushed error body matches what handleError expects for error.error.error
+      req.flush({ error: errorMessage }, { status: 500, statusText: 'Server Error' });
     });
   });
 

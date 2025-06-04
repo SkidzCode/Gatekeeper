@@ -280,6 +280,7 @@ describe('AuthService', () => {
     });
 
     it('getSettings should return settings from localStorage', () => {
+      const originalDate = new Date(); // Use a fixed date for consistent string representation
       const mockSettings: Setting[] = [{
         id: 1,
         name: 'setting1',
@@ -289,12 +290,24 @@ describe('AuthService', () => {
         defaultSettingValue: 'default',
         createdBy: 1,
         updatedBy: 1,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: originalDate, // Still a Date object here
+        updatedAt: originalDate  // Still a Date object here
         // parentId, userId, category are optional
       }];
+
+      // This is what getItem will return from localStorage (dates as ISO strings)
       getItemSpy.withArgs('currentSettings').and.returnValue(JSON.stringify(mockSettings));
-      expect(service.getSettings()).toEqual(mockSettings);
+
+      const retrievedSettings = service.getSettings();
+
+      // Create an expected object that mirrors what JSON.parse would produce from mockSettings
+      const expectedSettings = mockSettings.map(setting => ({
+        ...setting,
+        createdAt: originalDate.toISOString(), // Compare with ISO string
+        updatedAt: originalDate.toISOString()  // Compare with ISO string
+      }));
+
+      expect(retrievedSettings).toEqual(expectedSettings);
     });
 
     it('getRoles (derived from getUser) should return user roles if user is available', () => {
