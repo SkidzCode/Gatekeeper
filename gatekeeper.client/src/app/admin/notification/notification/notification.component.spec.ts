@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
+import { ComponentFixture, TestBed, waitForAsync, fakeAsync, tick } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -130,15 +130,16 @@ describe('NotificationComponent', () => {
       expect(component.loadingNotifications).toBeFalse();
     });
 
-    it('should set loadingNotifications to false and show snackbar on error', () => {
+    it('should set loadingNotifications to false and show snackbar on error', fakeAsync(() => { // Added fakeAsync
       const errorResponse = new Error('Failed to fetch');
       mockNotificationService.getAllNotifications.and.returnValue(throwError(() => errorResponse));
 
       component.fetchNotificationLog();
+      tick(); // Added tick
 
       expect(component.loadingNotifications).toBeFalse();
       expect(mockSnackBar.open).toHaveBeenCalledWith('Error fetching notifications', 'OK', { duration: 3000 });
-    });
+    }));
 
     it('should set loadingNotifications to true while fetching', () => {
       mockNotificationService.getAllNotifications.and.returnValue(new Subject<Notification[]>()); // Keep it pending

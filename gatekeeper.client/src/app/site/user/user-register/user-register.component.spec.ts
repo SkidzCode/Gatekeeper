@@ -193,7 +193,7 @@ describe('UserRegisterComponent', () => {
     // We'll call fixture.detectChanges() and tick() within each relevant validation test's fakeAsync block
     // after setting control values.
 
-    beforeEach(() => {
+    beforeEach(fakeAsync(() => {
       // Ensure a default state for ActivatedRoute for these validation tests if needed,
       // though most control validations are independent of route params.
       // Form is initialized after first detectChanges in 'it' block or a more specific beforeEach.
@@ -201,7 +201,7 @@ describe('UserRegisterComponent', () => {
       mockActivatedRoute.setParams({ token: 'test-token' }); // Default setup for validation context
       fixture.detectChanges(); // Create form by calling ngOnInit
       tick(); // Settle ngOnInit async calls
-    });
+    }));
 
     describe('firstName control', () => {
       it('should be invalid when empty (required validator)', () => {
