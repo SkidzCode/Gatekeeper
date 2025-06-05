@@ -421,7 +421,7 @@ describe('UserRegisterComponent', () => {
       it('should be invalid if not checked (requiredTrue validator)', () => {
         const control = component.registerForm.get('userLicAgreement');
         control?.setValue(false);
-        expect(control?.hasError('requiredtrue')).toBeTrue();
+        expect(control?.hasError('required')).toBeTrue();
       });
 
       it('should be valid if checked', () => {
