@@ -47,7 +47,7 @@ export class UserProfileComponent implements OnInit {
    * Retrieves the current user from localStorage.
    * @returns The User object if found, otherwise null.
    */
-  private getUser(): User | null {
+  public getUser(): User | null {
     const userJson = localStorage.getItem('currentUser');
     return userJson ? JSON.parse(userJson) : null;
   }

@@ -12,6 +12,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 
 import { UserProfileComponent } from './user-profile.component';
+import { User } from '../../../shared/models/user.model';
 
 describe('UserProfileComponent', () => {
   let component: UserProfileComponent;
@@ -56,7 +57,7 @@ describe('UserProfileComponent', () => {
 
   it('should call updateUserWithImage on saveUser and handle success', () => {
     // Mock current user for the component
-    const mockUser = {
+    const mockUser: User = {
       id: 1, firstName: 'Test', lastName: 'User', username: 'testuser',
       email: 'test@example.com', phone: '1234567890', roles: ['User'], isActive: true
     };
@@ -64,7 +65,11 @@ describe('UserProfileComponent', () => {
     component.ngOnInit(); // Initialize form with user data
     fixture.detectChanges();
 
-    // Ensure form is valid
+    // Verify that ngOnInit patched the form with mockUser data
+    expect(component.profileForm.value.firstName).toBe(mockUser.firstName);
+    expect(component.profileForm.value.email).toBe(mockUser.email);
+
+    // Now, update the form for the saveUser test
     component.profileForm.patchValue({
       firstName: 'UpdatedFirst',
       lastName: 'UpdatedLast',
