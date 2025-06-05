@@ -1,8 +1,9 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors, AsyncValidatorFn } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, ParamMap, Params, convertToParamMap } from '@angular/router'; // Added Params, convertToParamMap
 import { AuthService } from '../../../core/services/user/auth.service';
 import { InviteService } from '../../../core/services/user/invite.service';
+import { WindowRef } from '../../../core/services/utils/window-ref.service';
 import { Observable, of, Subscription } from 'rxjs';
 import { map, catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 
@@ -40,10 +41,13 @@ export class UserRegisterComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private inviteService: InviteService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private windowRef: WindowRef
   ) {
-    this.route.queryParams.subscribe(params => {
-      this.token = params['token'] ? decodeURIComponent(params['token']) : '';
+    this.route.queryParams.subscribe((params: Params) => { // Expect Params
+      const paramMap: ParamMap = convertToParamMap(params); // Convert to ParamMap
+      const tokenParam = paramMap.get('token');
+      this.token = tokenParam ? decodeURIComponent(tokenParam) : '';
     });
   }
 
@@ -192,7 +196,7 @@ export class UserRegisterComponent implements OnInit, OnDestroy {
       username: this.registerForm.get('username')?.value,
       phone: this.registerForm.get('phone')?.value,
       password: this.registerForm.get('newPassword')?.value,
-      website: window.location.origin,
+      website: this.windowRef.nativeWindow.location.origin,
       userLicAgreement: this.registerForm.get('userLicAgreement')?.value,
       receiveEmails: this.registerForm.get('receiveEmails')?.value,
       token: this.token
