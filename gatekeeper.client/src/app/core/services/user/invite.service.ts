@@ -27,13 +27,15 @@ interface CheckInviteRequiredResponse {
   _requiresInvite: boolean;
 }
 
+import { WindowRef } from '../utils/window-ref.service';
+
 @Injectable({
   providedIn: 'root'
 })
 export class InviteService {
   private baseUrl = '/api/Invite';
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private windowRef: WindowRef) { }
 
   /**
    * Sends an invite to a user via POST /api/Invite/SendInvite
@@ -41,7 +43,7 @@ export class InviteService {
    * @returns An observable with { message: string, inviteId: number } upon success
    */
   sendInvite(invite: Invite): Observable<{ message: string; inviteId: number }> {
-    invite.website = window.location.origin;
+    invite.website = this.windowRef.nativeWindow.location.origin;
     return this.http.post<{ message: string; inviteId: number }>(
       `${this.baseUrl}/SendInvite`, invite
     )

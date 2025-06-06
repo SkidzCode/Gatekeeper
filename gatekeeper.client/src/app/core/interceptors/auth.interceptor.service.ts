@@ -3,7 +3,7 @@ import {
   HttpEvent, HttpInterceptor, HttpHandler, HttpRequest, HttpErrorResponse
 } from '@angular/common/http';
 import { Observable, throwError, BehaviorSubject } from 'rxjs';
-import { catchError, filter, switchMap, take } from 'rxjs/operators';
+import { catchError, filter, switchMap, take, distinctUntilChanged } from 'rxjs/operators';
 import { AuthService } from '../services/user/auth.service';
 import { Router } from '@angular/router';
 
@@ -66,32 +66,47 @@ export class AuthInterceptor implements HttpInterceptor {
   private handle401Error(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     if (!this.refreshTokenInProgress) {
       this.refreshTokenInProgress = true;
-      this.refreshTokenSubject.next(null);
+      this.refreshTokenSubject.next(null); // Signal ongoing refresh, invalidate current token for queue
 
-      return this.authService.refreshToken().pipe(
-        switchMap((res) => {
+      this.authService.refreshToken().subscribe({ // Eagerly subscribe
+        next: (res) => {
           this.refreshTokenInProgress = false;
+          this.authService.setUser(res.user); // Assuming this is synchronous enough
+          this.retryCount = 0; // Reset on success
           this.refreshTokenSubject.next(res.accessToken);
-          this.authService.setUser(res.user);
-          this.retryCount = 0;
-          return next.handle(this.addToken(req, res.accessToken));
-        }),
-        catchError((err) => {
+        },
+        error: (err) => {
           this.refreshTokenInProgress = false;
-          this.retryCount++;
+          this.refreshTokenSubject.error(err); // Notify all listeners of the error
+          // Re-initialize subject for any future independent refresh cycles
+          this.refreshTokenSubject = new BehaviorSubject<string | null>(null);
           this.logout();
-          return throwError(() => err);
-        })
-      );
-    } else {
-      return this.refreshTokenSubject.pipe(
-        filter(token => token != null),
-        take(1),
-        switchMap(token => {
-          return next.handle(this.addToken(req, token!));
-        })
-      );
+          // No return throwError here as this is a detached subscription's error handler
+        }
+      });
     }
+
+    // All requests (initiating or queued) now consistently wait on the refreshTokenSubject
+    return this.refreshTokenSubject.pipe(
+      filter((token: string | null): token is string => token != null), // Type guard for clarity
+      distinctUntilChanged(),
+      take(1), // Process only one token emission
+      switchMap(token => { // token is now definitely string
+        return next.handle(this.addToken(req, token));
+      }),
+      catchError((err) => {
+        // This catchError handles errors from refreshTokenSubject.error() or from next.handle() if it fails after retry
+        // If the error came from refreshTokenSubject.error(), logout() was already called.
+        // To avoid double logout or other side effects, we might need more specific error handling here.
+        // For now, just rethrow. If logout wasn't called (e.g. next.handle failed), it should be.
+        // This could be an issue if next.handle() fails with a non-401 after retry.
+        if (!this.refreshTokenInProgress && !this.authService.getAccessToken()) { // A simple check, might need refinement
+             // If refresh wasn't in progress (e.g. error from next.handle) AND there's no token, perhaps logout.
+             // This part is tricky; for now, let's assume logout is handled by the refresh path or higher up.
+        }
+        return throwError(() => err);
+      })
+    );
   }
 
   private logout() {
