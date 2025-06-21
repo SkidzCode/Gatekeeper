@@ -119,6 +119,7 @@ builder.Services.AddOptions<SerilogConfig>()
 builder.Services.AddSingleton<IDbHelper, DBHelper>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IRoleRepository, GateKeeper.Server.Repositories.RoleRepository>(); // Added for RoleRepository
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IResourceService, ResourceService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();

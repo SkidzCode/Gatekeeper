@@ -2,29 +2,27 @@
 using Moq;
 using GateKeeper.Server.Services;
 using GateKeeper.Server.Models.Account;
+using GateKeeper.Server.Interface; // Added for IRoleRepository
 using Microsoft.Extensions.Logging;
-using System.Data;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using Dapper;
-using System.Linq;
-using Moq.Dapper;
+// Dapper, System.Data, System.Linq, Moq.Dapper might not be needed here anymore or less used.
 
 namespace GateKeeper.Server.Test.Services
 {
     [TestClass]
     public class RoleServiceTests
     {
-        private Mock<IDbConnection> _mockDbConnection;
+        private Mock<IRoleRepository> _mockRoleRepository;
         private Mock<ILogger<RoleService>> _mockLogger;
         private RoleService _roleService;
 
         [TestInitialize]
         public void Setup()
         {
-            _mockDbConnection = new Mock<IDbConnection>();
+            _mockRoleRepository = new Mock<IRoleRepository>();
             _mockLogger = new Mock<ILogger<RoleService>>();
-            _roleService = new RoleService(_mockDbConnection.Object, _mockLogger.Object);
+            _roleService = new RoleService(_mockRoleRepository.Object, _mockLogger.Object);
         }
 
         [TestMethod]
@@ -32,20 +30,19 @@ namespace GateKeeper.Server.Test.Services
         {
             // Arrange
             var roleToAdd = new Role { RoleName = "Administrator" };
-            var expectedRoleId = 123; // Example ID
+            var expectedRoleAfterAdd = new Role { Id = 123, RoleName = "Administrator" }; // Assuming repository returns the role with ID
 
-            _mockDbConnection.SetupDapper(c => c.QuerySingleAsync<int>("InsertRole", It.IsAny<object>(), null, null, CommandType.StoredProcedure))
-                .ReturnsAsync(expectedRoleId);
+            _mockRoleRepository.Setup(repo => repo.AddRoleAsync(roleToAdd))
+                .ReturnsAsync(expectedRoleAfterAdd);
 
             // Act
             var result = await _roleService.AddRole(roleToAdd);
 
             // Assert
             Assert.IsNotNull(result);
-            Assert.AreEqual("Administrator", result.RoleName);
-            Assert.AreEqual(expectedRoleId, result.Id); // Verify the ID is set
-            // Verify Dapper's QuerySingleAsync was called with the correct parameters
-            _mockDbConnection.Verify(c => c.QuerySingleAsync<int>("InsertRole", It.Is<DynamicParameters>(p => p.Get<string>("@p_RoleName") == "Administrator"), null, null, CommandType.StoredProcedure), Times.Once());
+            Assert.AreEqual(expectedRoleAfterAdd.RoleName, result.RoleName);
+            Assert.AreEqual(expectedRoleAfterAdd.Id, result.Id);
+            _mockRoleRepository.Verify(repo => repo.AddRoleAsync(roleToAdd), Times.Once());
         }
 
 
@@ -56,7 +53,7 @@ namespace GateKeeper.Server.Test.Services
             int roleId = 1;
             var expectedRole = new Role { Id = roleId, RoleName = "User" };
 
-            _mockDbConnection.SetupDapper(c => c.QueryFirstOrDefaultAsync<Role>("GetRoleById", It.IsAny<object>(), null, null, CommandType.StoredProcedure))
+            _mockRoleRepository.Setup(repo => repo.GetRoleByIdAsync(roleId))
                 .ReturnsAsync(expectedRole);
 
             // Act
@@ -66,7 +63,7 @@ namespace GateKeeper.Server.Test.Services
             Assert.IsNotNull(result);
             Assert.AreEqual(expectedRole.Id, result.Id);
             Assert.AreEqual(expectedRole.RoleName, result.RoleName);
-            _mockDbConnection.Verify(c => c.QueryFirstOrDefaultAsync<Role>("GetRoleById", It.Is<DynamicParameters>(p => p.Get<int>("@p_Id") == roleId), null, null, CommandType.StoredProcedure), Times.Once());
+            _mockRoleRepository.Verify(repo => repo.GetRoleByIdAsync(roleId), Times.Once());
         }
 
         [TestMethod]
@@ -75,15 +72,15 @@ namespace GateKeeper.Server.Test.Services
             // Arrange
             int roleId = 2;
 
-            _mockDbConnection.SetupDapper(c => c.QueryFirstOrDefaultAsync<Role>("GetRoleById", It.IsAny<object>(), null, null, CommandType.StoredProcedure))
-                .ReturnsAsync((Role)null);
+            _mockRoleRepository.Setup(repo => repo.GetRoleByIdAsync(roleId))
+                .ReturnsAsync((Role?)null);
 
             // Act
             var result = await _roleService.GetRoleById(roleId);
 
             // Assert
             Assert.IsNull(result);
-            _mockDbConnection.Verify(c => c.QueryFirstOrDefaultAsync<Role>("GetRoleById", It.Is<DynamicParameters>(p => p.Get<int>("@p_Id") == roleId), null, null, CommandType.StoredProcedure), Times.Once());
+            _mockRoleRepository.Verify(repo => repo.GetRoleByIdAsync(roleId), Times.Once());
         }
 
         [TestMethod]
@@ -93,7 +90,7 @@ namespace GateKeeper.Server.Test.Services
             string roleName = "Manager";
             var expectedRole = new Role { Id = 3, RoleName = roleName };
 
-            _mockDbConnection.SetupDapper(c => c.QueryFirstOrDefaultAsync<Role>("GetRoleByName", It.IsAny<object>(), null, null, CommandType.StoredProcedure))
+            _mockRoleRepository.Setup(repo => repo.GetRoleByNameAsync(roleName))
                 .ReturnsAsync(expectedRole);
 
             // Act
@@ -103,7 +100,7 @@ namespace GateKeeper.Server.Test.Services
             Assert.IsNotNull(result);
             Assert.AreEqual(expectedRole.Id, result.Id);
             Assert.AreEqual(expectedRole.RoleName, result.RoleName);
-            _mockDbConnection.Verify(c => c.QueryFirstOrDefaultAsync<Role>("GetRoleByName", It.Is<DynamicParameters>(p => p.Get<string>("@p_RoleName") == roleName), null, null, CommandType.StoredProcedure), Times.Once());
+            _mockRoleRepository.Verify(repo => repo.GetRoleByNameAsync(roleName), Times.Once());
         }
 
         [TestMethod]
@@ -112,15 +109,15 @@ namespace GateKeeper.Server.Test.Services
             // Arrange
             string roleName = "NonExistentRole";
 
-            _mockDbConnection.SetupDapper(c => c.QueryFirstOrDefaultAsync<Role>("GetRoleByName", It.IsAny<object>(), null, null, CommandType.StoredProcedure))
-                .ReturnsAsync((Role)null);
+            _mockRoleRepository.Setup(repo => repo.GetRoleByNameAsync(roleName))
+                .ReturnsAsync((Role?)null);
 
             // Act
             var result = await _roleService.GetRoleByName(roleName);
 
             // Assert
             Assert.IsNull(result);
-            _mockDbConnection.Verify(c => c.QueryFirstOrDefaultAsync<Role>("GetRoleByName", It.Is<DynamicParameters>(p => p.Get<string>("@p_RoleName") == roleName), null, null, CommandType.StoredProcedure), Times.Once());
+            _mockRoleRepository.Verify(repo => repo.GetRoleByNameAsync(roleName), Times.Once());
         }
 
         [TestMethod]
@@ -129,8 +126,8 @@ namespace GateKeeper.Server.Test.Services
             // Arrange
             var roleToUpdate = new Role { Id = 4, RoleName = "Supervisor" };
 
-            _mockDbConnection.SetupDapper(c => c.ExecuteAsync("UpdateRole", It.IsAny<object>(), null, null, CommandType.StoredProcedure))
-                .ReturnsAsync(1);
+            _mockRoleRepository.Setup(repo => repo.UpdateRoleAsync(roleToUpdate))
+                .ReturnsAsync(roleToUpdate); // Assuming repository returns the updated role
 
             // Act
             var result = await _roleService.UpdateRole(roleToUpdate);
@@ -139,7 +136,7 @@ namespace GateKeeper.Server.Test.Services
             Assert.IsNotNull(result);
             Assert.AreEqual(roleToUpdate.Id, result.Id);
             Assert.AreEqual(roleToUpdate.RoleName, result.RoleName);
-            _mockDbConnection.Verify(c => c.ExecuteAsync("UpdateRole", It.Is<DynamicParameters>(p => p.Get<int>("@p_Id") == roleToUpdate.Id && p.Get<string>("@p_RoleName") == roleToUpdate.RoleName), null, null, CommandType.StoredProcedure), Times.Once());
+            _mockRoleRepository.Verify(repo => repo.UpdateRoleAsync(roleToUpdate), Times.Once());
         }
 
         [TestMethod]
@@ -153,7 +150,7 @@ namespace GateKeeper.Server.Test.Services
                 new Role { Id = 3, RoleName = "Guest" }
             };
 
-            _mockDbConnection.SetupDapper(c => c.QueryAsync<Role>("GetAllRoles", null, null, null, CommandType.StoredProcedure))
+            _mockRoleRepository.Setup(repo => repo.GetAllRolesAsync())
                 .ReturnsAsync(expectedRoles);
 
             // Act
@@ -167,7 +164,7 @@ namespace GateKeeper.Server.Test.Services
                 Assert.AreEqual(expectedRoles[i].Id, result[i].Id);
                 Assert.AreEqual(expectedRoles[i].RoleName, result[i].RoleName);
             }
-            _mockDbConnection.Verify(c => c.QueryAsync<Role>("GetAllRoles", null, null, null, CommandType.StoredProcedure), Times.Once());
+            _mockRoleRepository.Verify(repo => repo.GetAllRolesAsync(), Times.Once());
         }
     }
 }
