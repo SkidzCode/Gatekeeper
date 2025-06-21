@@ -79,5 +79,6 @@ namespace GateKeeper.Server.Database
             return _connection.DisposeAsync();
         }
 
+        public System.Data.Common.DbConnection GetDbConnection() => _connection; // Implemented for Dapper
     }
 }

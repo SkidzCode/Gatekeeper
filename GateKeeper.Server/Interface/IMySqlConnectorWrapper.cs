@@ -12,5 +12,6 @@ namespace GateKeeper.Server.Interface
         Task<IMySqlDataReaderWrapper> ExecuteReaderAsync(string commandText, CommandType commandType, params MySqlParameter[] parameters);
         void CloseConnection();
         Task<Dictionary<string, object>> ExecuteNonQueryWithOutputAsync(string commandText, CommandType commandType, params MySqlParameter[] parameters);
+        DbConnection GetDbConnection(); // Added for Dapper
     }
 }
