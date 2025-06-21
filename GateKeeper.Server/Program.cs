@@ -11,6 +11,8 @@ using GateKeeper.Server.Middleware;
 using Serilog.Formatting.Compact;
 using GateKeeper.Server.Models.Configuration; // Added for typed configurations
 using Microsoft.Extensions.Options; // Added for IOptions
+using System.Data; // Added for IDbConnection
+using MySqlConnector; // Added for MySqlConnection
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -117,6 +119,14 @@ builder.Services.AddOptions<SerilogConfig>()
 // End Register and Validate Typed Configuration
 
 builder.Services.AddSingleton<IDbHelper, DBHelper>();
+
+// Register IDbConnection for services that need direct DB access (like RoleRepository)
+builder.Services.AddScoped<IDbConnection>(sp =>
+{
+    var dbConfig = sp.GetRequiredService<IOptions<DatabaseConfig>>().Value;
+    return new MySqlConnection(dbConfig.GateKeeperConnection);
+});
+
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleRepository, GateKeeper.Server.Repositories.RoleRepository>(); // Added for RoleRepository
