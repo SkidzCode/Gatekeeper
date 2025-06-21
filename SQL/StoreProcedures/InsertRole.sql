@@ -7,6 +7,7 @@ CREATE PROCEDURE InsertRole(
 BEGIN
     INSERT INTO Roles (RoleName)
     VALUES (p_RoleName);
+    SELECT LAST_INSERT_ID();
 END //
 
 DELIMITER ;
