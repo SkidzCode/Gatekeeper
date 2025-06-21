@@ -38,18 +38,25 @@ namespace GateKeeper.Server.Services
         /// <returns>The inserted Role (with any DB-generated fields, if applicable).</returns>
         public async Task<Role> AddRole(Role role)
         {
-            await using var connection = await _dbHelper.GetWrapperAsync();
-            // TODO: Refactor this method to use Dapper if it's part of the scope,
-            // for now, keeping it as is, assuming it might use methods from IMySqlConnectorWrapper
-            // that are not directly replaced by Dapper's typical Query/Execute.
-            // If it can be simplified with Dapper's ExecuteAsync, it should be.
-            await connection.ExecuteNonQueryAsync("InsertRole", CommandType.StoredProcedure,
-                new MySqlParameter("@p_RoleName", MySqlDbType.VarChar, 50) { Value = role.RoleName });
+            await using var wrapper = await _dbHelper.GetWrapperAsync();
+            var connection = wrapper.GetDbConnection();
 
-            // If your SP sets any output parameters, retrieve them here. Example if InsertRole returns last inserted Id:
-            // role.Id = Convert.ToInt32(cmd.Parameters["@last_id"].Value);
+            await connection.ExecuteAsync(
+                "InsertRole",
+                new { p_RoleName = role.RoleName },
+                commandType: CommandType.StoredProcedure);
 
-            return role;
+            // If the stored procedure `InsertRole` were to return the Id (e.g., via an OUTPUT parameter or SELECT SCOPE_IDENTITY()),
+            // Dapper could map it back. For example, if it returned the new Id:
+            // var newId = await connection.ExecuteScalarAsync<int>(...);
+            // role.Id = newId;
+            // Or if the SP was modified to return the full role object:
+            // var insertedRole = await connection.QuerySingleAsync<Role>(...);
+            // return insertedRole;
+            // For now, assuming InsertRole does not return values directly mapped by Dapper's ExecuteAsync for this basic usage.
+            // The original method also didn't retrieve any DB-generated fields like Id.
+
+            return role; // Returns the input role, Id will be 0 if not set prior.
         }
 
         /// <summary>
