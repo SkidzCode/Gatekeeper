@@ -45,7 +45,7 @@ namespace GateKeeper.Server.Test.Services
             Assert.AreEqual("Administrator", result.RoleName);
             Assert.AreEqual(expectedRoleId, result.Id); // Verify the ID is set
             // Verify Dapper's QuerySingleAsync was called with the correct parameters
-            _mockDbConnection.VerifyDapper(c => c.QuerySingleAsync<int>("InsertRole", It.Is<DynamicParameters>(p => p.Get<string>("@p_RoleName") == "Administrator"), null, null, CommandType.StoredProcedure), Times.Once());
+            _mockDbConnection.Verify(c => c.QuerySingleAsync<int>("InsertRole", It.Is<DynamicParameters>(p => p.Get<string>("@p_RoleName") == "Administrator"), null, null, CommandType.StoredProcedure), Times.Once());
         }
 
 
@@ -66,7 +66,7 @@ namespace GateKeeper.Server.Test.Services
             Assert.IsNotNull(result);
             Assert.AreEqual(expectedRole.Id, result.Id);
             Assert.AreEqual(expectedRole.RoleName, result.RoleName);
-            _mockDbConnection.VerifyDapper(c => c.QueryFirstOrDefaultAsync<Role>("GetRoleById", It.Is<DynamicParameters>(p => p.Get<int>("@p_Id") == roleId), null, null, CommandType.StoredProcedure), Times.Once());
+            _mockDbConnection.Verify(c => c.QueryFirstOrDefaultAsync<Role>("GetRoleById", It.Is<DynamicParameters>(p => p.Get<int>("@p_Id") == roleId), null, null, CommandType.StoredProcedure), Times.Once());
         }
 
         [TestMethod]
@@ -83,7 +83,7 @@ namespace GateKeeper.Server.Test.Services
 
             // Assert
             Assert.IsNull(result);
-            _mockDbConnection.VerifyDapper(c => c.QueryFirstOrDefaultAsync<Role>("GetRoleById", It.Is<DynamicParameters>(p => p.Get<int>("@p_Id") == roleId), null, null, CommandType.StoredProcedure), Times.Once());
+            _mockDbConnection.Verify(c => c.QueryFirstOrDefaultAsync<Role>("GetRoleById", It.Is<DynamicParameters>(p => p.Get<int>("@p_Id") == roleId), null, null, CommandType.StoredProcedure), Times.Once());
         }
 
         [TestMethod]
@@ -103,7 +103,7 @@ namespace GateKeeper.Server.Test.Services
             Assert.IsNotNull(result);
             Assert.AreEqual(expectedRole.Id, result.Id);
             Assert.AreEqual(expectedRole.RoleName, result.RoleName);
-            _mockDbConnection.VerifyDapper(c => c.QueryFirstOrDefaultAsync<Role>("GetRoleByName", It.Is<DynamicParameters>(p => p.Get<string>("@p_RoleName") == roleName), null, null, CommandType.StoredProcedure), Times.Once());
+            _mockDbConnection.Verify(c => c.QueryFirstOrDefaultAsync<Role>("GetRoleByName", It.Is<DynamicParameters>(p => p.Get<string>("@p_RoleName") == roleName), null, null, CommandType.StoredProcedure), Times.Once());
         }
 
         [TestMethod]
@@ -120,7 +120,7 @@ namespace GateKeeper.Server.Test.Services
 
             // Assert
             Assert.IsNull(result);
-            _mockDbConnection.VerifyDapper(c => c.QueryFirstOrDefaultAsync<Role>("GetRoleByName", It.Is<DynamicParameters>(p => p.Get<string>("@p_RoleName") == roleName), null, null, CommandType.StoredProcedure), Times.Once());
+            _mockDbConnection.Verify(c => c.QueryFirstOrDefaultAsync<Role>("GetRoleByName", It.Is<DynamicParameters>(p => p.Get<string>("@p_RoleName") == roleName), null, null, CommandType.StoredProcedure), Times.Once());
         }
 
         [TestMethod]
@@ -139,7 +139,7 @@ namespace GateKeeper.Server.Test.Services
             Assert.IsNotNull(result);
             Assert.AreEqual(roleToUpdate.Id, result.Id);
             Assert.AreEqual(roleToUpdate.RoleName, result.RoleName);
-            _mockDbConnection.VerifyDapper(c => c.ExecuteAsync("UpdateRole", It.Is<DynamicParameters>(p => p.Get<int>("@p_Id") == roleToUpdate.Id && p.Get<string>("@p_RoleName") == roleToUpdate.RoleName), null, null, CommandType.StoredProcedure), Times.Once());
+            _mockDbConnection.Verify(c => c.ExecuteAsync("UpdateRole", It.Is<DynamicParameters>(p => p.Get<int>("@p_Id") == roleToUpdate.Id && p.Get<string>("@p_RoleName") == roleToUpdate.RoleName), null, null, CommandType.StoredProcedure), Times.Once());
         }
 
         [TestMethod]
@@ -167,7 +167,7 @@ namespace GateKeeper.Server.Test.Services
                 Assert.AreEqual(expectedRoles[i].Id, result[i].Id);
                 Assert.AreEqual(expectedRoles[i].RoleName, result[i].RoleName);
             }
-            _mockDbConnection.VerifyDapper(c => c.QueryAsync<Role>("GetAllRoles", null, null, null, CommandType.StoredProcedure), Times.Once());
+            _mockDbConnection.Verify(c => c.QueryAsync<Role>("GetAllRoles", null, null, null, CommandType.StoredProcedure), Times.Once());
         }
     }
 }
