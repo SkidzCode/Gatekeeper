@@ -131,6 +131,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleRepository, GateKeeper.Server.Repositories.RoleRepository>(); // Added for RoleRepository
 builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<ISettingsRepository, GateKeeper.Server.Repositories.SettingsRepository>(); // Added for SettingsRepository
 builder.Services.AddScoped<IResourceService, ResourceService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<IVerifyTokenService, VerifyTokenService>();
