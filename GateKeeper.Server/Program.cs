@@ -232,7 +232,7 @@ builder.Services.AddSwaggerGen(options =>
 
 #region JWT Middleware
 
-builder.Services.AddSingleton<IKeyManagementService>(sp =>
+builder.Services.AddScoped<IKeyManagementService>(sp => // Changed from AddSingleton to AddScoped
 {
     var keyManagementRepository = sp.GetRequiredService<IKeyManagementRepository>();
     var logger = sp.GetRequiredService<ILogger<KeyManagementService>>();
