@@ -234,16 +234,16 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddSingleton<IKeyManagementService>(sp =>
 {
-    var keyManagementConfig = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<KeyManagementConfig>>().Value;
-    var dbHelper = sp.GetRequiredService<IDbHelper>();
+    var keyManagementRepository = sp.GetRequiredService<IKeyManagementRepository>();
     var logger = sp.GetRequiredService<ILogger<KeyManagementService>>();
+    var keyManagementConfigOptions = sp.GetRequiredService<IOptions<KeyManagementConfig>>();
 
-    // KeyManagementService is already refactored to take IOptions<KeyManagementConfig> in its constructor.
+    // KeyManagementService is refactored to take IKeyManagementRepository, ILogger, and IOptions<KeyManagementConfig>.
     // The validation for MasterKey (presence, Base64 format, length) is handled within KeyManagementService.
     return new KeyManagementService(
-        dbHelper, 
-        logger, 
-        sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<KeyManagementConfig>>() // Pass IOptions directly
+        keyManagementRepository,
+        logger,
+        keyManagementConfigOptions
     );
 });
 

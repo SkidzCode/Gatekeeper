@@ -9,10 +9,6 @@ using System; // For StringComparison
 
 namespace GateKeeper.Server.Services
 {
-    // Interface INotificationTemplateService is now expected to be in its own file:
-    // GateKeeper.Server/Interface/INotificationTemplateService.cs
-    // If it's not, you should move it there or adjust the using directive.
-
     public class NotificationTemplateService : INotificationTemplateService
     {
         private readonly INotificationTemplateRepository _templateRepository;
