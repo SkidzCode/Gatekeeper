@@ -425,26 +425,22 @@ namespace GateKeeper.Server.Test.Services
             // similar to the AccountLocked test, though specific settings aren't changed here.
             // This helps isolate test states.
             _authService = new UserAuthenticationService(
-                _mockUserService.Object, _mockVerificationService.Object, _mockJwtSettingsOptions.Object,
-                _mockPasswordSettingsOptions.Object, _mockRegisterSettingsOptions.Object, _mockLoginSettingsOptions.Object,
-                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
-                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
-                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
-                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
-                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
-                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
-                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
-                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
-                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
-                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
-                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
-                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
-                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
-                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
-                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
-                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
-                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
-                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
+                _mockUserService.Object,
+                _mockVerificationService.Object,
+                _mockJwtSettingsOptions.Object,
+                _mockPasswordSettingsOptions.Object,
+                _mockRegisterSettingsOptions.Object,
+                _mockLoginSettingsOptions.Object,
+                _mockLogger.Object,
+                _mockSettingsService.Object,
+                _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object,
+                _mockHttpContextAccessor.Object,
+                _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object,
+                _mockSessionService.Object,
+                _mockUserAuthRepository.Object
+            );
 
             // Act & Assert
             await Assert.ThrowsExceptionAsync<InvalidCredentialsException>(() =>
@@ -485,9 +481,21 @@ namespace GateKeeper.Server.Test.Services
              _authService = new UserAuthenticationService(
                 _mockUserService.Object, _mockVerificationService.Object, _mockJwtSettingsOptions.Object,
                 _mockPasswordSettingsOptions.Object, _mockRegisterSettingsOptions.Object, _mockLoginSettingsOptions.Object,
-                _mockDbHelper.Object, _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
                 _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
-                _mockNotificationTemplateService.Object, _mockSessionService.Object);
+                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
+                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
+                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
+                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
+                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
 
 
             // Act & Assert
