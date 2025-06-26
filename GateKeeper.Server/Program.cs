@@ -118,31 +118,40 @@ builder.Services.AddOptions<SerilogConfig>()
     .Bind(builder.Configuration.GetSection(SerilogConfig.SectionName));
 // End Register and Validate Typed Configuration
 
-builder.Services.AddSingleton<IDbHelper, DBHelper>();
+builder.Services.AddSingleton<IDbHelper, DBHelper>(); // DBHelper might still be used by other non-converted services or utilities
 
-// Register IDbConnection for services that need direct DB access (like RoleRepository, SettingsRepository, UserRepository)
+// Register IDbConnection for Dapper repositories
 builder.Services.AddScoped<IDbConnection>(sp =>
 {
     var dbConfig = sp.GetRequiredService<IOptions<DatabaseConfig>>().Value;
     return new MySqlConnection(dbConfig.GateKeeperConnection);
 });
 
-builder.Services.AddScoped<IEmailService, EmailService>();
-builder.Services.AddScoped<IUserRepository, GateKeeper.Server.Repositories.UserRepository>(); // Added for UserRepository
+// Register Repositories
+builder.Services.AddScoped<IUserRepository, GateKeeper.Server.Repositories.UserRepository>();
+builder.Services.AddScoped<IRoleRepository, GateKeeper.Server.Repositories.RoleRepository>();
+builder.Services.AddScoped<ISettingsRepository, GateKeeper.Server.Repositories.SettingsRepository>();
+builder.Services.AddScoped<IVerifyTokenRepository, GateKeeper.Server.Repositories.VerifyTokenRepository>();
+builder.Services.AddScoped<IUserAuthenticationRepository, GateKeeper.Server.Repositories.UserAuthenticationRepository>();
+builder.Services.AddScoped<IInviteRepository, GateKeeper.Server.Repositories.InviteRepository>();
+builder.Services.AddScoped<IKeyManagementRepository, GateKeeper.Server.Repositories.KeyManagementRepository>();
+builder.Services.AddScoped<INotificationRepository, GateKeeper.Server.Repositories.NotificationRepository>();
+builder.Services.AddScoped<INotificationTemplateRepository, GateKeeper.Server.Repositories.NotificationTemplateRepository>();
+builder.Services.AddScoped<ISessionRepository, GateKeeper.Server.Repositories.SessionRepository>();
+
+// Register Services
+builder.Services.AddScoped<IEmailService, EmailService>(); // EmailService doesn't use a repository
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IRoleRepository, GateKeeper.Server.Repositories.RoleRepository>(); // Added for RoleRepository
 builder.Services.AddScoped<IRoleService, RoleService>();
-builder.Services.AddScoped<ISettingsRepository, GateKeeper.Server.Repositories.SettingsRepository>(); // Added for SettingsRepository
-builder.Services.AddScoped<IResourceService, ResourceService>();
+builder.Services.AddScoped<IResourceService, ResourceService>(); // ResourceService interacts with file system
 builder.Services.AddScoped<ISettingsService, SettingsService>();
-builder.Services.AddScoped<IVerifyTokenRepository, GateKeeper.Server.Repositories.VerifyTokenRepository>(); // Added for VerifyTokenRepository
 builder.Services.AddScoped<IVerifyTokenService, VerifyTokenService>();
-builder.Services.AddScoped<IUserAuthenticationRepository, GateKeeper.Server.Repositories.UserAuthenticationRepository>(); // Added
 builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService>();
 builder.Services.AddScoped<INotificationTemplateService, NotificationTemplateService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IInviteService, InviteService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
+
 
 // Register IStringDataProtector and its wrapper
 builder.Services.AddTransient<IStringDataProtector>(provider =>
