@@ -479,24 +479,22 @@ namespace GateKeeper.Server.Test.Services
             // Re-initialize authService to ensure it picks up the modified _mockLoginSettingsOptions if it's cached internally.
             // This is a common pattern if IOptions.Value is read once in constructor.
              _authService = new UserAuthenticationService(
-                _mockUserService.Object, _mockVerificationService.Object, _mockJwtSettingsOptions.Object,
-                _mockPasswordSettingsOptions.Object, _mockRegisterSettingsOptions.Object, _mockLoginSettingsOptions.Object,
-                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
-                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
-                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
-                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
-                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
-                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
-                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
-                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
-                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
-                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
-                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
-                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
-                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
-                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
-                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
-
+                _mockUserService.Object,
+                _mockVerificationService.Object,
+                _mockJwtSettingsOptions.Object,
+                _mockPasswordSettingsOptions.Object,
+                _mockRegisterSettingsOptions.Object,
+                _mockLoginSettingsOptions.Object,
+                _mockLogger.Object,
+                _mockSettingsService.Object,
+                _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object,
+                _mockHttpContextAccessor.Object,
+                _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object,
+                _mockSessionService.Object,
+                _mockUserAuthRepository.Object
+            );
 
             // Act & Assert
             await Assert.ThrowsExceptionAsync<AccountLockedException>(() =>
@@ -519,9 +517,18 @@ namespace GateKeeper.Server.Test.Services
             _authService = new UserAuthenticationService(
                 _mockUserService.Object, _mockVerificationService.Object, _mockJwtSettingsOptions.Object,
                 _mockPasswordSettingsOptions.Object, _mockRegisterSettingsOptions.Object, _mockLoginSettingsOptions.Object,
-                _mockDbHelper.Object, _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
                 _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
-                _mockNotificationTemplateService.Object, _mockSessionService.Object);
+                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
+                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
+                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
+                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
 
             // Act & Assert
             var exception = await Assert.ThrowsExceptionAsync<InvalidTokenException>(() =>
