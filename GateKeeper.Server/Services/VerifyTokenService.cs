@@ -1,125 +1,120 @@
-﻿using MySqlConnector;
-using System.Data;
-using System.Web;
+﻿using System;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Account;
 using GateKeeper.Server.Models.Account.Login;
-using System.Xml;
 using GateKeeper.Server.Models.Account.UserModels;
-using GateKeeper.Server.Extension;
+using GateKeeper.Server.Extension; // For SanitizeForLogging
 
 namespace GateKeeper.Server.Services
 {
     public interface IVerifyTokenService
     {
-        public Task<TokenVerificationResponse> VerifyTokenAsync(VerifyTokenRequest verificationCode);
-        public Task<string> GenerateTokenAsync(int userId, string verifyType);
-        public Task<int> RevokeTokensAsync(int userId, string verifyType, string? token = null);
-        public Task<int> CompleteTokensAsync(int userId, string verifyType, string? token = null);
+        Task<TokenVerificationResponse> VerifyTokenAsync(VerifyTokenRequest verificationCode);
+        Task<string> GenerateTokenAsync(int userId, string verifyType);
+        Task<int> RevokeTokensAsync(int userId, string verifyType, string? token = null);
+        Task<int> CompleteTokensAsync(int userId, string verifyType, string? token = null);
     }
 
-
     /// <summary>
-    /// Service handling user authentication and related operations.
+    /// Service handling verification token operations.
     /// </summary>
     public class VerifyTokenService : IVerifyTokenService
     {
-        private readonly IDbHelper _dbHelper;
+        private readonly IVerifyTokenRepository _verifyTokenRepository;
         private readonly ILogger<VerifyTokenService> _logger;
-        // private readonly IConfiguration _configuration; // Removed
-        private readonly IEmailService _emailService;
         private readonly IUserService _userService;
+        // private readonly IEmailService _emailService; // Kept for now, remove if not used after refactor
 
         /// <summary>
-        /// Constructor for VerificationService.
+        /// Constructor for VerifyTokenService.
         /// </summary>
-        // <param name="configuration">Application configuration dependency.</param> // Removed from docs
-        /// <param name="dbHelper">Database helper for DB operations.</param>
-        /// <param name="logger">Logger for logging information and errors.</param>
-        /// <param name="userService"></param>
         public VerifyTokenService(
-            /* IConfiguration configuration, */ // Removed
-            IDbHelper dbHelper, 
-            ILogger<VerifyTokenService> logger, 
-            IEmailService emailService,
-            IUserService userService)
+            IVerifyTokenRepository verifyTokenRepository,
+            ILogger<VerifyTokenService> logger,
+            IUserService userService,
+            IEmailService emailService) // IEmailService might not be needed directly by this service anymore
         {
-            // _configuration = configuration; // Removed
-            _dbHelper = dbHelper;
+            _verifyTokenRepository = verifyTokenRepository;
             _logger = logger;
-            _emailService = emailService;
             _userService = userService;
+            // _emailService = emailService;
         }
 
         /// <inheritdoc />
         public async Task<TokenVerificationResponse> VerifyTokenAsync(VerifyTokenRequest verifyRequest)
         {
-            TokenVerificationResponse response = new TokenVerificationResponse();
-            response.VerificationCode = verifyRequest.VerificationCode;
-            var tokenParts = response.VerificationCode.Split('.');
+            var response = new TokenVerificationResponse
+            {
+                VerificationCode = verifyRequest.VerificationCode
+            };
+
+            var tokenParts = verifyRequest.VerificationCode.Split('.');
             if (tokenParts.Length != 2)
             {
                 response.FailureReason = "Invalid token format";
                 return response;
             }
 
-            response.SessionId = tokenParts[0];
+            response.SessionId = tokenParts[0]; // This is actually the tokenId
             var providedTokenPart = tokenParts[1];
-            
-            string tokenUsername = string.Empty;
 
+            var tokenDetails = await _verifyTokenRepository.GetTokenDetailsForVerificationAsync(response.SessionId);
 
-            await using var connection = await _dbHelper.GetWrapperAsync();
-            await using var reader = await connection.ExecuteReaderAsync("ValidateUser", CommandType.StoredProcedure,
-                new MySqlParameter("@p_Id", MySqlDbType.VarChar, 36) { Value = response.SessionId });
-
-            if (!await reader.ReadAsync())
+            if (tokenDetails == null)
             {
-                response.FailureReason = "Invalid Session Id";
+                response.FailureReason = "Invalid Session Id"; // Or "Token ID not found"
                 return response;
             }
 
-            if (Convert.ToBoolean(reader["Revoked"]))
+            if (tokenDetails.Revoked)
             {
                 response.FailureReason = "Token already revoked";
                 return response;
             }
 
-            if (Convert.ToBoolean(reader["Complete"]))
+            if (tokenDetails.Complete)
             {
                 response.FailureReason = "Token already completed";
                 return response;
             }
 
-            response.TokenType = reader["VerifyType"].ToString() ?? string.Empty;
+            response.TokenType = tokenDetails.VerifyType;
             if (verifyRequest.TokenType != response.TokenType)
             {
                 response.FailureReason = "Incorrect token type";
                 return response;
             }
 
+            var hashedProvidedToken = PasswordHelper.HashPassword(providedTokenPart, tokenDetails.RefreshSalt);
 
-            string salt = reader["RefreshSalt"].ToString() ?? string.Empty;
-            string storedHashedToken = reader["HashedToken"].ToString() ?? string.Empty;
-            var hashedProvidedToken = PasswordHelper.HashPassword(providedTokenPart, salt);
-
-            response.User = new User()
-            {
-                Id = Convert.ToInt32(reader["UserId"]),
-                FirstName = reader["FirstName"].ToString() ?? string.Empty,
-                LastName = reader["LastName"].ToString() ?? string.Empty,
-                Email = reader["Email"].ToString() ?? string.Empty,
-                Phone = reader["Phone"].ToString() ?? string.Empty,
-                Salt = reader["Salt"].ToString() ?? string.Empty,
-                Password = reader["Password"].ToString() ?? string.Empty,
-                Username = reader["Username"].ToString() ?? string.Empty,
-                Roles = await _userService.GetRolesAsync(Convert.ToInt32(reader["UserId"]))
-            };
-
-            if (storedHashedToken != hashedProvidedToken)
+            if (tokenDetails.HashedToken != hashedProvidedToken)
             {
                 response.FailureReason = "Invalid token";
-                await response.User.ClearPHIAsync();
+                // User object is not fully populated yet to call ClearPHIAsync directly on response.User
+                // We'll create the user object below, and if this check fails, it will be cleared.
+            }
+
+            // Construct the User object from tokenDetails
+            // Note: The VerificationTokenDetails model now contains user fields from the SP.
+            response.User = new User()
+            {
+                Id = tokenDetails.UserId,
+                FirstName = tokenDetails.FirstName,
+                LastName = tokenDetails.LastName,
+                Email = tokenDetails.Email,
+                Phone = tokenDetails.Phone,
+                Salt = tokenDetails.UserSalt, // User's main password salt from SP
+                Password = tokenDetails.UserPassword, // User's main password hash from SP
+                Username = tokenDetails.Username,
+                Roles = await _userService.GetRolesAsync(tokenDetails.UserId) // Still get roles separately for consistency and up-to-date info
+            };
+
+            if (tokenDetails.HashedToken != hashedProvidedToken) // Re-check here after User object is populated
+            {
+                // response.FailureReason is already set above
+                await response.User.ClearPHIAsync(); // Now safe to call
                 return response;
             }
 
@@ -127,114 +122,77 @@ namespace GateKeeper.Server.Services
             return response;
         }
 
-        /// <summary>
-        /// Generates and Stores the refresh token in the database.
-        /// </summary>
-        /// <param name="userId">User ID associated with the token.</param>
-        /// <param name="refreshToken">Refresh token to store.</param>
-        /// <param name="connection">Active database connection.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
+        /// <inheritdoc />
         public async Task<string> GenerateTokenAsync(int userId, string verifyType)
         {
-            var verifyToken = GenerateVerifyToken();
-            
-            _logger.LogInformation("Generating token: {Token} for {UserId}", verifyToken.SanitizeForLogging(), userId);
-            
-            await using var connection = await _dbHelper.GetWrapperAsync();
-            // Generate Refresh Token
+            var rawVerifyToken = GenerateRawVerifyToken();
+            _logger.LogInformation("Generating raw token part for User ID: {UserId}, Type: {VerifyType}", userId, verifyType);
+
             var salt = PasswordHelper.GenerateSalt();
+            _logger.LogInformation("Generated salt for token: {Salt}", salt);
 
-            _logger.LogInformation("Generating salt: {Salt}", salt);
+            var hashedVerifyToken = PasswordHelper.HashPassword(rawVerifyToken, salt);
+            _logger.LogInformation("Generated hashed token: {HashedToken}", hashedVerifyToken.SanitizeForLogging());
 
-            var hashedVerifyToken = PasswordHelper.HashPassword(verifyToken, salt);
-            var tokenId = Guid.NewGuid().ToString(); // Unique identifier for the refresh token
+            var expiryDate = DateTime.UtcNow.AddDays(7); // 7-day expiration, consider making this configurable
 
-            _logger.LogInformation("Generating Hashed Token: {Hashed}", hashedVerifyToken.SanitizeForLogging());
+            // Store using repository
+            var tokenId = await _verifyTokenRepository.StoreTokenAsync(userId, verifyType, hashedVerifyToken, salt, expiryDate);
+            _logger.LogInformation("Stored token with ID: {TokenId} for User ID: {UserId}", tokenId, userId);
 
-
-            // Store Refresh Token in DB
-            await connection.ExecuteNonQueryAsync("VerificationInsert", CommandType.StoredProcedure,
-                new MySqlParameter("@p_Id", MySqlDbType.VarChar, 36) { Value = tokenId },
-                new MySqlParameter("@p_VerifyType", MySqlDbType.VarChar, 20) { Value = verifyType },
-                new MySqlParameter("@p_UserId", MySqlDbType.Int32) { Value = userId },
-                new MySqlParameter("@p_HashedToken", MySqlDbType.VarChar, 255) { Value = hashedVerifyToken },
-                new MySqlParameter("@p_Salt", MySqlDbType.VarChar, 255) { Value = salt },
-                new MySqlParameter("@p_ExpiryDate", MySqlDbType.DateTime) { Value = DateTime.UtcNow.AddDays(7) }); // 7-day expiration
-
-            return $"{tokenId}.{verifyToken}";
+            return $"{tokenId}.{rawVerifyToken}";
         }
 
-        /// <summary>
-        /// Revokes tokens for a user, either specific or all tokens.
-        /// </summary>
-        /// <param name="token">Specific token to revoke, or null to revoke all tokens.</param>
-        /// <param name="userId">ID of the user whose tokens are to be revoked.</param>
-        /// <returns>The number of tokens revoked.</returns>
+        /// <inheritdoc />
         public async Task<int> RevokeTokensAsync(int userId, string verifyType, string? token = null)
         {
             string? tokenId = null;
-            if (!string.IsNullOrEmpty(token))
-                tokenId = token.Split('.')[0];
-
-            await using var connection = await _dbHelper.GetWrapperAsync();
-
-            var rowsAffectedParam = new MySqlParameter("@p_RowsAffected", MySqlDbType.Int32)
+            if (!string.IsNullOrEmpty(token) && token.Contains('.'))
             {
-                Direction = ParameterDirection.Output
-            };
+                tokenId = token.Split('.')[0];
+            }
+            else if (!string.IsNullOrEmpty(token)) // If token is passed but not in expected format, it might be just the ID
+            {
+                 _logger.LogWarning("RevokeTokensAsync received a token '{TokenValue}' not in 'tokenId.rawValue' format. Assuming it's a tokenId.", token.SanitizeForLogging());
+                 tokenId = token; // Or treat as an error, depending on expected usage
+            }
 
-            await connection.ExecuteNonQueryAsync("RevokeVerifyToken", CommandType.StoredProcedure,
-                new MySqlParameter("@p_UserId", MySqlDbType.Int32) { Value = userId },
-                new MySqlParameter("@p_TokenId", MySqlDbType.VarChar, 36) { Value = tokenId ?? (object)DBNull.Value },
-                new MySqlParameter("@p_VerifyType", MySqlDbType.VarChar, 20) { Value = verifyType },
-                rowsAffectedParam);
 
-            // Get the value of the output parameter
-            int rowsAffected = (int)rowsAffectedParam.Value;
-
+            _logger.LogInformation("Attempting to revoke token. User ID: {UserId}, Type: {VerifyType}, Token ID: {TokenId}", userId, verifyType, tokenId ?? "All");
+            var rowsAffected = await _verifyTokenRepository.RevokeTokensAsync(userId, verifyType, tokenId);
+            _logger.LogInformation("{RowsAffected} token(s) revoked.", rowsAffected);
             return rowsAffected;
         }
 
-        /// <summary>
-        /// Revokes tokens for a user, either specific or all tokens.
-        /// </summary>
-        /// <param name="token">Specific token to revoke, or null to revoke all tokens.</param>
-        /// <param name="userId">ID of the user whose tokens are to be revoked.</param>
-        /// <returns>The number of tokens revoked.</returns>
+        /// <inheritdoc />
         public async Task<int> CompleteTokensAsync(int userId, string verifyType, string? token = null)
         {
             string? tokenId = null;
-            if (!string.IsNullOrEmpty(token))
-                tokenId = token.Split('.')[0];
-
-            await using var connection = await _dbHelper.GetWrapperAsync();
-
-            var rowsAffectedParam = new MySqlParameter("@p_RowsAffected", MySqlDbType.Int32)
+            if (!string.IsNullOrEmpty(token) && token.Contains('.'))
             {
-                Direction = ParameterDirection.Output
-            };
+                tokenId = token.Split('.')[0];
+            }
+            else if (!string.IsNullOrEmpty(token))
+            {
+                _logger.LogWarning("CompleteTokensAsync received a token '{TokenValue}' not in 'tokenId.rawValue' format. Assuming it's a tokenId.", token.SanitizeForLogging());
+                tokenId = token;
+            }
 
-            await connection.ExecuteNonQueryAsync("CompleteVerifyToken", CommandType.StoredProcedure,
-                new MySqlParameter("@p_UserId", MySqlDbType.Int32) { Value = userId },
-                new MySqlParameter("@p_TokenId", MySqlDbType.VarChar, 36) { Value = tokenId ?? (object)DBNull.Value },
-                new MySqlParameter("@p_VerifyType", MySqlDbType.VarChar, 20) { Value = verifyType },
-                rowsAffectedParam);
-
-            // Get the value of the output parameter
-            int rowsAffected = (int)rowsAffectedParam.Value;
-
+            _logger.LogInformation("Attempting to complete token. User ID: {UserId}, Type: {VerifyType}, Token ID: {TokenId}", userId, verifyType, tokenId ?? "All");
+            var rowsAffected = await _verifyTokenRepository.CompleteTokensAsync(userId, verifyType, tokenId);
+            _logger.LogInformation("{RowsAffected} token(s) completed.", rowsAffected);
             return rowsAffected;
         }
 
         #region Private Helper Methods
 
         /// <summary>
-        /// Generates a secure refresh token.
+        /// Generates a secure raw (unhashed) verification token part.
         /// </summary>
-        /// <returns>Refresh token as a string.</returns>
-        private string GenerateVerifyToken()
+        /// <returns>Raw token part as a string.</returns>
+        private string GenerateRawVerifyToken()
         {
-            var randomBytes = new byte[64];
+            var randomBytes = new byte[64]; // For a Base64 string of length 88
             using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
             rng.GetBytes(randomBytes);
             return Convert.ToBase64String(randomBytes);
@@ -242,6 +200,4 @@ namespace GateKeeper.Server.Services
 
         #endregion
     }
-
-
 }

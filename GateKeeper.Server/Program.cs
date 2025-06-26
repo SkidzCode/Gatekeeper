@@ -135,6 +135,7 @@ builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<ISettingsRepository, GateKeeper.Server.Repositories.SettingsRepository>(); // Added for SettingsRepository
 builder.Services.AddScoped<IResourceService, ResourceService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
+builder.Services.AddScoped<IVerifyTokenRepository, GateKeeper.Server.Repositories.VerifyTokenRepository>(); // Added for VerifyTokenRepository
 builder.Services.AddScoped<IVerifyTokenService, VerifyTokenService>();
 builder.Services.AddScoped<IUserAuthenticationRepository, GateKeeper.Server.Repositories.UserAuthenticationRepository>(); // Added
 builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService>();
