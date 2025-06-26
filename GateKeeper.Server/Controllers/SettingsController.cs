@@ -38,23 +38,44 @@ namespace GateKeeper.Server.Controllers
         {
             try
             {
-                var userId = GetUserIdFromClaims();
-                var settings = await _settingsService.GetAllSettingsAsync(userId);
-                var userSettings = settings
-                    .GroupBy(s => new { s.Name, s.Category })
-                    .SelectMany(group =>
-                    {
-                        // If any setting in the group has a UserId, exclude the ones without a UserId
-                        if (group.Any(s => s.UserId.HasValue))
-                        {
-                            return group.Where(s => s.UserId.HasValue);
-                        }
+                List<Setting> settingsToReturn;
 
-                        // Otherwise, include all
-                        return group;
-                    })
-                    .ToList();
-                return Ok(userSettings);
+                if (User.IsInRole("Admin"))
+                {
+                    // Admins see only global settings on this general listing.
+                    // User-specific settings for admins (if any) could be managed elsewhere or via specific queries.
+                    var globalSettings = await _settingsService.GetAllSettingsAsync(null); // Pass null to get only global settings
+
+                    // The existing LINQ processing is designed for override logic.
+                    // If we only fetch global settings (UserId will be null), this LINQ might be overly complex
+                    // or could be simplified. For now, let's see its effect.
+                    // All s.UserId.HasValue will be false. So it will always hit the 'else return group'.
+                    // This means the grouping might still be relevant if global settings could have duplicates by name/category
+                    // (which they shouldn't ideally, but the logic handles it).
+                    settingsToReturn = globalSettings
+                        .GroupBy(s => new { s.Name, s.Category })
+                        .SelectMany(group => group) // Simpler: take all from the group as they are all global
+                        .ToList();
+                    // A more direct approach if only global settings are fetched and no override logic is needed:
+                    // settingsToReturn = globalSettings;
+                }
+                else
+                {
+                    var userId = GetUserIdFromClaims();
+                    var userSpecificAndGlobalSettings = await _settingsService.GetAllSettingsAsync(userId);
+                    settingsToReturn = userSpecificAndGlobalSettings
+                        .GroupBy(s => new { s.Name, s.Category })
+                        .SelectMany(group =>
+                        {
+                            if (group.Any(s => s.UserId.HasValue))
+                            {
+                                return group.Where(s => s.UserId.HasValue);
+                            }
+                            return group;
+                        })
+                        .ToList();
+                }
+                return Ok(settingsToReturn);
             }
             catch (Exception ex)
             {
