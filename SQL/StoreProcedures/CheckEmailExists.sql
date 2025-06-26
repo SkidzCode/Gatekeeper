@@ -6,7 +6,7 @@ DROP PROCEDURE IF EXISTS CheckEmailExists //
 
 -- Create the stored procedure
 CREATE PROCEDURE CheckEmailExists (
-    IN p_email VARCHAR(50),    -- Input parameter: Username to check
+    IN p_email VARCHAR(100),    -- Input parameter: Email to check, increased to 100
     OUT p_exists BOOLEAN           -- Output parameter: TRUE if exists, FALSE otherwise
 )
 BEGIN

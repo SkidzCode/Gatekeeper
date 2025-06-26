@@ -120,7 +120,7 @@ builder.Services.AddOptions<SerilogConfig>()
 
 builder.Services.AddSingleton<IDbHelper, DBHelper>();
 
-// Register IDbConnection for services that need direct DB access (like RoleRepository)
+// Register IDbConnection for services that need direct DB access (like RoleRepository, SettingsRepository, UserRepository)
 builder.Services.AddScoped<IDbConnection>(sp =>
 {
     var dbConfig = sp.GetRequiredService<IOptions<DatabaseConfig>>().Value;
@@ -128,6 +128,7 @@ builder.Services.AddScoped<IDbConnection>(sp =>
 });
 
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IUserRepository, GateKeeper.Server.Repositories.UserRepository>(); // Added for UserRepository
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleRepository, GateKeeper.Server.Repositories.RoleRepository>(); // Added for RoleRepository
 builder.Services.AddScoped<IRoleService, RoleService>();
