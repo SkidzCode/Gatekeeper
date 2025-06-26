@@ -7,9 +7,9 @@ using GateKeeper.Server.Models.Account.UserModels;
 using GateKeeper.Server.Models.Account.Login;
 using GateKeeper.Server.Models.Account.Notifications;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration; // Keep for non-refactored parts
-using Microsoft.Extensions.Options; // Added for IOptions
-using GateKeeper.Server.Models.Configuration; // Added for typed configuration classes
+// using Microsoft.Extensions.Configuration; // No longer needed
+using Microsoft.Extensions.Options;
+using GateKeeper.Server.Models.Configuration;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System;
@@ -18,40 +18,39 @@ using System.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using GateKeeper.Server.Exceptions;
-// using GateKeeper.Server.Services; // Duplicate removed
 
 namespace GateKeeper.Server.Test.Services
 {
     [TestClass]
     public class UserAuthenticationServiceTests
     {
-        private Mock<IDbHelper> _mockDbHelper;
+        // private Mock<IDbHelper> _mockDbHelper; // Removed
         private Mock<ILogger<UserAuthenticationService>> _mockLogger;
         private Mock<IUserService> _mockUserService;
-        private Mock<IEmailService> _mockEmailService;
+        // private Mock<IEmailService> _mockEmailService; // Not directly used by UserAuthenticationService anymore
         private Mock<IVerifyTokenService> _mockVerificationService;
         private Mock<ISettingsService> _mockSettingsService;
         private Mock<IKeyManagementService> _mockKeyManagementService;
         private Mock<IStringDataProtector> _mockStringDataProtector;
         private Mock<IHttpContextAccessor> _mockHttpContextAccessor;
-        private Mock<IResponseCookies> _mockResponseCookies; // Made field
+        private Mock<IResponseCookies> _mockResponseCookies;
         private Mock<INotificationService> _mockNotificationService;
         private Mock<INotificationTemplateService> _mockNotificationTemplateService;
         private Mock<ISessionService> _mockSessionService;
+        private Mock<IUserAuthenticationRepository> _mockUserAuthRepository; // Added
         private UserAuthenticationService _authService;
         private Mock<IOptions<JwtSettingsConfig>> _mockJwtSettingsOptions;
         private Mock<IOptions<PasswordSettingsConfig>> _mockPasswordSettingsOptions;
-        private Mock<IOptions<RegisterSettingsConfig>> _mockRegisterSettingsOptions; // Added
-        private Mock<IOptions<LoginSettingsConfig>> _mockLoginSettingsOptions;     // Added
-        // private Mock<IConfiguration> _mockConfiguration; // No longer directly needed by UserAuthenticationService
+        private Mock<IOptions<RegisterSettingsConfig>> _mockRegisterSettingsOptions;
+        private Mock<IOptions<LoginSettingsConfig>> _mockLoginSettingsOptions;
 
         [TestInitialize]
         public void Setup()
         {
-            _mockDbHelper = new Mock<IDbHelper>();
+            // _mockDbHelper = new Mock<IDbHelper>(); // Removed
             _mockLogger = new Mock<ILogger<UserAuthenticationService>>();
             _mockUserService = new Mock<IUserService>();
-            _mockEmailService = new Mock<IEmailService>();
+            // _mockEmailService = new Mock<IEmailService>(); // Removed
             _mockVerificationService = new Mock<IVerifyTokenService>();
             _mockSettingsService = new Mock<ISettingsService>();
             _mockKeyManagementService = new Mock<IKeyManagementService>();
@@ -60,9 +59,8 @@ namespace GateKeeper.Server.Test.Services
             _mockNotificationService = new Mock<INotificationService>();
             _mockNotificationTemplateService = new Mock<INotificationTemplateService>();
             _mockSessionService = new Mock<ISessionService>();
-            // _mockConfiguration = new Mock<IConfiguration>(); // No longer directly needed
+            _mockUserAuthRepository = new Mock<IUserAuthenticationRepository>(); // Added
 
-            // Setup JwtSettingsConfig
             var jwtSettings = new JwtSettingsConfig
             {
                 Key = "your_super_secret_key_that_is_at_least_32_bytes_long_for_hs256", // Ensure this is a valid length key for your algorithm

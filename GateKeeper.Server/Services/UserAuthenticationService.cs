@@ -1,23 +1,23 @@
 using Microsoft.Extensions.Logging;
-using MySqlConnector;
-using Microsoft.Extensions.Options; // Added for IOptions
-using GateKeeper.Server.Models.Configuration; // Added for typed configuration classes
+// using MySqlConnector; // No longer directly needed for MySqlParameter if dbHelper is fully replaced
+using Microsoft.Extensions.Options;
+using GateKeeper.Server.Models.Configuration;
 using System;
 using System.Collections.Generic;
-using System.Data;
+// using System.Data; // No longer directly needed if dbHelper is fully replaced
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
+// using System.Text; // No longer directly needed here
 using System.Threading.Tasks;
 using GateKeeper.Server.Interface;
 using Microsoft.IdentityModel.Tokens;
-using System.Reflection.PortableExecutable;
-using System.Runtime.CompilerServices;
-using System.Xml;
+// using System.Reflection.PortableExecutable; // Not used
+// using System.Runtime.CompilerServices; // Not used
+// using System.Xml; // Not used
 using GateKeeper.Server.Models.Account;
-using System.Net;
-using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.Identity.Data;
+// using System.Net; // Not used
+// using System.Text.RegularExpressions; // Not used
+// using Microsoft.AspNetCore.Identity.Data; // Not used
 using RegisterRequest = GateKeeper.Server.Models.Account.UserModels.RegisterRequest;
 using GateKeeper.Server.Models.Site;
 using System.Runtime.InteropServices;
@@ -34,10 +34,8 @@ namespace GateKeeper.Server.Services
     /// </summary>
     public class UserAuthenticationService : IUserAuthenticationService
     {
-        private readonly IStringDataProtector _protector; // Changed type
-        private IHttpContextAccessor _httpContextAccessor;
-
-        private readonly IDbHelper _dbHelper;
+        private readonly IStringDataProtector _protector;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ILogger<UserAuthenticationService> _logger;
         private readonly JwtSettingsConfig _jwtSettings;
         private readonly PasswordSettingsConfig _passwordSettings;
@@ -50,25 +48,13 @@ namespace GateKeeper.Server.Services
         private readonly INotificationTemplateService _notificationTemplateService;
         private readonly INotificationService _notificationService;
         private readonly ISessionService _sessionService;
-        // private readonly bool _requiresInvite; // This will now come from _registerSettings
+        private readonly IUserAuthenticationRepository _userAuthRepository; // Added
 
         private const string cookieName = "LoginAttempts";
-
 
         /// <summary>
         /// Constructor for UserAuthenticationService.
         /// </summary>
-        /// <param name="userService">User-related operations.</param>
-        /// <param name="verificationService">Verification token operations.</param>
-        /// <param name="configuration">App configuration (used for time-based configs, etc.).</param>
-        /// <param name="dbHelper">Database wrapper for DB access.</param>
-        /// <param name="logger">Logger for logging information and errors.</param>
-        /// <param name="settingsService">Service to retrieve settings for users.</param>
-        /// <param name="keyManagementService">Key Management Service for retrieving rotating JWT keys.</param>
-        /// <param name="stringDataProtector">String data protector service.</param>
-        /// <param name="httpContextAccessor"></param>
-        /// <param name="notification"></param>
-        /// <param name="notificationTemplateService"></param>
         public UserAuthenticationService(
             IUserService userService,
             IVerifyTokenService verificationService,
@@ -76,21 +62,20 @@ namespace GateKeeper.Server.Services
             IOptions<PasswordSettingsConfig> passwordSettingsOptions,
             IOptions<RegisterSettingsConfig> registerSettingsOptions,
             IOptions<LoginSettingsConfig> loginSettingsOptions,
-            IDbHelper dbHelper,
             ILogger<UserAuthenticationService> logger,
             ISettingsService settingsService,
             IKeyManagementService keyManagementService,
-            IStringDataProtector stringDataProtector, // Changed parameter type
-            IHttpContextAccessor httpContextAccessor, 
+            IStringDataProtector stringDataProtector,
+            IHttpContextAccessor httpContextAccessor,
             INotificationService notification,
             INotificationTemplateService notificationTemplateService,
-            ISessionService sessionService)
+            ISessionService sessionService,
+            IUserAuthenticationRepository userAuthRepository) // Added
         {
             _jwtSettings = jwtSettingsOptions.Value;
             _passwordSettings = passwordSettingsOptions.Value;
             _registerSettings = registerSettingsOptions.Value;
             _loginSettings = loginSettingsOptions.Value;
-            _dbHelper = dbHelper;
             _logger = logger;
             _verificationService = verificationService;
             _userService = userService;
@@ -98,10 +83,10 @@ namespace GateKeeper.Server.Services
             _keyManagementService = keyManagementService;
             _protector = stringDataProtector;
             _httpContextAccessor = httpContextAccessor;
-            // _requiresInvite = _configuration.GetValue<bool>("RegisterSettings:RequireInvite"); // Now from _registerSettings.RequireInvite
             _notificationService = notification;
             _notificationTemplateService = notificationTemplateService;
             _sessionService = sessionService;
+            _userAuthRepository = userAuthRepository; // Added
         }
 
         /// <inheritdoc />
@@ -151,7 +136,7 @@ namespace GateKeeper.Server.Services
             }
             response.User = userServiceResponse.User; // Ensure the user object in the response is the one from the service
 
-            await AssignRoleToUser(response.User.Id, "NewUser");
+            await _userAuthRepository.AssignRoleToUserAsync(response.User.Id, "NewUser"); // Changed
 
             var template = await _notificationTemplateService.GetNotificationTemplateByNameAsync("Verify Email Template");
             await _notificationService.InsertNotificationAsync(new Notification()
@@ -277,10 +262,15 @@ namespace GateKeeper.Server.Services
                 throw new InvalidTokenException(response.FailureReason ?? "Invalid verification code.");
             }
 
-            await using var connection = await _dbHelper.GetWrapperAsync();
-            await connection.ExecuteNonQueryAsync("ValidateFinish", CommandType.StoredProcedure,
-                new MySqlParameter("@p_UserId", response.User?.Id),
-                new MySqlParameter("@p_Id", response.SessionId));
+            // Ensure response.User and response.SessionId are not null before proceeding
+            if (response.User == null || response.User.Id == 0 || string.IsNullOrEmpty(response.SessionId))
+            {
+                // This case should ideally be handled by VerifyTokenAsync throwing an exception or returning IsVerified = false
+                // Adding a specific log and exception here for robustness.
+                _logger.LogError("User or SessionId is null after token verification, which should not happen for a verified token. UserId: {UserId}, SessionId: {SessionId}", response.User?.Id, response.SessionId);
+                throw new InvalidOperationException("User details or session ID missing after successful token verification.");
+            }
+            await _userAuthRepository.ValidateFinishAsync(response.User.Id, response.SessionId); // Changed
 
             return response;
         }
@@ -481,20 +471,6 @@ namespace GateKeeper.Server.Services
             Array.Clear(keyBytes, 0, keyBytes.Length);
 
             return jwt;
-        }
-
-        /// <summary>
-        /// Assigns a default role to the newly registered user.
-        /// </summary>
-        /// <param name="connection">Active database connection.</param>
-        /// <param name="userId">ID of the user to assign the role to.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        private async Task AssignRoleToUser(int userId, string role)
-        {
-            await using var connection = await _dbHelper.GetWrapperAsync();
-            await connection.ExecuteNonQueryAsync("AssignRoleToUser", CommandType.StoredProcedure,
-                new MySqlParameter("@p_UserId", userId),
-                new MySqlParameter("@p_RoleName", role));
         }
 
         private async Task UpdateLoginAttemptsAndThrowIfLockedAsync(User? user, LoginResponse loginResponse)
