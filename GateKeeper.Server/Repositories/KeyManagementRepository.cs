@@ -24,9 +24,23 @@ namespace GateKeeper.Server.Repositories
             await _dbConnection.ExecuteAsync("spInsertKey", parameters, commandType: CommandType.StoredProcedure);
         }
 
-        public async Task<byte[]> GetActiveEncryptedKeyAsync()
+        public async Task<byte[]?> GetActiveEncryptedKeyAsync()
         {
-            return await _dbConnection.QueryFirstOrDefaultAsync<byte[]>("spGetActiveKey", commandType: CommandType.StoredProcedure);
+            // Call the SP, then select the SecretKey property from the result.
+            // This assumes the SP returns a single row or null.
+            var result = await _dbConnection.QuerySingleOrDefaultAsync(
+                "spGetActiveKey",
+                commandType: CommandType.StoredProcedure
+            );
+
+            if (result == null)
+            {
+                return null;
+            }
+
+            // Dapper returns a DapperRow (which can be treated as IDictionary<string, object>)
+            // or a specific type if you map it. Since we used no type, it's dynamic.
+            return result.SecretKey as byte[];
         }
 
         public async Task DeactivateOldKeysAsync()
