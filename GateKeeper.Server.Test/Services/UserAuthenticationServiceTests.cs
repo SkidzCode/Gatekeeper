@@ -168,9 +168,8 @@ namespace GateKeeper.Server.Test.Services
                 _mockVerificationService.Object,
                 _mockJwtSettingsOptions.Object,
                 _mockPasswordSettingsOptions.Object,
-                _mockRegisterSettingsOptions.Object, // Pass IOptions<RegisterSettingsConfig>
-                _mockLoginSettingsOptions.Object,   // Pass IOptions<LoginSettingsConfig>
-                _mockDbHelper.Object,
+                _mockRegisterSettingsOptions.Object,
+                _mockLoginSettingsOptions.Object,
                 _mockLogger.Object,
                 _mockSettingsService.Object,
                 _mockKeyManagementService.Object,
@@ -178,7 +177,8 @@ namespace GateKeeper.Server.Test.Services
                 _mockHttpContextAccessor.Object,
                 _mockNotificationService.Object,
                 _mockNotificationTemplateService.Object,
-                _mockSessionService.Object
+                _mockSessionService.Object,
+                _mockUserAuthRepository.Object // Added: Corrected position
             );
         }
 
@@ -201,23 +201,26 @@ namespace GateKeeper.Server.Test.Services
             _mockUserService.Setup(us => us.RegisterUser(It.IsAny<User>()))
                 .ReturnsAsync(registrationResponse);
             
-            _mockDbHelper.Setup(db => db.GetWrapperAsync()).ReturnsAsync(Mock.Of<IMySqlConnectorWrapper>()); 
+            // _mockDbHelper.Setup(db => db.GetWrapperAsync()).ReturnsAsync(Mock.Of<IMySqlConnectorWrapper>()); // Removed
+            _mockUserAuthRepository.Setup(repo => repo.AssignRoleToUserAsync(It.IsAny<int>(), It.IsAny<string>()))
+                .Returns(Task.CompletedTask);
+
 
             _mockNotificationTemplateService.Setup(nts => nts.GetNotificationTemplateByNameAsync(It.IsAny<string>(), It.IsAny<string?>()))
                 .ReturnsAsync(new NotificationTemplate { Body = "template_body", Subject = "template_subject" });
             _mockNotificationService.Setup(ns => ns.InsertNotificationAsync(It.IsAny<Notification>()))
-                .ReturnsAsync(new NotificationInsertResponse()); // Removed IsSuccess
+                .ReturnsAsync(new NotificationInsertResponse());
 
             _mockVerificationService.Setup(vs => vs.GenerateTokenAsync(It.IsAny<int>(), "NewUser"))
                 .ReturnsAsync("verification_token");
 
-            _mockEmailService.Setup(es => es.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
-                .Returns(Task.CompletedTask);
+            // _mockEmailService.Setup(es => es.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>())) // Removed as not directly called
+            //     .Returns(Task.CompletedTask);
             
             _mockVerificationService.Setup(vs => vs.VerifyTokenAsync(It.IsAny<VerifyTokenRequest>()))
-                .ReturnsAsync(new TokenVerificationResponse { IsVerified = true, User = new User { Id = registerRequest.Token == "valid_invite_token" ? 100 : 0 } }); // Simulate invite token verification
+                .ReturnsAsync(new TokenVerificationResponse { IsVerified = true, User = new User { Id = registerRequest.Token == "valid_invite_token" ? 100 : 0 } });
             _mockVerificationService.Setup(vs => vs.CompleteTokensAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>()))
-                .ReturnsAsync(1); // Changed to ReturnsAsync(1)
+                .ReturnsAsync(1);
 
 
             // Act
@@ -225,8 +228,8 @@ namespace GateKeeper.Server.Test.Services
 
             // Assert
             _mockUserService.Verify(us => us.RegisterUser(It.IsAny<User>()), Times.Once);
-            _mockNotificationService.Verify(ns => ns.InsertNotificationAsync(It.IsAny<Notification>()), Times.Once); // Verify notification insertion
-            // _mockEmailService.Verify(es => es.SendEmailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once); // Removed this verification
+            _mockNotificationService.Verify(ns => ns.InsertNotificationAsync(It.IsAny<Notification>()), Times.Once);
+            _mockUserAuthRepository.Verify(repo => repo.AssignRoleToUserAsync(registrationResponse.User.Id, "NewUser"), Times.Once); // Added verification
         }
 
         [TestMethod]
@@ -300,7 +303,9 @@ namespace GateKeeper.Server.Test.Services
             _mockVerificationService.Setup(vs => vs.VerifyTokenAsync(It.IsAny<VerifyTokenRequest>()))
                 .ReturnsAsync(tokenVerificationResponse);
 
-            _mockDbHelper.Setup(db => db.GetWrapperAsync()).ReturnsAsync(Mock.Of<IMySqlConnectorWrapper>());
+            // _mockDbHelper.Setup(db => db.GetWrapperAsync()).ReturnsAsync(Mock.Of<IMySqlConnectorWrapper>()); // Removed
+            _mockUserAuthRepository.Setup(repo => repo.ValidateFinishAsync(user.Id, "session123"))
+                .Returns(Task.CompletedTask); // Added
 
             // Act
             var result = await _authService.VerifyNewUser(verificationCode);
@@ -310,6 +315,7 @@ namespace GateKeeper.Server.Test.Services
             Assert.IsNotNull(result.User);
             Assert.AreEqual("NewUser", result.TokenType);
             _mockVerificationService.Verify(vs => vs.VerifyTokenAsync(It.IsAny<VerifyTokenRequest>()), Times.Once);
+            _mockUserAuthRepository.Verify(repo => repo.ValidateFinishAsync(user.Id, "session123"), Times.Once); // Added verification
         }
 
         [TestMethod]
@@ -421,9 +427,24 @@ namespace GateKeeper.Server.Test.Services
             _authService = new UserAuthenticationService(
                 _mockUserService.Object, _mockVerificationService.Object, _mockJwtSettingsOptions.Object,
                 _mockPasswordSettingsOptions.Object, _mockRegisterSettingsOptions.Object, _mockLoginSettingsOptions.Object,
-                _mockDbHelper.Object, _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
                 _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
-                _mockNotificationTemplateService.Object, _mockSessionService.Object);
+                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
+                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
+                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
+                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
+                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
+                _mockLogger.Object, _mockSettingsService.Object, _mockKeyManagementService.Object,
+                _mockStringDataProtector.Object, _mockHttpContextAccessor.Object, _mockNotificationService.Object,
+                _mockNotificationTemplateService.Object, _mockSessionService.Object, _mockUserAuthRepository.Object);
 
             // Act & Assert
             await Assert.ThrowsExceptionAsync<InvalidCredentialsException>(() =>
@@ -951,7 +972,6 @@ namespace GateKeeper.Server.Test.Services
                 _mockPasswordSettingsOptions.Object,
                 _mockRegisterSettingsOptions.Object,
                 _mockLoginSettingsOptions.Object,
-                _mockDbHelper.Object,
                 _mockLogger.Object,
                 _mockSettingsService.Object,
                 _mockKeyManagementService.Object,
@@ -959,7 +979,8 @@ namespace GateKeeper.Server.Test.Services
                 _mockHttpContextAccessor.Object,
                 _mockNotificationService.Object,
                 _mockNotificationTemplateService.Object,
-                _mockSessionService.Object
+                _mockSessionService.Object,
+                _mockUserAuthRepository.Object // Added
             );
 
             _mockUserService.Setup(s => s.GetUser(It.IsAny<string>()))
