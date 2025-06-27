@@ -154,28 +154,18 @@ const staticRoutes: Routes = [
     // Routes are generated and router is configured in the APP_INITIALIZER below.
     {
       provide: APP_INITIALIZER,
-      useFactory: (injector: Injector, pluginLoader: PluginLoaderService) => { // Inject PluginLoaderService
-        return async () => { // Factory returns an async function (Promise)
+      useFactory: (injector: Injector, pluginLoader: PluginLoaderService) => {
+        return async () => {
           console.log('[AppRoutingModule] APP_INITIALIZER for router reconfiguration STARTING');
-
-          // Ensure plugin manifests are loaded. The other APP_INITIALIZER should handle this,
-          // but this APP_INITIALIZER depends on PluginLoaderService, so Angular ensures it runs after
-          // PluginLoaderService is available. The promise from loadPluginManifests() should have resolved.
-          // For robustness, one could await pluginLoader.loadPluginManifests() here if it weren't already an APP_INIT.
-          // However, the dependency chain of APP_INITIALIZERs should manage order.
 
           const router = injector.get(Router);
           console.log('[AppRoutingModule] Router instance:', router);
 
-          // Generate routes now, as manifests should be loaded.
           const dynamicRoutes = generatePluginRoutes(injector);
           console.log('[AppRoutingModule] Dynamic routes generated:', JSON.parse(JSON.stringify(dynamicRoutes, (key, value) =>
             typeof value === 'function' ? `FUNCTION: ${value.name || 'anonymous'}` : value
           )));
 
-        // It's crucial that staticRoutes is a new copy if it's mutated,
-        // or router.resetConfig might not detect changes properly in some scenarios.
-        // However, direct mutation as done here is common.
         console.log('[AppRoutingModule] Static routes BEFORE modification:', JSON.parse(JSON.stringify(staticRoutes)));
 
         const portalRoute = staticRoutes.find(r => r.path === 'portal');
@@ -197,9 +187,9 @@ const staticRoutes: Routes = [
         )));
         router.resetConfig(staticRoutes);
         console.log('[AppRoutingModule] APP_INITIALIZER for router reconfiguration COMPLETED');
-        // No return needed for APP_INITIALIZER factory that returns an async function
+        };
       },
-      deps: [Injector, PluginLoaderService], // Added PluginLoaderService to deps
+      deps: [Injector, PluginLoaderService],
       multi: true
     }
   ]
