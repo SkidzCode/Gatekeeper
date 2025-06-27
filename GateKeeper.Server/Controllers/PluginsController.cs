@@ -24,7 +24,12 @@ namespace GateKeeper.Server.Controllers
             {
                 Name = plugin.Name,
                 Version = plugin.Version,
-                Description = plugin.Description
+                Description = plugin.Description,
+                AngularModulePath = plugin.AngularModulePath,
+                AngularModuleName = plugin.AngularModuleName,
+                RoutePath = $"portal/{plugin.DefaultRoutePath}", // Transform DefaultRoutePath
+                NavigationLabel = plugin.NavigationLabel,
+                RequiredRole = plugin.RequiredRole
             }).ToList();
 
             return Ok(pluginInfos);
