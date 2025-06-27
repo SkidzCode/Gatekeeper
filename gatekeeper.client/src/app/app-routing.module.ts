@@ -52,16 +52,16 @@ export function generatePluginRoutes(injector: Injector): Routes {
       console.log(`[AppRoutingModule]   - Loader FOUND for pluginKey: ${pluginKey}`);
     }
 
-    // Ensure defaultRoutePath is correctly segmented
-    // If manifest.defaultRoutePath is "portal/sample", we only want "sample"
-    const pathSegments = manifest.defaultRoutePath.split('/');
-    const routePath = pathSegments[pathSegments.length - 1];
-    console.log(`[AppRoutingModule]   - Original manifest.defaultRoutePath: ${manifest.defaultRoutePath}, Derived routePath for routing: ${routePath}`);
+    // Ensure routePath is correctly segmented
+    // If manifest.routePath is "portal/sample", we only want "sample"
+    const pathSegments = manifest.routePath.split('/');
+    const finalRoutePath = pathSegments[pathSegments.length - 1]; // Renamed to avoid conflict with outer scope if any
+    console.log(`[AppRoutingModule]   - Original manifest.routePath: ${manifest.routePath}, Derived routePath for routing: ${finalRoutePath}`);
 
     const routeConfig = {
-      path: routePath, // e.g., 'sample'
+      path: finalRoutePath, // e.g., 'sample'
       loadChildren: () => {
-        console.log(`[AppRoutingModule] Executing loadChildren for route: ${routePath}, pluginKey: ${pluginKey}`);
+        console.log(`[AppRoutingModule] Executing loadChildren for route: ${finalRoutePath}, pluginKey: ${pluginKey}`);
         return loader().then((m: any) => {
           console.log(`[AppRoutingModule] Module loaded for ${pluginKey}:`, m);
           if (!m[manifest.angularModuleName]) {
