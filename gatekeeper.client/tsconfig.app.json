@@ -8,8 +8,12 @@
   },
   "files": [
     "src/main.ts"
+    // "src/plugins.d.ts" // No longer needed here if include is broader
   ],
   "include": [
-    "src/**/*.d.ts"
+    "src/**/*.ts" // Broaden to include all .ts files in src
+  ],
+  "exclude": [
+    "src/**/*.spec.ts"
   ]
 }
