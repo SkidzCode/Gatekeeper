@@ -42,8 +42,13 @@ export function generatePluginRoutes(injector: Injector): Routes {
       return null;
     }
 
+    // Ensure defaultRoutePath is correctly segmented
+    // If manifest.defaultRoutePath is "portal/sample", we only want "sample"
+    const pathSegments = manifest.defaultRoutePath.split('/');
+    const routePath = pathSegments[pathSegments.length - 1];
+
     return {
-      path: manifest.defaultRoutePath, // e.g., 'sample'
+      path: routePath, // e.g., 'sample'
       loadChildren: () => loader().then((m: any) => m[manifest.angularModuleName]),
       data: {
         navigationLabel: manifest.navigationLabel,
