@@ -40,6 +40,7 @@
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
     <ProjectReference Include="..\GateKeeper.Plugin.Abstractions\GateKeeper.Plugin.Abstractions.csproj" />
+    <ProjectReference Include="..\GateKeeper.Plugin.Placeholder\GateKeeper.Plugin.Placeholder.csproj" />
   </ItemGroup>
 
   <ItemGroup>
