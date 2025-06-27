@@ -61,22 +61,24 @@ export class PluginLoaderService {
               portalRoute.children = [];
             }
 
-            // Ensure portalRoute.children is definitely assigned for the following block
-            const childrenRoutes = portalRoute.children;
-            if (childrenRoutes) { // This check might seem redundant but can satisfy stricter TS checks
-              // Add only new routes, avoiding conflicts
+            // Explicitly check portalRoute.children again before assignment and use
+            if (portalRoute.children) {
+              const childrenRoutes = portalRoute.children; // Safe to assign now
               pluginRoutes.forEach(pluginRoute => {
                 if (!childrenRoutes.find(child => child.path === pluginRoute.path)) {
                   childrenRoutes.push(pluginRoute);
                 } else {
-                  const navLabel = pluginRoute.data ? pluginRoute.data['navigationLabel'] : 'unknown';
+                  // Use bracket notation for data property access and ensure data object exists
+                  const navLabel = pluginRoute.data && typeof pluginRoute.data === 'object' && pluginRoute.data['navigationLabel']
+                                   ? pluginRoute.data['navigationLabel']
+                                   : 'unknown';
                   console.warn(`Route path conflict: A route with path "${pluginRoute.path}" already exists under "portal". Plugin route for "${navLabel}" will be skipped.`);
                 }
               });
               this.router.resetConfig(currentConfig);
             } else {
-              // This case should ideally not be reached if the above initialization works
-              console.error('Error: portalRoute.children could not be initialized.');
+              // This path should ideally not be reached if the above initialization works
+              console.error('Critical Error: portalRoute.children is null or undefined even after initialization attempt.');
             }
             console.log('Router configuration updated with plugin routes:', pluginRoutes);
           } else {
