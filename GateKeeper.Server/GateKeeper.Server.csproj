@@ -39,6 +39,7 @@
     <ProjectReference Include="..\gatekeeper.client\gatekeeper.client.esproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
+    <ProjectReference Include="..\GateKeeper.Plugin.Abstractions\GateKeeper.Plugin.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

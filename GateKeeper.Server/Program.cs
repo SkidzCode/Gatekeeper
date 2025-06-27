@@ -13,6 +13,7 @@ using GateKeeper.Server.Models.Configuration; // Added for typed configurations
 using Microsoft.Extensions.Options; // Added for IOptions
 using System.Data; // Added for IDbConnection
 using MySqlConnector; // Added for MySqlConnection
+using GateKeeper.Plugin.Abstractions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -297,6 +298,57 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+#endregion
+
+#region Plugin Discovery and Loading
+Log.Information("Starting plugin discovery...");
+var loadedPlugins = new List<IPlugin>();
+var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+foreach (var assembly in assemblies)
+{
+    try
+    {
+        var pluginTypes = assembly.GetTypes()
+            .Where(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+
+        foreach (var type in pluginTypes)
+        {
+            try
+            {
+                var plugin = (IPlugin)Activator.CreateInstance(type);
+                if (plugin != null)
+                {
+                    Log.Information("Found plugin: {PluginName} v{PluginVersion}", plugin.Name, plugin.Version);
+                    plugin.ConfigureServices(builder.Services, builder.Configuration);
+                    loadedPlugins.Add(plugin);
+                    Log.Information("Configured plugin: {PluginName}", plugin.Name);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error instantiating or configuring plugin type {PluginType} from assembly {AssemblyName}", type.FullName, assembly.FullName);
+            }
+        }
+    }
+    catch (ReflectionTypeLoadException ex)
+    {
+        Log.Warning("Could not load types from assembly {AssemblyName} during plugin discovery: {LoaderExceptions}", assembly.FullName, ex.LoaderExceptions.Select(e => e?.Message));
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "Error inspecting assembly {AssemblyName} for plugins", assembly.FullName);
+    }
+}
+
+if (!loadedPlugins.Any())
+{
+    Log.Information("No plugins found.");
+}
+else
+{
+    Log.Information("Finished plugin discovery. Loaded {PluginCount} plugins.", loadedPlugins.Count);
+}
+builder.Services.AddSingleton<IReadOnlyList<IPlugin>>(loadedPlugins.AsReadOnly());
 #endregion
 
 var app = builder.Build();
