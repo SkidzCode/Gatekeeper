@@ -29,27 +29,50 @@ import { PortalLayoutComponent } from './portal/layout/portal-layout/portal-layo
 // This function creates the routes by combining backend data and frontend loaders
 // We need to export it to be used in the AOT factory
 export function generatePluginRoutes(injector: Injector): Routes {
+  console.log('[AppRoutingModule] generatePluginRoutes called');
   const pluginService = injector.get(PluginLoaderService);
   const manifests = pluginService.getPluginManifests();
+  console.log('[AppRoutingModule] Fetched manifests:', JSON.parse(JSON.stringify(manifests)));
+  console.log('[AppRoutingModule] Available pluginLoaders from esbuild:', pluginLoaders);
+
 
   const mappedRoutes: (Route | null)[] = manifests.map(manifest => {
-    const pluginKey = manifest.angularModulePath.replace(/\.module$/, ''); // 'plugins/sample/sample'
+    console.log(`[AppRoutingModule] Processing manifest for: ${manifest.name}`);
+    console.log(`[AppRoutingModule]   - angularModulePath: ${manifest.angularModulePath}`);
+    const pluginKey = manifest.angularModulePath.replace(/\.module$/, ''); // Expected: 'plugins/sample/sample'
+    console.log(`[AppRoutingModule]   - Generated pluginKey: ${pluginKey}`);
 
     const loader = (pluginLoaders as any)[pluginKey];
 
     if (!loader) {
-      console.error(`Plugin manifest for "${manifest.name}" found, but no corresponding module loader for key "${pluginKey}" was generated.`);
+      console.error(`[AppRoutingModule] Plugin manifest for "${manifest.name}" found, but NO corresponding module loader for key "${pluginKey}" was generated in pluginLoaders.`);
+      console.log('[AppRoutingModule] Available keys in pluginLoaders:', Object.keys(pluginLoaders));
       return null;
+    } else {
+      console.log(`[AppRoutingModule]   - Loader FOUND for pluginKey: ${pluginKey}`);
     }
 
     // Ensure defaultRoutePath is correctly segmented
     // If manifest.defaultRoutePath is "portal/sample", we only want "sample"
     const pathSegments = manifest.defaultRoutePath.split('/');
     const routePath = pathSegments[pathSegments.length - 1];
+    console.log(`[AppRoutingModule]   - Original manifest.defaultRoutePath: ${manifest.defaultRoutePath}, Derived routePath for routing: ${routePath}`);
 
-    return {
+    const routeConfig = {
       path: routePath, // e.g., 'sample'
-      loadChildren: () => loader().then((m: any) => m[manifest.angularModuleName]),
+      loadChildren: () => {
+        console.log(`[AppRoutingModule] Executing loadChildren for route: ${routePath}, pluginKey: ${pluginKey}`);
+        return loader().then((m: any) => {
+          console.log(`[AppRoutingModule] Module loaded for ${pluginKey}:`, m);
+          if (!m[manifest.angularModuleName]) {
+            console.error(`[AppRoutingModule] Module ${manifest.angularModuleName} not found in loaded module for ${pluginKey}. Available exports:`, Object.keys(m));
+          }
+          return m[manifest.angularModuleName];
+        }).catch((err: any) => {
+          console.error(`[AppRoutingModule] Error loading module for ${pluginKey} (route: ${routePath}):`, err);
+          throw err; // Re-throw to see it in console further if not caught by router
+        });
+      },
       data: {
         navigationLabel: manifest.navigationLabel,
         requiredRole: manifest.requiredRole,
@@ -58,13 +81,20 @@ export function generatePluginRoutes(injector: Injector): Routes {
     };
   });
 
-  return mappedRoutes.filter((r): r is Route => r !== null);
+  const finalPluginRoutes = mappedRoutes.filter((r): r is Route => r !== null);
+  console.log('[AppRoutingModule] Final generated plugin routes:', JSON.parse(JSON.stringify(finalPluginRoutes, (key, value) =>
+    typeof value === 'function' ? `FUNCTION: ${value.name || 'anonymous'}` : value
+  )));
+  return finalPluginRoutes;
 }
 
 // Use an InjectionToken for the dynamically generated routes
 export const DYNAMIC_PLUGIN_ROUTES = new InjectionToken<Routes>('DYNAMIC_PLUGIN_ROUTES', {
   providedIn: 'root',
-  factory: () => generatePluginRoutes(inject(Injector)) // inject Injector
+  factory: () => {
+    console.log('[AppRoutingModule] DYNAMIC_PLUGIN_ROUTES factory called.');
+    return generatePluginRoutes(inject(Injector));
+  }
 });
 
 const staticRoutes: Routes = [
@@ -128,20 +158,39 @@ const staticRoutes: Routes = [
     {
       provide: APP_INITIALIZER, // Changed from NgModule to APP_INITIALIZER for router reconfiguration
       useFactory: (injector: Injector) => () => { // Return a function for APP_INITIALIZER
+        console.log('[AppRoutingModule] APP_INITIALIZER for router reconfiguration STARTING');
         const router = injector.get(Router); // Use imported Router
-        const dynamicRoutes = injector.get(DYNAMIC_PLUGIN_ROUTES);
+        console.log('[AppRoutingModule] Router instance:', router);
 
-        // Find the '/portal' route and add children to it
+        const dynamicRoutes = injector.get(DYNAMIC_PLUGIN_ROUTES);
+        console.log('[AppRoutingModule] Dynamic routes from token:', JSON.parse(JSON.stringify(dynamicRoutes, (key, value) =>
+          typeof value === 'function' ? `FUNCTION: ${value.name || 'anonymous'}` : value
+        )));
+
+        // It's crucial that staticRoutes is a new copy if it's mutated,
+        // or router.resetConfig might not detect changes properly in some scenarios.
+        // However, direct mutation as done here is common.
+        console.log('[AppRoutingModule] Static routes BEFORE modification:', JSON.parse(JSON.stringify(staticRoutes)));
+
         const portalRoute = staticRoutes.find(r => r.path === 'portal');
-        if (portalRoute && portalRoute.children) {
+        if (portalRoute) {
+          console.log('[AppRoutingModule] Found portal route:', JSON.parse(JSON.stringify(portalRoute)));
+          if (!portalRoute.children) {
+            portalRoute.children = [];
+          }
           portalRoute.children.push(...dynamicRoutes);
-        } else if (portalRoute) {
-          portalRoute.children = dynamicRoutes;
+          console.log('[AppRoutingModule] Portal route AFTER adding dynamic children:', JSON.parse(JSON.stringify(portalRoute, (key, value) =>
+            typeof value === 'function' ? `FUNCTION: ${value.name || 'anonymous'}` : value
+          )));
         } else {
-          console.error("Could not find '/portal' route to attach plugin routes.");
+          console.error("[AppRoutingModule] CRITICAL: Could not find '/portal' route to attach plugin routes.");
         }
 
+        console.log('[AppRoutingModule] Final routes for resetConfig:', JSON.parse(JSON.stringify(staticRoutes, (key, value) =>
+          typeof value === 'function' ? `FUNCTION: ${value.name || 'anonymous'}` : value
+        )));
         router.resetConfig(staticRoutes);
+        console.log('[AppRoutingModule] APP_INITIALIZER for router reconfiguration COMPLETED');
         // No return needed for APP_INITIALIZER factory that returns a function
       },
       deps: [Injector],
