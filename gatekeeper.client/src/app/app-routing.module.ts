@@ -69,7 +69,7 @@ export function generatePluginRoutes(injector: Injector): Routes {
           }
           return m[manifest.angularModuleName];
         }).catch((err: any) => {
-          console.error(`[AppRoutingModule] Error loading module for ${pluginKey} (route: ${routePath}):`, err);
+          console.error(`[AppRoutingModule] Error loading module for ${pluginKey} (route: ${finalRoutePath}):`, err);
           throw err; // Re-throw to see it in console further if not caught by router
         });
       },
