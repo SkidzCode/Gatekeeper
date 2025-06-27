@@ -4,10 +4,11 @@ import { SampleRoutingModule } from './sample-routing.module';
 import { SampleComponent } from './sample.component';
 
 @NgModule({
-  declarations: [SampleComponent],
+  declarations: [], // SampleComponent is now standalone
   imports: [
     CommonModule,
-    SampleRoutingModule
+    SampleRoutingModule,
+    SampleComponent // Import standalone components
   ]
 })
 export class SampleModule { }
