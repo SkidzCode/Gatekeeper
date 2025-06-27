@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { NgModule, APP_INITIALIZER } from '@angular/core';
 import { MatOptionModule } from '@angular/material/core';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatListModule } from '@angular/material/list';
@@ -36,6 +36,11 @@ import { ThemeSwitchComponent } from './shared/theme/theme-switch/theme-switch.c
 
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 
+import { PluginLoaderService } from './core/services/plugin-loader.service';
+
+export function initializeApp(pluginLoaderService: PluginLoaderService) {
+  return () => pluginLoaderService.loadPluginManifests();
+}
 
 @NgModule({
   declarations: [
@@ -73,6 +78,13 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
   ],
   providers: [
     provideAnimationsAsync(),
+    PluginLoaderService,
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initializeApp,
+      deps: [PluginLoaderService],
+      multi: true
+    },
     {
       provide: HTTP_INTERCEPTORS,
       useClass: AuthInterceptor,
