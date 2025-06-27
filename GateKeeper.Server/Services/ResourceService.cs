@@ -13,15 +13,13 @@ namespace GateKeeper.Server.Services
 {
     public class ResourceService : IResourceService
     {
-        private readonly IDbHelper _dbHelper;
         private readonly ILogger<ResourceService> _logger;
         // private readonly IConfiguration _configuration; // To be replaced
         private readonly ResourceSettingsConfig _resourceSettings; // Added
         private readonly string _resourceDirectory;
 
-        public ResourceService(IDbHelper dbHelper, ILogger<ResourceService> logger, IOptions<ResourceSettingsConfig> resourceSettingsOptions) // Use IOptions
+        public ResourceService(ILogger<ResourceService> logger, IOptions<ResourceSettingsConfig> resourceSettingsOptions) // Use IOptions
         {
-            _dbHelper = dbHelper;
             _logger = logger;
             _resourceSettings = resourceSettingsOptions.Value; // Store the typed config
             

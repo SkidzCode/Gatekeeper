@@ -7,36 +7,26 @@ using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System;
-using System.Data;
-using MySqlConnector;
-using System.Linq;
+using System.Linq; // Keep if used for LINQ expressions in parameter matching
 
 namespace GateKeeper.Server.Test.Services
 {
     [TestClass]
     public class SettingsServiceTests
     {
-        private Mock<IDbHelper> _mockDbHelper;
-        private Mock<IMySqlConnectorWrapper> _mockMySqlConnectorWrapper;
-        private Mock<IMySqlDataReaderWrapper> _mockDataReader;
+        private Mock<ISettingsRepository> _mockSettingsRepository;
         private Mock<ILogger<SettingsService>> _mockLogger;
         private SettingsService _service;
 
         [TestInitialize]
         public void TestInitialize()
         {
-            _mockDbHelper = new Mock<IDbHelper>();
-            _mockMySqlConnectorWrapper = new Mock<IMySqlConnectorWrapper>();
-            _mockDataReader = new Mock<IMySqlDataReaderWrapper>();
+            _mockSettingsRepository = new Mock<ISettingsRepository>();
             _mockLogger = new Mock<ILogger<SettingsService>>();
-
-            _mockDbHelper.Setup(db => db.GetWrapperAsync()).Returns(Task.FromResult(_mockMySqlConnectorWrapper.Object));
-            _mockMySqlConnectorWrapper.Setup(c => c.OpenConnectionAsync()).Returns(Task.FromResult(_mockMySqlConnectorWrapper.Object));
-            
-            _service = new SettingsService(_mockDbHelper.Object, _mockLogger.Object);
+            _service = new SettingsService(_mockSettingsRepository.Object, _mockLogger.Object);
         }
 
-        private Setting CreateTestSetting(int id = 1, string name = "TestSetting", string value = "TestValue", 
+        private Setting CreateTestSetting(int id = 1, string name = "TestSetting", string value = "TestValue",
                                           string category = "General", int? parentId = null, int? userId = null,
                                           string type = "string", string defaultValue = "Default",
                                           int createdBy = 1, int updatedBy = 1)
@@ -45,7 +35,7 @@ namespace GateKeeper.Server.Test.Services
             {
                 Id = id,
                 ParentId = parentId,
-                UserId = userId,
+                UserId = userId, // UserId is part of the Setting model, so keep it for creating test objects
                 Name = name,
                 Category = category,
                 SettingValueType = type,
@@ -58,239 +48,215 @@ namespace GateKeeper.Server.Test.Services
             };
         }
 
-        private void SetupMockReaderForSetting(Setting setting)
-        {
-            _mockDataReader.Setup(r => r.GetInt32("Id")).Returns(setting.Id);
-            _mockDataReader.Setup(r => r.GetOrdinal("ParentId")).Returns(1); // Example ordinal
-            _mockDataReader.Setup(r => r.IsDBNull(1)).Returns(!setting.ParentId.HasValue);
-            if (setting.ParentId.HasValue) _mockDataReader.Setup(r => r.GetInt32("ParentId")).Returns(setting.ParentId.Value);
-            
-            _mockDataReader.Setup(r => r.GetOrdinal("UserId")).Returns(2); // Example ordinal
-            _mockDataReader.Setup(r => r.IsDBNull(2)).Returns(!setting.UserId.HasValue);
-            if (setting.UserId.HasValue) _mockDataReader.Setup(r => r.GetInt32("UserId")).Returns(setting.UserId.Value);
-
-            _mockDataReader.Setup(r => r.GetString("Name")).Returns(setting.Name);
-            _mockDataReader.Setup(r => r.GetOrdinal("Category")).Returns(3); // Example ordinal
-            _mockDataReader.Setup(r => r.IsDBNull(3)).Returns(setting.Category == null);
-            if (setting.Category != null) _mockDataReader.Setup(r => r.GetString("Category")).Returns(setting.Category);
-            
-            _mockDataReader.Setup(r => r.GetString("SettingValueType")).Returns(setting.SettingValueType);
-            _mockDataReader.Setup(r => r.GetString("DefaultSettingValue")).Returns(setting.DefaultSettingValue);
-            _mockDataReader.Setup(r => r.GetString("SettingValue")).Returns(setting.SettingValue);
-            _mockDataReader.Setup(r => r.GetInt32("CreatedBy")).Returns(setting.CreatedBy);
-            _mockDataReader.Setup(r => r.GetInt32("UpdatedBy")).Returns(setting.UpdatedBy);
-            _mockDataReader.Setup(r => r.GetDateTime("CreatedAt")).Returns(setting.CreatedAt);
-            _mockDataReader.Setup(r => r.GetDateTime("UpdatedAt")).Returns(setting.UpdatedAt);
-        }
-
         #region GetAllSettingsAsync Tests
         [TestMethod]
-        public async Task GetAllSettingsAsync_ReturnsListOfSettings()
+        public async Task GetAllSettingsAsync_ReturnsListOfSettingsFromRepository()
+        {
+            var settingsData = new List<Setting> { CreateTestSetting(1), CreateTestSetting(2, userId: 10) };
+            int? testUserId = 10;
+            _mockSettingsRepository.Setup(repo => repo.GetAllSettingsAsync(testUserId))
+                                   .ReturnsAsync(settingsData.Where(s => s.UserId == testUserId).ToList());
+
+            var result = await _service.GetAllSettingsAsync(testUserId);
+
+            Assert.IsNotNull(result);
+            Assert.AreEqual(1, result.Count); // Only one setting matches userId 10
+            _mockSettingsRepository.Verify(repo => repo.GetAllSettingsAsync(testUserId), Times.Once);
+        }
+
+        [TestMethod]
+        public async Task GetAllSettingsAsync_NullUserId_ReturnsAllSettingsFromRepository()
         {
             var settingsData = new List<Setting> { CreateTestSetting(1), CreateTestSetting(2) };
-            _mockMySqlConnectorWrapper.Setup(c => c.ExecuteReaderAsync("GetAllSettings", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
-                                      .ReturnsAsync(_mockDataReader.Object);
-            var readCallCount = 0;
-            _mockDataReader.Setup(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
-                           .ReturnsAsync(() => readCallCount < settingsData.Count)
-                           .Callback(() => { if (readCallCount < settingsData.Count) SetupMockReaderForSetting(settingsData[readCallCount]); readCallCount++; });
-            
-            var result = await _service.GetAllSettingsAsync();
+            _mockSettingsRepository.Setup(repo => repo.GetAllSettingsAsync(null))
+                                   .ReturnsAsync(settingsData);
+
+            var result = await _service.GetAllSettingsAsync(null);
 
             Assert.IsNotNull(result);
             Assert.AreEqual(settingsData.Count, result.Count);
+            _mockSettingsRepository.Verify(repo => repo.GetAllSettingsAsync(null), Times.Once);
         }
         #endregion
 
         #region GetSettingByIdAsync Tests
         [TestMethod]
-        public async Task GetSettingByIdAsync_SettingFound_ReturnsSetting()
+        public async Task GetSettingByIdAsync_SettingFound_ReturnsSettingFromRepository()
         {
             var setting = CreateTestSetting(1);
-            _mockMySqlConnectorWrapper.Setup(c => c.ExecuteReaderAsync("GetSettingById", CommandType.StoredProcedure, It.Is<MySqlParameter[]>(p => (int)p[0].Value == setting.Id)))
-                                      .ReturnsAsync(_mockDataReader.Object);
-            _mockDataReader.Setup(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(true);
-            SetupMockReaderForSetting(setting);
+            _mockSettingsRepository.Setup(repo => repo.GetSettingByIdAsync(setting.Id))
+                                   .ReturnsAsync(setting);
 
             var result = await _service.GetSettingByIdAsync(setting.Id);
 
             Assert.IsNotNull(result);
             Assert.AreEqual(setting.Id, result.Id);
+            _mockSettingsRepository.Verify(repo => repo.GetSettingByIdAsync(setting.Id), Times.Once);
         }
 
         [TestMethod]
-        public async Task GetSettingByIdAsync_SettingNotFound_ReturnsNull()
+        public async Task GetSettingByIdAsync_SettingNotFound_ReturnsNullFromRepository()
         {
-            _mockMySqlConnectorWrapper.Setup(c => c.ExecuteReaderAsync("GetSettingById", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
-                                      .ReturnsAsync(_mockDataReader.Object);
-            _mockDataReader.Setup(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(false);
+            _mockSettingsRepository.Setup(repo => repo.GetSettingByIdAsync(It.IsAny<int>()))
+                                   .ReturnsAsync((Setting?)null);
 
             var result = await _service.GetSettingByIdAsync(1);
             Assert.IsNull(result);
+            _mockSettingsRepository.Verify(repo => repo.GetSettingByIdAsync(1), Times.Once);
         }
         #endregion
 
         #region AddSettingAsync Tests
         [TestMethod]
-        public async Task AddSettingAsync_CallsSPAndReturnsSettingWithId()
+        public async Task AddSettingAsync_CallsRepositoryAndReturnsSetting()
         {
-            var setting = CreateTestSetting(id: 0); // ID is 0 for new setting
-            var expectedNewId = 123;
-            _mockMySqlConnectorWrapper.Setup(c => c.ExecuteReaderAsync("AddSetting", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
-                                      .ReturnsAsync(_mockDataReader.Object);
-            _mockDataReader.Setup(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(true);
-            _mockDataReader.Setup(r => r.GetInt32("NewSettingId")).Returns(expectedNewId);
+            var settingToAdd = CreateTestSetting(id: 0); // ID is 0 for new setting
+            var expectedSettingAfterAdd = CreateTestSetting(id: 123, name: settingToAdd.Name); // Repository returns it with ID
 
-            var result = await _service.AddSettingAsync(setting);
+            _mockSettingsRepository.Setup(repo => repo.AddSettingAsync(settingToAdd))
+                                   .ReturnsAsync(expectedSettingAfterAdd);
+
+            var result = await _service.AddSettingAsync(settingToAdd);
 
             Assert.IsNotNull(result);
-            Assert.AreEqual(expectedNewId, result.Id);
-            _mockMySqlConnectorWrapper.Verify(c => c.ExecuteReaderAsync("AddSetting", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()), Times.Once);
+            Assert.AreEqual(expectedSettingAfterAdd.Id, result.Id);
+            Assert.AreEqual(settingToAdd.Name, result.Name);
+            _mockSettingsRepository.Verify(repo => repo.AddSettingAsync(settingToAdd), Times.Once);
         }
         #endregion
 
         #region UpdateSettingAsync Tests
         [TestMethod]
-        public async Task UpdateSettingAsync_CallsSPAndReturnsUpdatedSetting()
+        public async Task UpdateSettingAsync_CallsRepositoryAndReturnsUpdatedSetting()
         {
-            var setting = CreateTestSetting(1); // Existing setting
-            _mockMySqlConnectorWrapper.Setup(c => c.ExecuteNonQueryAsync("UpdateSetting", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
-                                      .ReturnsAsync(1); // 1 row affected
+            var settingToUpdate = CreateTestSetting(1, name: "OriginalName");
+            var expectedUpdatedSetting = CreateTestSetting(1, name: "UpdatedName");
 
-            // Mock the GetSettingByIdAsync call that happens after update
-            _mockMySqlConnectorWrapper.Setup(c => c.ExecuteReaderAsync("GetSettingById", CommandType.StoredProcedure, It.Is<MySqlParameter[]>(p => (int)p[0].Value == setting.Id)))
-                                      .ReturnsAsync(_mockDataReader.Object);
-            _mockDataReader.Setup(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(true);
-            SetupMockReaderForSetting(setting); // Assume GetSettingById returns the same setting data
+            _mockSettingsRepository.Setup(repo => repo.UpdateSettingAsync(settingToUpdate))
+                                   .ReturnsAsync(expectedUpdatedSetting);
 
-            var result = await _service.UpdateSettingAsync(setting);
+            var result = await _service.UpdateSettingAsync(settingToUpdate);
 
             Assert.IsNotNull(result);
-            Assert.AreEqual(setting.Id, result.Id);
-            _mockMySqlConnectorWrapper.Verify(c => c.ExecuteNonQueryAsync("UpdateSetting", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()), Times.Once);
-            _mockMySqlConnectorWrapper.Verify(c => c.ExecuteReaderAsync("GetSettingById", CommandType.StoredProcedure, It.Is<MySqlParameter[]>(p => (int)p[0].Value == setting.Id)), Times.Once);
+            Assert.AreEqual(expectedUpdatedSetting.Id, result.Id);
+            Assert.AreEqual(expectedUpdatedSetting.Name, result.Name);
+            _mockSettingsRepository.Verify(repo => repo.UpdateSettingAsync(settingToUpdate), Times.Once);
         }
 
-         [TestMethod]
-        public async Task UpdateSettingAsync_UpdateFailed_ReturnsNull()
+        [TestMethod]
+        public async Task UpdateSettingAsync_UpdateFailedInRepository_ReturnsNull()
         {
-            var setting = CreateTestSetting(1);
-            _mockMySqlConnectorWrapper.Setup(c => c.ExecuteNonQueryAsync("UpdateSetting", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
-                                      .ReturnsAsync(0); // 0 rows affected
+            var settingToUpdate = CreateTestSetting(1);
+            _mockSettingsRepository.Setup(repo => repo.UpdateSettingAsync(settingToUpdate))
+                                   .ReturnsAsync((Setting?)null); // Simulate repository failing to update
 
-            var result = await _service.UpdateSettingAsync(setting);
+            var result = await _service.UpdateSettingAsync(settingToUpdate);
             Assert.IsNull(result);
+            _mockSettingsRepository.Verify(repo => repo.UpdateSettingAsync(settingToUpdate), Times.Once);
         }
         #endregion
 
         #region DeleteSettingAsync Tests
         [TestMethod]
-        public async Task DeleteSettingAsync_Successful_ReturnsTrue()
+        public async Task DeleteSettingAsync_Successful_ReturnsTrueFromRepository()
         {
-            _mockMySqlConnectorWrapper.Setup(c => c.ExecuteNonQueryAsync("DeleteSetting", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
-                                      .ReturnsAsync(1); // 1 row affected
+            _mockSettingsRepository.Setup(repo => repo.DeleteSettingAsync(1)).ReturnsAsync(true);
             var result = await _service.DeleteSettingAsync(1);
             Assert.IsTrue(result);
+            _mockSettingsRepository.Verify(repo => repo.DeleteSettingAsync(1), Times.Once);
         }
 
         [TestMethod]
-        public async Task DeleteSettingAsync_Failed_ReturnsFalse()
+        public async Task DeleteSettingAsync_Failed_ReturnsFalseFromRepository()
         {
-            _mockMySqlConnectorWrapper.Setup(c => c.ExecuteNonQueryAsync("DeleteSetting", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
-                                      .ReturnsAsync(0); // 0 rows affected
+            _mockSettingsRepository.Setup(repo => repo.DeleteSettingAsync(1)).ReturnsAsync(false);
             var result = await _service.DeleteSettingAsync(1);
             Assert.IsFalse(result);
+            _mockSettingsRepository.Verify(repo => repo.DeleteSettingAsync(1), Times.Once);
         }
         #endregion
 
         #region GetSettingsByCategoryAsync Tests
         [TestMethod]
-        public async Task GetSettingsByCategoryAsync_ReturnsCorrectSettings()
+        public async Task GetSettingsByCategoryAsync_ReturnsCorrectSettingsFromRepository()
         {
             var userId = 1;
             var category = "TestCategory";
-            var settingsData = new List<Setting> { CreateTestSetting(category: category), CreateTestSetting(id:2, category: category) };
-            _mockMySqlConnectorWrapper.Setup(c => c.ExecuteReaderAsync("GetSettingsByCategory", CommandType.StoredProcedure, 
-                It.Is<MySqlParameter[]>(p => (int)p[0].Value == userId && (string)p[1].Value == category)))
-                .ReturnsAsync(_mockDataReader.Object);
-            var readCallCount = 0;
-            _mockDataReader.Setup(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
-                           .ReturnsAsync(() => readCallCount < settingsData.Count)
-                           .Callback(() => { if (readCallCount < settingsData.Count) SetupMockReaderForSetting(settingsData[readCallCount]); readCallCount++; });
+            var settingsData = new List<Setting> { CreateTestSetting(category: category, userId: userId), CreateTestSetting(id: 2, category: category, userId: userId) };
+            _mockSettingsRepository.Setup(repo => repo.GetSettingsByCategoryAsync(userId, category))
+                                   .ReturnsAsync(settingsData);
 
             var result = await _service.GetSettingsByCategoryAsync(userId, category);
             Assert.IsNotNull(result);
             Assert.AreEqual(settingsData.Count, result.Count);
+            _mockSettingsRepository.Verify(repo => repo.GetSettingsByCategoryAsync(userId, category), Times.Once);
         }
         #endregion
 
         #region SearchSettingsAsync Tests
         [TestMethod]
-        public async Task SearchSettingsAsync_ReturnsMatchingSettings()
+        public async Task SearchSettingsAsync_ReturnsMatchingSettingsFromRepository()
         {
-            var settingsData = new List<Setting> { CreateTestSetting(name: "SearchMe") };
-             _mockMySqlConnectorWrapper.Setup(c => c.ExecuteReaderAsync("SearchSettings", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
-                .ReturnsAsync(_mockDataReader.Object);
-            var readCallCount = 0;
-            _mockDataReader.Setup(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
-                           .ReturnsAsync(() => readCallCount < settingsData.Count)
-                           .Callback(() => { if (readCallCount < settingsData.Count) SetupMockReaderForSetting(settingsData[readCallCount]); readCallCount++; });
+            var name = "SearchMe";
+            int limit = 10, offset = 0;
+            var settingsData = new List<Setting> { CreateTestSetting(name: name) };
+            _mockSettingsRepository.Setup(repo => repo.SearchSettingsAsync(name, null, limit, offset))
+                                   .ReturnsAsync(settingsData);
 
-            var result = await _service.SearchSettingsAsync("SearchMe", null, 10, 0);
+            var result = await _service.SearchSettingsAsync(name, null, limit, offset);
             Assert.IsNotNull(result);
             Assert.AreEqual(settingsData.Count, result.Count);
+            _mockSettingsRepository.Verify(repo => repo.SearchSettingsAsync(name, null, limit, offset), Times.Once);
         }
         #endregion
-        
+
         #region AddOrUpdateSettingAsync Tests
         [TestMethod]
-        public async Task AddOrUpdateSettingAsync_CallsSPAndReturnsSetting()
+        public async Task AddOrUpdateSettingAsync_CallsRepositoryAndReturnsSetting()
         {
             var userId = 1;
-            var setting = CreateTestSetting(id: 1, name: "AddOrUpdateTest");
-            _mockMySqlConnectorWrapper.Setup(c => c.ExecuteReaderAsync("AddOrUpdateSetting", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
-                                      .ReturnsAsync(_mockDataReader.Object);
-            _mockDataReader.Setup(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(true);
-            SetupMockReaderForSetting(setting); // SP returns the setting
+            var settingToUpsert = CreateTestSetting(id: 1, name: "AddOrUpdateTest");
+            var expectedReturnedSetting = CreateTestSetting(id: 1, name: "AddOrUpdateTest"); // Assume SP returns the setting
 
-            var result = await _service.AddOrUpdateSettingAsync(userId, setting);
+            _mockSettingsRepository.Setup(repo => repo.AddOrUpdateSettingAsync(userId, settingToUpsert))
+                                   .ReturnsAsync(expectedReturnedSetting);
+
+            var result = await _service.AddOrUpdateSettingAsync(userId, settingToUpsert);
 
             Assert.IsNotNull(result);
-            Assert.AreEqual(setting.Name, result.Name);
-            _mockMySqlConnectorWrapper.Verify(c => c.ExecuteReaderAsync("AddOrUpdateSetting", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()), Times.Once);
+            Assert.AreEqual(expectedReturnedSetting.Name, result.Name);
+            _mockSettingsRepository.Verify(repo => repo.AddOrUpdateSettingAsync(userId, settingToUpsert), Times.Once);
         }
 
         [TestMethod]
-        public async Task AddOrUpdateSettingAsync_NewSettingWithIdZero_CallsSPAndReturnsSetting()
+        public async Task AddOrUpdateSettingAsync_NewSettingWithIdZero_CallsRepositoryAndReturnsSetting()
         {
             var userId = 1;
-            var setting = CreateTestSetting(id: 0, name: "AddNewViaUpdate"); // ID 0 indicates new
-            var returnedSetting = CreateTestSetting(id: 555, name: "AddNewViaUpdate"); // SP returns this with new ID
+            var settingToUpsert = CreateTestSetting(id: 0, name: "AddNewViaUpdate"); // ID 0 indicates new
+            var expectedReturnedSetting = CreateTestSetting(id: 555, name: "AddNewViaUpdate"); // Repository returns this with new ID
 
-            _mockMySqlConnectorWrapper.Setup(c => c.ExecuteReaderAsync("AddOrUpdateSetting", CommandType.StoredProcedure, 
-                It.Is<MySqlParameter[]>(p => p.Any(x => x.ParameterName == "@p_Id" && x.Value == DBNull.Value)))) // Check that Id is passed as DBNull
-                .ReturnsAsync(_mockDataReader.Object);
-            _mockDataReader.Setup(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(true);
-            SetupMockReaderForSetting(returnedSetting);
+            _mockSettingsRepository.Setup(repo => repo.AddOrUpdateSettingAsync(userId, settingToUpsert))
+                                   .ReturnsAsync(expectedReturnedSetting);
 
-            var result = await _service.AddOrUpdateSettingAsync(userId, setting);
+            var result = await _service.AddOrUpdateSettingAsync(userId, settingToUpsert);
 
             Assert.IsNotNull(result);
-            Assert.AreEqual(returnedSetting.Id, result.Id);
-            Assert.AreEqual(setting.Name, result.Name);
+            Assert.AreEqual(expectedReturnedSetting.Id, result.Id);
+            Assert.AreEqual(settingToUpsert.Name, result.Name);
+            _mockSettingsRepository.Verify(repo => repo.AddOrUpdateSettingAsync(userId, settingToUpsert), Times.Once);
         }
 
         [TestMethod]
-        public async Task AddOrUpdateSettingAsync_SPReturnsNoRow_ReturnsNull()
+        public async Task AddOrUpdateSettingAsync_RepositoryReturnsNull_ReturnsNull()
         {
             var userId = 1;
-            var setting = CreateTestSetting(id: 1);
-            _mockMySqlConnectorWrapper.Setup(c => c.ExecuteReaderAsync("AddOrUpdateSetting", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()))
-                                      .ReturnsAsync(_mockDataReader.Object);
-            _mockDataReader.Setup(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(false); // Simulate no row returned
+            var settingToUpsert = CreateTestSetting(id: 1);
+            _mockSettingsRepository.Setup(repo => repo.AddOrUpdateSettingAsync(userId, settingToUpsert))
+                                   .ReturnsAsync((Setting?)null); // Simulate repository returning null
 
-            var result = await _service.AddOrUpdateSettingAsync(userId, setting);
+            var result = await _service.AddOrUpdateSettingAsync(userId, settingToUpsert);
             Assert.IsNull(result);
+            _mockSettingsRepository.Verify(repo => repo.AddOrUpdateSettingAsync(userId, settingToUpsert), Times.Once);
         }
         #endregion
     }

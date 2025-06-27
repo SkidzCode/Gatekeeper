@@ -1,284 +1,169 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
-using MySqlConnector;
-using System.Data;
-using GateKeeper.Server.Controllers;
-using GateKeeper.Server.Interface;
-using GateKeeper.Server.Models.Account;
+﻿using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Account.UserModels;
+using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System; // Required for DBNull
 
-namespace GateKeeper.Server.Services;
-
-public class UserService : IUserService
+namespace GateKeeper.Server.Services
 {
-    private readonly IDbHelper _dbHelper;
-    private readonly ILogger<UserService> _logger;
-
-    /// <summary>
-    /// Constructor for the UserController.
-    /// </summary>
-    public UserService(/* IConfiguration configuration, */ IDbHelper dbHelper, ILogger<UserService> logger) // IConfiguration removed
+    public class UserService : IUserService
     {
-        // Retrieve database connection string
-        // var dbConfig = configuration.GetSection("DatabaseConfig").Get<DatabaseConfig>() ?? new DatabaseConfig(); // Removed
-        _dbHelper = dbHelper;
-        _logger = logger;
-    }
+        private readonly IUserRepository _userRepository;
+        private readonly ILogger<UserService> _logger;
 
-    /// <summary>
-    /// API endpoint to add/register a new user.
-    /// </summary>
-    /// <param name="user">User object containing registration details.</param>
-    /// <returns>HTTP response indicating success or failure.</returns>
-    public async Task<RegistrationResponse> RegisterUser(User user)
-    {
-        RegistrationResponse response = new RegistrationResponse()
+        /// <summary>
+        /// Constructor for the UserService.
+        /// </summary>
+        public UserService(IUserRepository userRepository, ILogger<UserService> logger)
         {
-            User = user
-        };
-        // Step 1: Generate a unique salt and hash the user's password
-        var salt = PasswordHelper.GenerateSalt();
-        response.User.Password = PasswordHelper.HashPassword(response.User.Password, salt);
-
-        // Step 2: Establish database connection
-        await using var connection = await _dbHelper.GetWrapperAsync();
-
-        // Step 3: Create and execute a stored procedure command
-        var outputParameters = await connection.ExecuteNonQueryWithOutputAsync("AddUser", CommandType.StoredProcedure,
-            new MySqlParameter("@p_FirstName", MySqlDbType.VarChar, 50) { Value = user.FirstName },
-            new MySqlParameter("@p_LastName", MySqlDbType.VarChar, 50) { Value = user.LastName },
-            new MySqlParameter("@p_Email", MySqlDbType.VarChar, 100) { Value = user.Email },
-            new MySqlParameter("@p_Username", MySqlDbType.VarChar, 50) { Value = user.Username },
-            new MySqlParameter("@p_Password", MySqlDbType.VarChar, 255) { Value = response.User.Password },
-            new MySqlParameter("@p_Salt", MySqlDbType.VarChar, 255) { Value = salt },
-            new MySqlParameter("@p_Phone", MySqlDbType.VarChar, 15) { Value = user.Phone },
-            new MySqlParameter("@p_ResultCode", MySqlDbType.Int32) { Direction = ParameterDirection.Output },
-            new MySqlParameter("last_id", MySqlDbType.Int32) { Direction = ParameterDirection.Output });
-
-        var resultCode = (int)outputParameters["@p_ResultCode"];
-        response.FailureReason = resultCode switch
-        {
-            1 => "Email already exists.",
-            2 => "Username already exists.",
-            3 => "Both Email and Username already exist.",
-            _ => response.FailureReason
-        };
-
-        if (outputParameters["last_id"] == DBNull.Value) return response;
-
-        response.IsSuccessful = true;
-        response.User.Id = Convert.ToInt32(outputParameters["last_id"]);
-        return response;
-    }
-
-    public async Task<int> ChangePassword(int userId, string newPassword)
-    {
-        await using var connection = await _dbHelper.GetWrapperAsync();
-
-        var salt = PasswordHelper.GenerateSalt();
-        var hashedPassword = PasswordHelper.HashPassword(newPassword, salt);
-
-        await connection.ExecuteNonQueryAsync("PasswordChange", CommandType.StoredProcedure,
-            new MySqlParameter("@p_HashedPassword", MySqlDbType.VarChar, 255) { Value = hashedPassword },
-            new MySqlParameter("@p_Salt", MySqlDbType.VarChar, 255) { Value = salt },
-            new MySqlParameter("@p_UserId", MySqlDbType.Int32) { Value = userId });
-
-        return 1;
-    }
-
-    public async Task<List<string>> GetRolesAsync(int Id)
-    {
-        await using var connection = await _dbHelper.GetWrapperAsync();
-
-        var roles = new List<string>();
-
-        await using var reader = await connection.ExecuteReaderAsync("GetUserRoles", CommandType.StoredProcedure,
-            new MySqlParameter("@p_UserId", MySqlDbType.Int32) { Value = Id });
-
-        while (await reader.ReadAsync())
-        {
-            var roleName = reader["RoleName"]?.ToString();
-            if (!string.IsNullOrEmpty(roleName))
-            {
-                roles.Add(roleName);
-            }
+            _userRepository = userRepository;
+            _logger = logger;
         }
 
-        return roles;
-    }
-
-    public async Task<User?> GetUser(string identifier)
-    {
-        await using var connection = await _dbHelper.GetWrapperAsync();
-        User? user = null;
-
-        var userReader = await connection.ExecuteReaderAsync("GetUserProfileByIdentifier", CommandType.StoredProcedure,
-            new MySqlParameter("@p_Identifier", MySqlDbType.VarChar, 50) { Value = identifier });
-
-        if (await userReader.ReadAsync())
+        /// <summary>
+        /// Registers a new user.
+        /// </summary>
+        /// <param name="user">User object containing registration details.</param>
+        /// <returns>RegistrationResponse indicating success or failure.</returns>
+        public async Task<RegistrationResponse> RegisterUser(User user)
         {
-            user = new User()
+            var response = new RegistrationResponse
             {
-                Id = Convert.ToInt32(userReader["Id"]),
-                FirstName = userReader["FirstName"].ToString() ?? string.Empty,
-                LastName = userReader["LastName"].ToString() ?? string.Empty,
-                Email = userReader["Email"].ToString() ?? string.Empty,
-                Phone = userReader["Phone"].ToString() ?? string.Empty,
-                Salt = userReader["Salt"].ToString() ?? string.Empty,
-                Password = userReader["Password"].ToString() ?? string.Empty,
-                Username = userReader["Username"].ToString() ?? string.Empty,
-                Roles = new List<string>(),
-                ProfilePicture = userReader["ProfilePicture"] as byte[]
+                User = user // Keep original user details for the response
             };
-            if (!await userReader.NextResultAsync()) return user;
-            while (await userReader.ReadAsync())
+
+            // Step 1: Generate a unique salt and hash the user's password
+            var salt = PasswordHelper.GenerateSalt();
+            // Create a temporary user object for password hashing to avoid modifying the input 'user' object's password directly yet
+            var userToRegister = new User
             {
-                var roleName = userReader["RoleName"]?.ToString();
-                if (!string.IsNullOrEmpty(roleName))
-                {
-                    user?.Roles.Add(roleName);
-                }
-            }
-        }
-        return user;
-    }
-
-    public async Task<User?> GetUser(int identifier)
-    {
-        await using var connection = await _dbHelper.GetWrapperAsync();
-        User? user = null;
-
-        var userReader = await connection.ExecuteReaderAsync("GetUserProfile", CommandType.StoredProcedure,
-            new MySqlParameter("@p_UserId", MySqlDbType.VarChar, 50) { Value = identifier });
-
-        if (await userReader.ReadAsync())
-        {
-            user = new User()
-            {
-                Id = Convert.ToInt32(userReader["Id"]),
-                FirstName = userReader["FirstName"].ToString() ?? string.Empty,
-                LastName = userReader["LastName"].ToString() ?? string.Empty,
-                Email = userReader["Email"].ToString() ?? string.Empty,
-                Phone = userReader["Phone"].ToString() ?? string.Empty,
-                Salt = userReader["Salt"].ToString() ?? string.Empty,
-                Password = userReader["Password"].ToString() ?? string.Empty,
-                Username = userReader["Username"].ToString() ?? string.Empty,
-                Roles = new List<string>(),
-                ProfilePicture = userReader["ProfilePicture"] as byte[]
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                Username = user.Username,
+                Password = PasswordHelper.HashPassword(user.Password, salt), // Hash here
+                Phone = user.Phone
+                // Id will be set by the repository if successful
             };
-            if (!await userReader.NextResultAsync()) return user;
-            while (await userReader.ReadAsync())
+
+            _logger.LogInformation("Attempting to register user: {Username}", userToRegister.Username);
+
+            // Step 2: Call repository to add user
+            var (newUserId, resultCode) = await _userRepository.AddUserAsync(userToRegister, salt);
+
+            response.FailureReason = resultCode switch
             {
-                var roleName = userReader["RoleName"]?.ToString();
-                if (!string.IsNullOrEmpty(roleName))
-                {
-                    user?.Roles.Add(roleName);
-                }
-                else
-                    break;
-            }
-        }
-        return user;
-    }
-
-    public async Task<User> UpdateUser(User user)
-    {
-        await using var connection = await _dbHelper.GetWrapperAsync();
-
-        var parameters = new List<MySqlParameter>
-                        {
-                            new MySqlParameter("@p_Id", MySqlDbType.Int32) { Value = user.Id },
-                            new MySqlParameter("@p_FirstName", MySqlDbType.VarChar, 50) { Value = user.FirstName },
-                            new MySqlParameter("@p_LastName", MySqlDbType.VarChar, 50) { Value = user.LastName },
-                            new MySqlParameter("@p_Email", MySqlDbType.VarChar, 100) { Value = user.Email },
-                            new MySqlParameter("@p_Username", MySqlDbType.VarChar, 50) { Value = user.Username },
-                            new MySqlParameter("@p_Phone", MySqlDbType.VarChar, 15) { Value = user.Phone }
-                        };
-
-        parameters.Add(new MySqlParameter("@p_ProfilePicture", MySqlDbType.Blob)
-        {
-            Value = user.ProfilePicture != null ?
-                user.ProfilePicture :
-                DBNull.Value
-        });
-
-        await connection.ExecuteNonQueryAsync("UpdateUserPic", CommandType.StoredProcedure, parameters.ToArray());
-
-        return user;
-    }
-
-    public async Task<bool> UsernameExistsAsync(string username)
-    {
-        await using var connection = await _dbHelper.GetWrapperAsync();
-
-        var outputParameters = await connection.ExecuteNonQueryWithOutputAsync("CheckUsernameExists", CommandType.StoredProcedure,
-            new MySqlParameter("@p_Username", MySqlDbType.VarChar, 50) { Value = username },
-            new MySqlParameter("@p_exists", MySqlDbType.Bool) { Direction = ParameterDirection.Output });
-
-        var resultCode = (bool)outputParameters["@p_exists"];
-        return resultCode;
-    }
-
-    public async Task<bool> EmailExistsAsync(string email)
-    {
-        await using var connection = await _dbHelper.GetWrapperAsync();
-
-        var outputParameters = await connection.ExecuteNonQueryWithOutputAsync("CheckEmailExists", CommandType.StoredProcedure,
-            new MySqlParameter("@p_Email", MySqlDbType.VarChar, 50) { Value = email },
-            new MySqlParameter("@p_exists", MySqlDbType.Bool) { Direction = ParameterDirection.Output });
-
-        var resultCode = (bool)outputParameters["@p_exists"];
-        return resultCode;
-    }
-
-    /// <summary>
-    /// Retrieves all Roles via the GetAllRoles stored procedure.
-    /// </summary>
-    /// <returns>List of Role objects.</returns>
-    public async Task<List<User>> GetUsers()
-    {
-        var users = new List<User>();
-
-        await using var connection = await _dbHelper.GetWrapperAsync();
-
-        await using var reader = await connection.ExecuteReaderAsync("GetAllUsers", CommandType.StoredProcedure);
-
-        while (await reader.ReadAsync())
-        {
-            var user = new User()
-            {
-                Id = Convert.ToInt32(reader["Id"]),
-                FirstName = reader["FirstName"].ToString() ?? string.Empty,
-                LastName = reader["LastName"].ToString() ?? string.Empty,
-                Email = reader["Email"].ToString() ?? string.Empty,
-                Phone = reader["Phone"].ToString() ?? string.Empty,
-                Salt = reader["Salt"].ToString() ?? string.Empty,
-                Password = reader["Password"].ToString() ?? string.Empty,
-                Username = reader["Username"].ToString() ?? string.Empty,
-                IsActive = Convert.ToBoolean(reader["IsActive"]),
-                CreatedAt = reader["CreatedAt"] as DateTime?,
-                UpdatedAt = reader["UpdatedAt"] as DateTime?,
-                Roles = new List<string>()
+                1 => "Email already exists.",
+                2 => "Username already exists.",
+                3 => "Both Email and Username already exist.",
+                _ => null // Success or other DB issue (which should throw exception ideally)
             };
-            users.Add(user);
+
+            if (newUserId.HasValue && newUserId.Value > 0 && resultCode == 0)
+            {
+                response.IsSuccessful = true;
+                response.User.Id = newUserId.Value;
+                // The password in response.User should remain the original plain text for confirmation if needed,
+                // or be cleared. For security, let's clear it.
+                response.User.Password = string.Empty;
+                _logger.LogInformation("User {Username} registered successfully with ID: {UserId}", userToRegister.Username, newUserId.Value);
+            }
+            else
+            {
+                response.IsSuccessful = false;
+                _logger.LogWarning("User registration failed for {Username}. Reason: {FailureReason}", userToRegister.Username, response.FailureReason);
+            }
+            return response;
         }
-        return users;
-    }
 
-    /// <summary>
-    /// Updates the roles of a user.
-    /// </summary>
-    /// <param name="userId">The ID of the user.</param>
-    /// <param name="roleNames">Array of role names to be assigned to the user.</param>
-    /// <returns>A Task representing the asynchronous operation.</returns>
-    public async Task UpdateUserRoles(int userId, List<string> roleNames)
-    {
-        await using var connection = await _dbHelper.GetWrapperAsync();
+        public async Task<int> ChangePassword(int userId, string newPassword)
+        {
+            _logger.LogInformation("Attempting to change password for user ID: {UserId}", userId);
+            var salt = PasswordHelper.GenerateSalt();
+            var hashedPassword = PasswordHelper.HashPassword(newPassword, salt);
 
-        var roleNamesString = string.Join(",", roleNames);
+            var success = await _userRepository.ChangePasswordAsync(userId, hashedPassword, salt);
+            if (success)
+            {
+                _logger.LogInformation("Password changed successfully for user ID: {UserId}", userId);
+                return 1; // Consistent with old return type, though bool might be better
+            }
+            _logger.LogWarning("Failed to change password for user ID: {UserId}", userId);
+            return 0; // Or throw an exception
+        }
 
-        await connection.ExecuteNonQueryAsync("UserRolesUpdate", CommandType.StoredProcedure,
-            new MySqlParameter("@pUserId", MySqlDbType.Int32) { Value = userId },
-            new MySqlParameter("@pRoleNames", MySqlDbType.VarChar, 1000) { Value = roleNamesString });
+        public async Task<List<string>> GetRolesAsync(int id)
+        {
+            _logger.LogDebug("Fetching roles for user ID: {UserId}", id);
+            var roles = await _userRepository.GetUserRolesAsync(id);
+            return roles.ToList();
+        }
+
+        public async Task<User?> GetUser(string identifier)
+        {
+            _logger.LogDebug("Fetching user by identifier: {Identifier}", identifier);
+            // The repository method GetUserByIdentifierAsync already includes roles
+            return await _userRepository.GetUserByIdentifierAsync(identifier);
+        }
+
+        public async Task<User?> GetUser(int id)
+        {
+            _logger.LogDebug("Fetching user by ID: {UserId}", id);
+            // The repository method GetUserByIdAsync already includes roles
+            return await _userRepository.GetUserByIdAsync(id);
+        }
+
+        public async Task<User> UpdateUser(User user)
+        {
+            _logger.LogInformation("Attempting to update user ID: {UserId}", user.Id);
+            // Password and Salt are not updated here. Roles are updated via UpdateUserRoles.
+            // The repository's UpdateUserAsync is expected to handle this.
+            var success = await _userRepository.UpdateUserAsync(user);
+            if (success)
+            {
+                _logger.LogInformation("User ID: {UserId} updated successfully.", user.Id);
+                // Optionally, re-fetch the user to get any DB-generated changes (e.g., UpdatedAt)
+                // For now, returning the passed user object as per the old method's behavior.
+                return user;
+            }
+            _logger.LogWarning("Failed to update user ID: {UserId}", user.Id);
+            // Consider throwing an exception if the update fails, or changing return type to bool/User?
+            // For consistency with the old signature, returning the user object, but it might not reflect the actual DB state if update failed.
+            // This behavior should be documented or changed.
+            // For now, let's return the user as is, but if an error occurred an exception should have been thrown by repo or dapper.
+            // If rowsAffected was 0, it means user was not found or data was identical.
+            return user;
+        }
+
+        public async Task<bool> UsernameExistsAsync(string username)
+        {
+            _logger.LogDebug("Checking if username exists: {Username}", username);
+            return await _userRepository.UsernameExistsAsync(username);
+        }
+
+        public async Task<bool> EmailExistsAsync(string email)
+        {
+            _logger.LogDebug("Checking if email exists: {Email}", email);
+            return await _userRepository.EmailExistsAsync(email);
+        }
+
+        public async Task<List<User>> GetUsers()
+        {
+            _logger.LogInformation("Fetching all users.");
+            var users = await _userRepository.GetAllUsersAsync();
+            // Note: GetAllUsersAsync from repository currently does not fetch roles for each user to avoid N+1.
+            // This is consistent with the previous implementation of GetUsers.
+            // If roles are needed here, the IUserRepository.GetAllUsersAsync and its implementation would need adjustment.
+            return users.ToList();
+        }
+
+        public async Task UpdateUserRoles(int userId, List<string> roleNames)
+        {
+            _logger.LogInformation("Updating roles for user ID: {UserId}", userId);
+            await _userRepository.UpdateUserRolesAsync(userId, roleNames);
+            _logger.LogInformation("Roles updated successfully for user ID: {UserId}", userId);
+        }
     }
 }

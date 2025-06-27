@@ -6,49 +6,41 @@ using Microsoft.Extensions.Logging;
 using System.Security;
 using System.Threading.Tasks;
 using System;
-using System.Runtime.InteropServices; // For Marshal
-using System.Security.Cryptography; // For CryptographicException
-using MySqlConnector; // For MySqlParameter
-using System.Data; // For CommandType
-using System.Linq; // For Enumerable.SequenceEqual
-using Microsoft.Extensions.Options; // Added for IOptions
-using GateKeeper.Server.Models.Configuration; // Added for KeyManagementConfig
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using Microsoft.Extensions.Options;
+using GateKeeper.Server.Models.Configuration;
+using System.Linq;
 
 namespace GateKeeper.Server.Test.Services
 {
     [TestClass]
     public class KeyManagementServiceTests
     {
-        private Mock<IDbHelper> _mockDbHelper;
-        private Mock<IMySqlConnectorWrapper> _mockMySqlConnectorWrapper;
+        private Mock<IKeyManagementRepository> _mockKeyManagementRepository;
         private Mock<ILogger<KeyManagementService>> _mockLogger;
         private KeyManagementService _keyManagementService;
         private Mock<IOptions<KeyManagementConfig>> _mockKeyManagementConfigOptions;
         private KeyManagementConfig _keyManagementConfig;
-        private byte[] _testMasterEncryptionKeyBytes; // To store the decoded key for assertions
+        private byte[] _testMasterEncryptionKeyBytes;
 
         [TestInitialize]
         public void TestInitialize()
         {
-            _mockDbHelper = new Mock<IDbHelper>();
-            _mockMySqlConnectorWrapper = new Mock<IMySqlConnectorWrapper>();
+            _mockKeyManagementRepository = new Mock<IKeyManagementRepository>();
             _mockLogger = new Mock<ILogger<KeyManagementService>>();
 
-            // A valid Base64 encoded 32-byte key
-            string testMasterKeyBase64 = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="; 
+            string testMasterKeyBase64 = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="; // Valid 32-byte key
             _testMasterEncryptionKeyBytes = Convert.FromBase64String(testMasterKeyBase64);
 
             _keyManagementConfig = new KeyManagementConfig { MasterKey = testMasterKeyBase64 };
             _mockKeyManagementConfigOptions = new Mock<IOptions<KeyManagementConfig>>();
             _mockKeyManagementConfigOptions.Setup(o => o.Value).Returns(_keyManagementConfig);
 
-            _mockDbHelper.Setup(db => db.GetWrapperAsync()).Returns(Task.FromResult(_mockMySqlConnectorWrapper.Object));
-            _mockMySqlConnectorWrapper.Setup(c => c.OpenConnectionAsync()).Returns(Task.FromResult(_mockMySqlConnectorWrapper.Object));
-
             _keyManagementService = new KeyManagementService(
-                _mockDbHelper.Object,
+                _mockKeyManagementRepository.Object,
                 _mockLogger.Object,
-                _mockKeyManagementConfigOptions.Object // Pass the mocked IOptions
+                _mockKeyManagementConfigOptions.Object
             );
         }
 
@@ -67,57 +59,67 @@ namespace GateKeeper.Server.Test.Services
             }
         }
 
+        #region Constructor Tests
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public void Constructor_NullMasterKey_ThrowsInvalidOperationException()
+        {
+            _keyManagementConfig.MasterKey = null;
+            new KeyManagementService(_mockKeyManagementRepository.Object, _mockLogger.Object, _mockKeyManagementConfigOptions.Object);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public void Constructor_InvalidBase64MasterKey_ThrowsInvalidOperationException()
+        {
+            _keyManagementConfig.MasterKey = "NotValidBase64";
+            new KeyManagementService(_mockKeyManagementRepository.Object, _mockLogger.Object, _mockKeyManagementConfigOptions.Object);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public void Constructor_IncorrectKeyLengthMasterKey_ThrowsInvalidOperationException()
+        {
+            _keyManagementConfig.MasterKey = Convert.ToBase64String(new byte[16]); // Not 32 bytes
+            new KeyManagementService(_mockKeyManagementRepository.Object, _mockLogger.Object, _mockKeyManagementConfigOptions.Object);
+        }
+
+        #endregion
+
+
         #region RotateKeyAsync Tests
 
         [TestMethod]
-        public async Task RotateKeyAsync_InsertsEncryptedKey()
+        public async Task RotateKeyAsync_CallsRepositoryInsertNewKeyAsync()
         {
             // Arrange
             var expirationDate = DateTime.UtcNow.AddYears(1);
             byte[] capturedEncryptedKey = null;
 
-            _mockMySqlConnectorWrapper
-                .Setup(c => c.ExecuteNonQueryAsync(
-                    "spInsertKey",
-                    CommandType.StoredProcedure,
-                    It.IsAny<MySqlParameter[]>()))
-                .ReturnsAsync(1) // Simulate 1 row affected
-                .Callback<string, CommandType, MySqlParameter[]>((proc, type, pars) =>
-                {
-                    Assert.AreEqual("spInsertKey", proc);
-                    var secretKeyParam = pars.FirstOrDefault(p => p.ParameterName == "p_SecretKey");
-                    Assert.IsNotNull(secretKeyParam);
-                    capturedEncryptedKey = secretKeyParam.Value as byte[];
-                    Assert.IsNotNull(capturedEncryptedKey);
-                    Assert.IsTrue(capturedEncryptedKey.Length > 32, "Encrypted key should be longer than original due to IV and encryption overhead.");
-
-                    var expirationDateParam = pars.FirstOrDefault(p => p.ParameterName == "p_ExpirationDate");
-                    Assert.IsNotNull(expirationDateParam);
-                    Assert.AreEqual(expirationDate, (DateTime)expirationDateParam.Value);
-                });
+            _mockKeyManagementRepository
+                .Setup(repo => repo.InsertNewKeyAsync(It.IsAny<byte[]>(), expirationDate))
+                .Callback<byte[], DateTime>((key, date) => capturedEncryptedKey = key)
+                .Returns(Task.CompletedTask);
 
             // Act
             await _keyManagementService.RotateKeyAsync(expirationDate);
 
             // Assert
-            _mockMySqlConnectorWrapper.Verify(c => c.OpenConnectionAsync(), Times.Once);
-            _mockMySqlConnectorWrapper.Verify(c => c.ExecuteNonQueryAsync("spInsertKey", CommandType.StoredProcedure, It.IsAny<MySqlParameter[]>()), Times.Once);
+            _mockKeyManagementRepository.Verify(repo => repo.InsertNewKeyAsync(It.IsAny<byte[]>(), expirationDate), Times.Once);
             Assert.IsNotNull(capturedEncryptedKey);
+            Assert.IsTrue(capturedEncryptedKey.Length > 32, "Encrypted key should be longer than original due to IV and encryption overhead.");
 
-            // Try to decrypt the captured key to verify it's plausible (optional deep check)
-            // This uses the service's own private decryption logic implicitly
+            // Verify decryption (optional deep check)
             using (var aes = Aes.Create())
             {
-                aes.Key = _testMasterEncryptionKeyBytes; // Use the decoded byte array
+                aes.Key = _testMasterEncryptionKeyBytes;
                 byte[] iv = new byte[aes.BlockSize / 8];
                 Buffer.BlockCopy(capturedEncryptedKey, 0, iv, 0, iv.Length);
                 aes.IV = iv;
                 aes.Mode = CipherMode.CBC;
-
                 int cipherTextLength = capturedEncryptedKey.Length - iv.Length;
                 byte[] cipherText = new byte[cipherTextLength];
                 Buffer.BlockCopy(capturedEncryptedKey, iv.Length, cipherText, 0, cipherTextLength);
-
                 using var decryptor = aes.CreateDecryptor();
                 byte[] decryptedKey = decryptor.TransformFinalBlock(cipherText, 0, cipherText.Length);
                 Assert.AreEqual(32, decryptedKey.Length, "Decrypted key should be 32 bytes.");
@@ -131,46 +133,21 @@ namespace GateKeeper.Server.Test.Services
         public async Task GetCurrentKeyAsync_ActiveKeyFound_ReturnsDecryptedKeyAsSecureString()
         {
             // Arrange
-
-            // Re-initialize service here for this test to ensure fresh state with specific mocks
-            // _mockDbHelper = new Mock<IDbHelper>(); // Already in TestInitialize
-            // _mockMySqlConnectorWrapper = new Mock<IMySqlConnectorWrapper>(); // Already in TestInitialize
-            // _mockLogger = new Mock<ILogger<KeyManagementService>>(); // Already in TestInitialize
-            // _keyManagementService = new KeyManagementService( // Already in TestInitialize
-            //     _mockDbHelper.Object,
-            //     _mockLogger.Object,
-            //     _testMasterEncryptionKey 
-            // );
-            // The above re-initialization for the GetCurrentKeyAsync_ActiveKeyFound_ReturnsDecryptedKeyAsSecureString test
-            // did not solve the NREs, so it's reverted to rely on TestInitialize.
-            // The NREs point to _dbHelper or wrapper being null, which should be set by TestInitialize.
-
             byte[] originalPlainKey = new byte[32];
-            using (var rng = RandomNumberGenerator.Create()) { rng.GetBytes(originalPlainKey); }
+            RandomNumberGenerator.Fill(originalPlainKey);
 
             byte[] encryptedKeyFromDb;
             using (var aes = Aes.Create())
             {
-                aes.Key = _testMasterEncryptionKeyBytes; // Use the decoded byte array
+                aes.Key = _testMasterEncryptionKeyBytes;
                 aes.GenerateIV();
                 aes.Mode = CipherMode.CBC;
-                using var encryptor = aes.CreateEncryptor();
+                using var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
                 byte[] cipherText = encryptor.TransformFinalBlock(originalPlainKey, 0, originalPlainKey.Length);
-                encryptedKeyFromDb = new byte[aes.IV.Length + cipherText.Length];
-                Buffer.BlockCopy(aes.IV, 0, encryptedKeyFromDb, 0, aes.IV.Length);
-                Buffer.BlockCopy(cipherText, 0, encryptedKeyFromDb, aes.IV.Length, cipherText.Length);
+                encryptedKeyFromDb = aes.IV.Concat(cipherText).ToArray();
             }
 
-            var mockReader = new Mock<IMySqlDataReaderWrapper>(); // Fresh mock reader for this test
-            _mockMySqlConnectorWrapper
-                .Setup(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure))
-                .ReturnsAsync(mockReader.Object);
-
-            mockReader.SetupSequence(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
-                      .ReturnsAsync(true)  // First call to ReadAsync, key found
-                      .ReturnsAsync(false); // Subsequent calls
-
-            mockReader.Setup(r => r["SecretKey"]).Returns(encryptedKeyFromDb);
+            _mockKeyManagementRepository.Setup(repo => repo.GetActiveEncryptedKeyAsync()).ReturnsAsync(encryptedKeyFromDb);
 
             // Act
             var secureStringResult = await _keyManagementService.GetCurrentKeyAsync();
@@ -179,38 +156,94 @@ namespace GateKeeper.Server.Test.Services
             Assert.IsNotNull(secureStringResult);
             var decryptedKeyString = SecureStringToString(secureStringResult);
             Assert.AreEqual(Convert.ToBase64String(originalPlainKey), decryptedKeyString);
-
-            _mockMySqlConnectorWrapper.Verify(c => c.OpenConnectionAsync(), Times.Once);
-            _mockMySqlConnectorWrapper.Verify(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure), Times.Once);
-            mockReader.Verify(r => r["SecretKey"], Times.Once);
+            _mockKeyManagementRepository.Verify(repo => repo.GetActiveEncryptedKeyAsync(), Times.Once);
         }
-        
-        // or the CS1061 error: The issue arises because the `Setup` method is being incorrectly chained on the result of another `Setup` call.  
-        // The correct approach is to call `Setup` directly on the mock object, not on the result of a `Setup` call.  
 
         [TestMethod]
-        public async Task GetCurrentKeyAsync_DbReturnsNullKey_ReturnsNull()
+        public async Task GetCurrentKeyAsync_NoActiveKey_RotatesAndReturnsNewKey()
         {
-            // Arrange  
-            var mockReader = new Mock<IMySqlDataReaderWrapper>();
-            _mockMySqlConnectorWrapper
-                .Setup(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure))
-                .ReturnsAsync(mockReader.Object); // Corrected: Removed the incorrect chaining of `Setup`.  
+            // Arrange
+            byte[] newPlainKey = new byte[32]; // This will be the key generated by RotateKeyAsync
+            RandomNumberGenerator.Fill(newPlainKey);
 
-            mockReader.SetupSequence(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
-                      .ReturnsAsync(true)
-                      .ReturnsAsync(false);
-            mockReader.Setup(r => r["SecretKey"]).Returns(null); // DB returns null for the key column  
+            byte[] rotatedEncryptedKey; // This will be the key "inserted" by RotateKeyAsync and then "retrieved"
+            using (var aes = Aes.Create())
+            {
+                aes.Key = _testMasterEncryptionKeyBytes;
+                aes.GenerateIV();
+                aes.Mode = CipherMode.CBC;
+                using var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+                // Simulate the key that would be generated and encrypted by RotateKeyAsync
+                // For the test, we pre-calculate what RotateKeyAsync would produce if it generated `newPlainKey`.
+                // This is a bit of a simplification as RotateKeyAsync generates its own random key.
+                // A more robust test would capture the argument to InsertNewKeyAsync.
+                byte[] cipherText = encryptor.TransformFinalBlock(newPlainKey, 0, newPlainKey.Length);
+                rotatedEncryptedKey = aes.IV.Concat(cipherText).ToArray();
+            }
 
-            // Act  
-            var result = await _keyManagementService.GetCurrentKeyAsync();
+            _mockKeyManagementRepository.SetupSequence(repo => repo.GetActiveEncryptedKeyAsync())
+                .ReturnsAsync((byte[])null) // First call, no key
+                .ReturnsAsync(rotatedEncryptedKey); // Second call, after rotation
 
-            // Assert  
-            Assert.IsNull(result);
+            _mockKeyManagementRepository
+                .Setup(repo => repo.InsertNewKeyAsync(It.IsAny<byte[]>(), It.IsAny<DateTime>()))
+                .Callback<byte[], DateTime>((key, date) => {
+                    // We can't directly use `rotatedEncryptedKey` here for assertion because the IV will be different
+                    // as RotateKeyAsync generates a new key and IV each time.
+                    // Instead, we ensure that InsertNewKeyAsync was called.
+                    // The GetActiveEncryptedKeyAsync mock returning `rotatedEncryptedKey` simulates the successful rotation.
+                 })
+                .Returns(Task.CompletedTask);
+
+
+            // Act
+            var secureStringResult = await _keyManagementService.GetCurrentKeyAsync();
+
+            // Assert
+            Assert.IsNotNull(secureStringResult);
+            var decryptedKeyString = SecureStringToString(secureStringResult);
+            Assert.AreEqual(Convert.ToBase64String(newPlainKey), decryptedKeyString); // Compare with the pre-calculated plain key
+
+            _mockKeyManagementRepository.Verify(repo => repo.GetActiveEncryptedKeyAsync(), Times.Exactly(2));
+            _mockKeyManagementRepository.Verify(repo => repo.InsertNewKeyAsync(It.IsAny<byte[]>(), It.IsAny<DateTime>()), Times.Once);
             _mockLogger.Verify(logger => logger.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("No active key found in the database.")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
+            _mockLogger.Verify(logger => logger.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Successfully rotated key and fetched the new active key.")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
+        }
+
+
+        [TestMethod]
+        public async Task GetCurrentKeyAsync_RotationFailsToProduceKey_ReturnsNull()
+        {
+            // Arrange
+            _mockKeyManagementRepository.SetupSequence(repo => repo.GetActiveEncryptedKeyAsync())
+                .ReturnsAsync((byte[])null) // First call, no key
+                .ReturnsAsync((byte[])null); // Second call, rotation also yields no key
+
+            _mockKeyManagementRepository
+                .Setup(repo => repo.InsertNewKeyAsync(It.IsAny<byte[]>(), It.IsAny<DateTime>()))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            var result = await _keyManagementService.GetCurrentKeyAsync();
+
+            // Assert
+            Assert.IsNull(result);
+            _mockKeyManagementRepository.Verify(repo => repo.GetActiveEncryptedKeyAsync(), Times.Exactly(2));
+            _mockKeyManagementRepository.Verify(repo => repo.InsertNewKeyAsync(It.IsAny<byte[]>(), It.IsAny<DateTime>()), Times.Once);
+            _mockLogger.Verify(logger => logger.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Still no active key found after attempting rotation.")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
         }
@@ -220,28 +253,15 @@ namespace GateKeeper.Server.Test.Services
         public async Task GetCurrentKeyAsync_DecryptionFails_ThrowsCryptographicException()
         {
             // Arrange
-            byte[] invalidEncryptedKey = new byte[] { 1, 2, 3, 4, 5 }; // Too short to be valid AES encrypted data with IV
+            byte[] invalidEncryptedKey = new byte[] { 1, 2, 3, 4, 5 }; // Too short for valid AES + IV
+            _mockKeyManagementRepository.Setup(repo => repo.GetActiveEncryptedKeyAsync()).ReturnsAsync(invalidEncryptedKey);
 
-            var mockReader = new Mock<IMySqlDataReaderWrapper>();
-            _mockMySqlConnectorWrapper
-                .Setup(c => c.ExecuteReaderAsync("spGetActiveKey", CommandType.StoredProcedure))
-                .ReturnsAsync(mockReader.Object);
-
-            mockReader.SetupSequence(r => r.ReadAsync(It.IsAny<System.Threading.CancellationToken>()))
-                      .ReturnsAsync(true)
-                      .ReturnsAsync(false);
-            mockReader.Setup(r => r["SecretKey"]).Returns(invalidEncryptedKey);
-            
             // Act & Assert
-            // The actual exception might be CryptographicException or one of its derivatives like ArgumentException
-            // depending on where the validation fails in Aes.CreateDecryptor or TransformFinalBlock.
-            // For this test, we'll expect CryptographicException or a parent like SystemException if specific type is too volatile.
             await Assert.ThrowsExceptionAsync<ArgumentException>(async () =>
             {
                 await _keyManagementService.GetCurrentKeyAsync();
             });
         }
-
         #endregion
     }
 }

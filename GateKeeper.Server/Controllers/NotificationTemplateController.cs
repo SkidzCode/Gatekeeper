@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
+using GateKeeper.Server.Interface; // Added for INotificationTemplateService
 using GateKeeper.Server.Services;
 using GateKeeper.Server.Models;
 using System;

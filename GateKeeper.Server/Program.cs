@@ -11,6 +11,8 @@ using GateKeeper.Server.Middleware;
 using Serilog.Formatting.Compact;
 using GateKeeper.Server.Models.Configuration; // Added for typed configurations
 using Microsoft.Extensions.Options; // Added for IOptions
+using System.Data; // Added for IDbConnection
+using MySqlConnector; // Added for MySqlConnection
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -116,11 +118,30 @@ builder.Services.AddOptions<SerilogConfig>()
     .Bind(builder.Configuration.GetSection(SerilogConfig.SectionName));
 // End Register and Validate Typed Configuration
 
-builder.Services.AddSingleton<IDbHelper, DBHelper>();
-builder.Services.AddScoped<IEmailService, EmailService>();
+// Register IDbConnection for Dapper repositories
+builder.Services.AddScoped<IDbConnection>(sp =>
+{
+    var dbConfig = sp.GetRequiredService<IOptions<DatabaseConfig>>().Value;
+    return new MySqlConnection(dbConfig.GateKeeperConnection);
+});
+
+// Register Repositories
+builder.Services.AddScoped<IUserRepository, GateKeeper.Server.Repositories.UserRepository>();
+builder.Services.AddScoped<IRoleRepository, GateKeeper.Server.Repositories.RoleRepository>();
+builder.Services.AddScoped<ISettingsRepository, GateKeeper.Server.Repositories.SettingsRepository>();
+builder.Services.AddScoped<IVerifyTokenRepository, GateKeeper.Server.Repositories.VerifyTokenRepository>();
+builder.Services.AddScoped<IUserAuthenticationRepository, GateKeeper.Server.Repositories.UserAuthenticationRepository>();
+builder.Services.AddScoped<IInviteRepository, GateKeeper.Server.Repositories.InviteRepository>();
+builder.Services.AddScoped<IKeyManagementRepository, GateKeeper.Server.Repositories.KeyManagementRepository>();
+builder.Services.AddScoped<INotificationRepository, GateKeeper.Server.Repositories.NotificationRepository>();
+builder.Services.AddScoped<INotificationTemplateRepository, GateKeeper.Server.Repositories.NotificationTemplateRepository>();
+builder.Services.AddScoped<ISessionRepository, GateKeeper.Server.Repositories.SessionRepository>();
+
+// Register Services
+builder.Services.AddScoped<IEmailService, EmailService>(); // EmailService doesn't use a repository
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
-builder.Services.AddScoped<IResourceService, ResourceService>();
+builder.Services.AddScoped<IResourceService, ResourceService>(); // ResourceService interacts with file system
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<IVerifyTokenService, VerifyTokenService>();
 builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService>();
@@ -128,6 +149,7 @@ builder.Services.AddScoped<INotificationTemplateService, NotificationTemplateSer
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IInviteService, InviteService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
+
 
 // Register IStringDataProtector and its wrapper
 builder.Services.AddTransient<IStringDataProtector>(provider =>
@@ -208,18 +230,18 @@ builder.Services.AddSwaggerGen(options =>
 
 #region JWT Middleware
 
-builder.Services.AddSingleton<IKeyManagementService>(sp =>
+builder.Services.AddScoped<IKeyManagementService>(sp => // Changed from AddSingleton to AddScoped
 {
-    var keyManagementConfig = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<KeyManagementConfig>>().Value;
-    var dbHelper = sp.GetRequiredService<IDbHelper>();
+    var keyManagementRepository = sp.GetRequiredService<IKeyManagementRepository>();
     var logger = sp.GetRequiredService<ILogger<KeyManagementService>>();
+    var keyManagementConfigOptions = sp.GetRequiredService<IOptions<KeyManagementConfig>>();
 
-    // KeyManagementService is already refactored to take IOptions<KeyManagementConfig> in its constructor.
+    // KeyManagementService is refactored to take IKeyManagementRepository, ILogger, and IOptions<KeyManagementConfig>.
     // The validation for MasterKey (presence, Base64 format, length) is handled within KeyManagementService.
     return new KeyManagementService(
-        dbHelper, 
-        logger, 
-        sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<KeyManagementConfig>>() // Pass IOptions directly
+        keyManagementRepository,
+        logger,
+        keyManagementConfigOptions
     );
 });
 
