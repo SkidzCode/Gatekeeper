@@ -89,14 +89,14 @@ export function generatePluginRoutes(injector: Injector): Routes {
   return finalPluginRoutes;
 }
 
-// Use an InjectionToken for the dynamically generated routes
-export const DYNAMIC_PLUGIN_ROUTES = new InjectionToken<Routes>('DYNAMIC_PLUGIN_ROUTES', {
-  providedIn: 'root',
-  factory: () => {
-    console.log('[AppRoutingModule] DYNAMIC_PLUGIN_ROUTES factory called.');
-    return generatePluginRoutes(inject(Injector));
-  }
-});
+// DYNAMIC_PLUGIN_ROUTES token can be removed if routes are generated directly in APP_INITIALIZER
+// export const DYNAMIC_PLUGIN_ROUTES = new InjectionToken<Routes>('DYNAMIC_PLUGIN_ROUTES', {
+//   providedIn: 'root',
+//   factory: () => {
+//     console.log('[AppRoutingModule] DYNAMIC_PLUGIN_ROUTES factory called.');
+//     return generatePluginRoutes(inject(Injector));
+//   }
+// });
 
 const staticRoutes: Routes = [
   // Main layout routes
@@ -150,23 +150,28 @@ const staticRoutes: Routes = [
       deps: [PluginLoaderService],
       multi: true
     },
-    // DYNAMIC_PLUGIN_ROUTES is now providedIn: 'root'
-    // {
-    //   provide: DYNAMIC_PLUGIN_ROUTES,
-    //   useFactory: generatePluginRoutes,
-    //   deps: [Injector]
-    // },
+    // DYNAMIC_PLUGIN_ROUTES token and its provider are removed.
+    // Routes are generated and router is configured in the APP_INITIALIZER below.
     {
-      provide: APP_INITIALIZER, // Changed from NgModule to APP_INITIALIZER for router reconfiguration
-      useFactory: (injector: Injector) => () => { // Return a function for APP_INITIALIZER
-        console.log('[AppRoutingModule] APP_INITIALIZER for router reconfiguration STARTING');
-        const router = injector.get(Router); // Use imported Router
-        console.log('[AppRoutingModule] Router instance:', router);
+      provide: APP_INITIALIZER,
+      useFactory: (injector: Injector, pluginLoader: PluginLoaderService) => { // Inject PluginLoaderService
+        return async () => { // Factory returns an async function (Promise)
+          console.log('[AppRoutingModule] APP_INITIALIZER for router reconfiguration STARTING');
 
-        const dynamicRoutes = injector.get(DYNAMIC_PLUGIN_ROUTES);
-        console.log('[AppRoutingModule] Dynamic routes from token:', JSON.parse(JSON.stringify(dynamicRoutes, (key, value) =>
-          typeof value === 'function' ? `FUNCTION: ${value.name || 'anonymous'}` : value
-        )));
+          // Ensure plugin manifests are loaded. The other APP_INITIALIZER should handle this,
+          // but this APP_INITIALIZER depends on PluginLoaderService, so Angular ensures it runs after
+          // PluginLoaderService is available. The promise from loadPluginManifests() should have resolved.
+          // For robustness, one could await pluginLoader.loadPluginManifests() here if it weren't already an APP_INIT.
+          // However, the dependency chain of APP_INITIALIZERs should manage order.
+
+          const router = injector.get(Router);
+          console.log('[AppRoutingModule] Router instance:', router);
+
+          // Generate routes now, as manifests should be loaded.
+          const dynamicRoutes = generatePluginRoutes(injector);
+          console.log('[AppRoutingModule] Dynamic routes generated:', JSON.parse(JSON.stringify(dynamicRoutes, (key, value) =>
+            typeof value === 'function' ? `FUNCTION: ${value.name || 'anonymous'}` : value
+          )));
 
         // It's crucial that staticRoutes is a new copy if it's mutated,
         // or router.resetConfig might not detect changes properly in some scenarios.
@@ -192,9 +197,9 @@ const staticRoutes: Routes = [
         )));
         router.resetConfig(staticRoutes);
         console.log('[AppRoutingModule] APP_INITIALIZER for router reconfiguration COMPLETED');
-        // No return needed for APP_INITIALIZER factory that returns a function
+        // No return needed for APP_INITIALIZER factory that returns an async function
       },
-      deps: [Injector],
+      deps: [Injector, PluginLoaderService], // Added PluginLoaderService to deps
       multi: true
     }
   ]
