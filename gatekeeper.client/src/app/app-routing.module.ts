@@ -158,6 +158,18 @@ const staticRoutes: Routes = [
         return async () => {
           console.log('[AppRoutingModule] APP_INITIALIZER for router reconfiguration STARTING');
 
+          if (pluginLoader.manifestLoadingPromise) {
+            console.log('[AppRoutingModule] Waiting for manifestLoadingPromise to resolve...');
+            await pluginLoader.manifestLoadingPromise;
+            console.log('[AppRoutingModule] manifestLoadingPromise resolved.');
+          } else {
+            // This case should ideally not happen if the other APP_INITIALIZER for loading manifests is set up correctly
+            // and if PluginLoaderService is a true singleton.
+            console.warn('[AppRoutingModule] manifestLoadingPromise not found on PluginLoaderService. This might indicate an issue with service instantiation order or APP_INITIALIZER setup.');
+            // As a fallback, or if loadPluginManifests() was NOT part of another APP_INITIALIZER:
+            // await pluginLoader.loadPluginManifests();
+          }
+
           const router = injector.get(Router);
           console.log('[AppRoutingModule] Router instance:', router);
 
