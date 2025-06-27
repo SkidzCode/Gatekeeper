@@ -79,6 +79,7 @@ export function generatePluginRoutes(injector: Injector): Routes {
         plugin: true // Mark as a plugin route
       }
     };
+    return routeConfig; // Ensure routeConfig is returned
   });
 
   const finalPluginRoutes = mappedRoutes.filter((r): r is Route => r !== null);

@@ -35,9 +35,10 @@ const dynamicImportGlobPlugin = {
       console.log('[ESBUILD PLUGIN] Discovered plugin module paths:', pluginModulePaths);
 
       const generatedMapEntries = pluginModulePaths.map(modulePath => {
-        const relativeFromPluginsRoot = path.relative(pluginsRoot, modulePath); // e.g., 'sample/sample.module.ts'
-        // Key should be like 'plugins/sample/sample' to match app-routing.module.ts
-        const pluginKey = path.join('plugins', relativeFromPluginsRoot).replace(/\\/g, '/').replace(/\.ts$/, '');
+        // relativeFromPluginsRoot will be like 'sample/sample.module.ts'
+        const relativeFromPluginsRoot = path.relative(pluginsRoot, modulePath);
+        // pluginKey should be like 'plugins/sample/sample'
+        const pluginKey = path.join('plugins', relativeFromPluginsRoot.replace(/\.module\.ts$/, '')).replace(/\\/g, '/');
 
         let relativePathToImport = path.relative(importerDir, modulePath).replace(/\\/g, '/').replace(/\.ts$/, '');
         if (!relativePathToImport.startsWith('.') && !path.isAbsolute(relativePathToImport)) {
