@@ -23,7 +23,6 @@ namespace GateKeeper.Server.Controllers
     [Route("api/[controller]")]
     public class UserController : ControllerBase
     {
-        private readonly IDbHelper _dbHelper;
         private readonly IUserService _userService;
         private readonly IRoleService _roleService;
         private readonly ILogger<UserController> _logger;
@@ -35,13 +34,11 @@ namespace GateKeeper.Server.Controllers
         /// <param name="jwtService">JWT service dependency.</param>
         public UserController(
             // IConfiguration configuration, // Removed
-            IDbHelper dbHelper,
             IUserService userService,
             ILogger<UserController> logger,
             IRoleService roleService)
         {
             _userService = userService;
-            _dbHelper = dbHelper;
             _logger = logger;
             _roleService = roleService;
         }

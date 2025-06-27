@@ -18,7 +18,6 @@ namespace GateKeeper.Server.Test.Services
     [TestClass]
     public class ResourceServiceTests
     {
-        private Mock<IDbHelper> _mockDbHelper;
         private Mock<ILogger<ResourceService>> _mockLogger;
         private Mock<IOptions<ResourceSettingsConfig>> _mockResourceSettingsOptions; // Added
         private ResourceService _resourceService;
@@ -27,7 +26,6 @@ namespace GateKeeper.Server.Test.Services
         [TestInitialize]
         public void TestInitialize()
         {
-            _mockDbHelper = new Mock<IDbHelper>();
             _mockLogger = new Mock<ILogger<ResourceService>>();
             _mockResourceSettingsOptions = new Mock<IOptions<ResourceSettingsConfig>>(); // Added
 
@@ -42,7 +40,7 @@ namespace GateKeeper.Server.Test.Services
             var resourceSettings = new ResourceSettingsConfig { Path = _testResourceDir };
             _mockResourceSettingsOptions.Setup(o => o.Value).Returns(resourceSettings);
             
-            _resourceService = new ResourceService(_mockDbHelper.Object, _mockLogger.Object, _mockResourceSettingsOptions.Object);
+            _resourceService = new ResourceService(_mockLogger.Object, _mockResourceSettingsOptions.Object);
         }
 
         [TestCleanup]

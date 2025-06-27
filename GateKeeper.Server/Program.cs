@@ -118,8 +118,6 @@ builder.Services.AddOptions<SerilogConfig>()
     .Bind(builder.Configuration.GetSection(SerilogConfig.SectionName));
 // End Register and Validate Typed Configuration
 
-builder.Services.AddSingleton<IDbHelper, DBHelper>(); // DBHelper might still be used by other non-converted services or utilities
-
 // Register IDbConnection for Dapper repositories
 builder.Services.AddScoped<IDbConnection>(sp =>
 {
