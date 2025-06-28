@@ -27,12 +27,31 @@ const dynamicImportGlobPlugin = {
       // Not plugins/sample/feature/feature.module.ts if that exists.
       // The glob pattern '**/*.module.ts' might be too broad if plugins have nested modules.
       // Let's assume for now it's one primary .module.ts per first-level plugin directory.
-      const pluginModulePaths = await glob('*/!(sample-routing).module.ts', { cwd: pluginsRoot, absolute: true, onlyFiles: true });
-      // const pluginModulePaths = await glob('**/*.module.ts', { cwd: pluginsRoot, absolute: true, onlyFiles: true });
-      // Filter out sample-routing.module.ts explicitly if it's causing issues with the key 'plugins/sample/sample-routing'
-      // pluginModulePaths = pluginModulePaths.filter(p => !p.endsWith('sample-routing.module.ts'));
+      // Original problematic glob: const pluginModulePaths = await glob('*/!(sample-routing).module.ts', { cwd: pluginsRoot, absolute: true, onlyFiles: true });
 
-      console.log('[ESBUILD PLUGIN] Discovered plugin module paths:', pluginModulePaths);
+      // Fetch all .module.ts files within the plugins directory and its subdirectories.
+      let pluginModulePaths = await glob('**/*.module.ts', { cwd: pluginsRoot, absolute: true, onlyFiles: true });
+
+      console.log('[ESBUILD PLUGIN] Initially discovered plugin module paths:', pluginModulePaths);
+
+      // Filter to keep only modules where the filename matches the directory name (e.g., profile/profile.module.ts)
+      // and it's a top-level module within its plugin directory.
+      pluginModulePaths = pluginModulePaths.filter(modulePath => {
+        const relativePath = path.relative(pluginsRoot, modulePath); // e.g., 'profile/profile.module.ts' or 'sample/feature/feature.module.ts'
+        const parts = relativePath.split(path.sep); // e.g., ['profile', 'profile.module.ts'] or ['sample', 'feature', 'feature.module.ts']
+
+        // We are looking for modules like 'pluginName/pluginName.module.ts'
+        // So, parts.length should be 2.
+        // And parts[0] (directory name) should be equal to parts[1] without '.module.ts'.
+        if (parts.length === 2) {
+          const dirName = parts[0];
+          const moduleFileName = parts[1].replace(/\.module\.ts$/, '');
+          return dirName === moduleFileName;
+        }
+        return false;
+      });
+
+      console.log('[ESBUILD PLUGIN] Filtered plugin module paths:', pluginModulePaths);
 
       const generatedMapEntries = pluginModulePaths.map(modulePath => {
         // relativeFromPluginsRoot will be like 'sample/sample.module.ts'
