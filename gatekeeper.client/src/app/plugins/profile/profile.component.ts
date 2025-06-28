@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { UserService } from '../../../../core/services/user/user.service'; // Adjusted path
-import { User } from '../../../../shared/models/user.model'; // Adjusted path
+import { UserService } from '../../core/services/user/user.service'; // Corrected path
+import { User } from '../../shared/models/user.model'; // Corrected path
 
 
 @Component({
@@ -124,12 +124,12 @@ export class ProfileComponent implements OnInit { // Changed class name
       }
 
       this.userService.updateUserWithImage(formData).subscribe({
-        next: (res) => {
+        next: (res: any) => { // Added type for res
           localStorage.setItem('currentUser', JSON.stringify(res.user));
           this.snackBar.open('Profile updated successfully!', 'Close', { duration: 3000 });
           this.refreshProfileImageUrl();
         },
-        error: (err) => {
+        error: (err: any) => { // Added type for err
           console.error('Error updating user:', err);
           this.snackBar.open('Failed to update profile. Please try again later.', 'Close', { duration: 3000 });
         }

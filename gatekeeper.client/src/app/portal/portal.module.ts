@@ -12,10 +12,10 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
-import { MatSnackBarModule } from '@angular/material/snack-bar'; // Add this import
-import { MatTabsModule } from '@angular/material/tabs'; // Add this import
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTabsModule } from '@angular/material/tabs';
 
-import { UserProfileComponent } from './user/user-profile/user-profile.component';
+// import { UserProfileComponent } from './user/user-profile/user-profile.component'; // Removed
 import { UserSettingsComponent } from './user/user-settings/user-settings.component';
 import { PortalRoutingModule } from './portal-routing.module';
 import { HomeComponent } from './home/home/home.component';
@@ -24,7 +24,7 @@ import { SessionsComponent } from './user/sessions/sessions.component';
 
 @NgModule({
   declarations: [
-    UserProfileComponent,
+    // UserProfileComponent, // Removed
     UserSettingsComponent,
     HomeComponent,
     InviteComponent,

@@ -1,13 +1,7 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router'; // Import RouterModule
-import { ProfileComponent } from './profile.component';
-import { ProfileRoutingModule } from './profile-routing.module';
-
-import { NgModule } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { ReactiveFormsModule } from '@angular/forms'; // Import ReactiveFormsModule
+import { ReactiveFormsModule } from '@angular/forms';
 
 import { ProfileComponent } from './profile.component';
 import { ProfileRoutingModule } from './profile-routing.module';
@@ -21,17 +15,16 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 
-
 @NgModule({
   declarations: [
     ProfileComponent // Declare the non-standalone ProfileComponent
   ],
   imports: [
     CommonModule,
-    ProfileRoutingModule,
-    RouterModule,
-    ReactiveFormsModule, // Add ReactiveFormsModule
-    // Add Angular Material Modules
+    RouterModule, // RouterModule is needed for routerLink, router-outlet etc. within the module's components
+    ProfileRoutingModule, // This sets up the routes for this lazy-loaded module
+    ReactiveFormsModule,
+    // Angular Material Modules
     MatCardModule,
     MatIconModule,
     MatDividerModule,
@@ -39,7 +32,7 @@ import { MatSnackBarModule } from '@angular/material/snack-bar';
     MatInputModule,
     MatButtonModule,
     MatSnackBarModule
-  ],
+  ]
   // No exports needed if ProfileComponent is only routed within this lazy-loaded module
 })
 export class ProfileModule { }
