@@ -52,7 +52,7 @@ export function initializeApp(pluginLoaderService: PluginLoaderService) {
     UserVerifyComponent,
     MainLayoutComponent,
     DisabledComponent,
-    PortalLayoutComponent,
+    // PortalLayoutComponent removed as it is now standalone
     AdminLayoutComponent,
     HomeComponent
   ],
