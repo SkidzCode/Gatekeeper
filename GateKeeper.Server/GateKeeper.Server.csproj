@@ -42,6 +42,7 @@
     <ProjectReference Include="..\GateKeeper.Plugin.Abstractions\GateKeeper.Plugin.Abstractions.csproj" />
     <ProjectReference Include="..\GateKeeper.Plugin.Placeholder\GateKeeper.Plugin.Placeholder.csproj" />
     <ProjectReference Include="..\GateKeeper.Plugin.Sample\GateKeeper.Plugin.Sample.csproj" />
+    <ProjectReference Include="..\GateKeeper.Plugin.Profile\GateKeeper.Plugin.Profile.csproj" />
   </ItemGroup>
 
   <ItemGroup>
