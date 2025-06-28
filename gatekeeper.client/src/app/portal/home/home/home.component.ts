@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 
 @Component({
-  selector: 'app-home',
+  selector: 'app-portal-home',
   standalone: false,
   
   templateUrl: './home.component.html',

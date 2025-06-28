@@ -96,7 +96,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GateKeeper.Plugin.Abstracti
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GateKeeper.Plugin.Placeholder", "GateKeeper.Plugin.Placeholder\GateKeeper.Plugin.Placeholder.csproj", "{5BAA6F0B-86D7-43E6-96F6-62603CBD424D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GateKeeper.Plugin.Sample", "GateKeeper.Plugin.Sample\GateKeeper.Plugin.Sample.csproj", "{YOUR-NEW-GUID-HERE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GateKeeper.Plugin.Sample", "GateKeeper.Plugin.Sample\GateKeeper.Plugin.Sample.csproj", "{6A8CAA30-0ADE-406A-B29C-2BF671FAC4E1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -126,10 +126,10 @@ Global
 		{5BAA6F0B-86D7-43E6-96F6-62603CBD424D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5BAA6F0B-86D7-43E6-96F6-62603CBD424D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5BAA6F0B-86D7-43E6-96F6-62603CBD424D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{YOUR-NEW-GUID-HERE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{YOUR-NEW-GUID-HERE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{YOUR-NEW-GUID-HERE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{YOUR-NEW-GUID-HERE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A8CAA30-0ADE-406A-B29C-2BF671FAC4E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A8CAA30-0ADE-406A-B29C-2BF671FAC4E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A8CAA30-0ADE-406A-B29C-2BF671FAC4E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A8CAA30-0ADE-406A-B29C-2BF671FAC4E1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
