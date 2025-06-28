@@ -143,6 +143,71 @@ npm start
 
 The frontend will typically be available at `http://localhost:4200`.
 
+## Plugin System
+
+GateKeeper features a plugin system that allows for extending the application's functionality with new features, including new pages and navigation items in the frontend portal. This system is designed to be modular, allowing developers to create self-contained plugins for both backend and frontend capabilities.
+
+### Overview
+
+The plugin architecture relies on:
+
+*   **Backend Discovery:** .NET class libraries implementing the `IPlugin` interface (from `GateKeeper.Plugin.Abstractions`) are discovered by the server at startup. Each plugin can register its own services and provide metadata.
+*   **API Manifest:** The `PluginsController` (`/api/plugins/manifests`) exposes a list of active plugins and their metadata (name, version, frontend module paths, route paths, navigation labels) to the frontend.
+*   **Frontend Dynamic Loading:**
+    *   The Angular frontend's `PluginLoaderService` fetches this manifest on application initialization.
+    *   A build-time script (`gatekeeper.client/esbuild-plugins.cjs`) scans the `gatekeeper.client/src/app/plugins/` directory for Angular modules. It generates a map that allows Angular to lazy-load these modules.
+    *   The main Angular router dynamically adds routes for active plugins based on the manifest and the build-time module map.
+    *   Navigation elements (e.g., in the portal sidebar) are also dynamically generated based on the plugin manifest.
+
+### Creating a New Plugin
+
+Here's a high-level guide to creating a new plugin (e.g., "MyExamplePlugin").
+
+**1. Backend C# Plugin Project:**
+
+*   **Create Project:** Create a new .NET Class Library project (e.g., `GateKeeper.Plugin.MyExamplePlugin`). Target `net8.0` or a compatible framework.
+*   **Add Reference:** Reference the `GateKeeper.Plugin.Abstractions` project.
+*   **Implement `IPlugin`:** Create a class (e.g., `MyExamplePlugin.cs`) that implements `GateKeeper.Plugin.Abstractions.IPlugin`.
+    *   **Key Properties to Define:**
+        *   `Name`: (string) Display name of the plugin.
+        *   `Version`: (string) Plugin version.
+        *   `Description`: (string) Short description.
+        *   `DefaultRoutePath`: (string) The base path segment for this plugin's routes under `/portal/` (e.g., `"myexample"` would result in `/portal/myexample`).
+        *   `AngularModuleName`: (string) The exported class name of your plugin's main Angular module (e.g., `"MyExamplePluginModule"`).
+        *   `AngularModulePath`: (string) The path to your plugin's main Angular module file, relative to `gatekeeper.client/src/app/` and without the `.ts` extension (e.g., `"plugins/myexample/myexample.module"`).
+        *   `NavigationLabel`: (string) Text for the link in the navigation menu.
+        *   `RequiredRole`: (string, optional) Role required to access this plugin.
+    *   **`ConfigureServices` Method:** Implement this method to register any backend services specific to your plugin using the provided `IServiceCollection`.
+*   **Add Server Reference:** Add a project reference from `GateKeeper.Server.csproj` to your new plugin project (`GateKeeper.Plugin.MyExamplePlugin.csproj`).
+
+**2. Frontend Angular Module:**
+
+*   **Create Directory:** In the `gatekeeper.client` project, create a new directory for your plugin's frontend code: `src/app/plugins/myexample/`.
+*   **Angular Module (`myexample.module.ts`):**
+    *   Create your main Angular module file (e.g., `src/app/plugins/myexample/myexample.module.ts`).
+    *   Define and export the module class (e.g., `MyExamplePluginModule`).
+    *   Import `CommonModule`, a routing module for your plugin, and declare/import any components specific to this plugin.
+*   **Component(s) (`myexample.component.ts`, `.html`, `.scss`):**
+    *   Create the Angular components that make up your plugin's UI.
+    *   Consider using standalone components if that aligns with the project's current practices.
+*   **Routing Module (`myexample-routing.module.ts`):**
+    *   Create a routing module for routes *within* your plugin (e.g., `src/app/plugins/myexample/myexample-routing.module.ts`).
+    *   Define child routes for your plugin components (e.g., `path: '', component: MyExampleComponent`).
+*   **Services (Optional):** If your plugin's frontend needs to call APIs, create Angular services within its directory (e.g., `src/app/plugins/myexample/services/`). These services can be `providedIn: 'root'` or scoped to your plugin's module. They can call general application APIs or APIs specific to your plugin (defined in its backend C# project).
+
+**3. Build and Verify:**
+
+*   **Rebuild Solution:** Ensure both backend and frontend projects are rebuilt.
+*   **Run Application:** Start both the backend server and the Angular development server.
+*   **Check:**
+    *   Backend server logs for discovery of "MyExamplePlugin".
+    *   The `/api/plugins/manifests` endpoint to see your plugin listed.
+    *   The portal navigation menu for the `NavigationLabel`.
+    *   Navigate to your plugin's route (e.g., `/portal/myexample`) to see its UI.
+    *   Browser developer tools (Network tab) to confirm lazy loading of your plugin's JavaScript module when first accessed.
+
+This plugin system allows for extending GateKeeper with new, self-contained features while maintaining a decoupled architecture.
+
 ## Testing
 
 Both frontend and backend include unit tests.
