@@ -19,6 +19,8 @@ import { HomeComponent } from './site/home/home/home.component';
 
 // Guards
 import { DisabledGuardService } from './core/guard/disabled-guard.service';
+import { AuthGuard } from './core/guard/auth-guard.service'; // Import AuthGuard
+import { RoleGuard } from './core/guard/role-guard.service'; // Import RoleGuard
 
 // Plugin Loading
 import { PluginLoaderService } from './core/services/plugin-loader.service';
@@ -76,6 +78,7 @@ function generatePluginChildRoutes(injector: Injector): Routes {
           throw err;
         });
       },
+      canActivate: [AuthGuard, RoleGuard], // Apply guards here
       data: {
         navigationLabel: manifest.navigationLabel,
         requiredRole: manifest.requiredRole,
