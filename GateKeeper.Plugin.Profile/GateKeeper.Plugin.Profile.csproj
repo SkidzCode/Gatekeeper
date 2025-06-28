@@ -8,12 +8,19 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <OutputPath>../GateKeeper.Server/bin/$(Configuration)/$(TargetFramework)/Plugins/GateKeeper.Plugin.Profile</OutputPath>
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <!-- Removed custom OutputPath and AppendTargetFrameworkToOutputPath -->
   </PropertyGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
+
+  <Target Name="CopyPluginToMainServerOutput" AfterTargets="Build">
+    <ItemGroup>
+      <PluginFiles Include="$(OutputPath)$(AssemblyName).dll" />
+      <PluginFiles Include="$(OutputPath)$(AssemblyName).pdb" Condition="Exists('$(OutputPath)$(AssemblyName).pdb')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(SolutionDir)GateKeeper.Server\bin\$(Configuration)\$(TargetFramework)\plugins\" SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

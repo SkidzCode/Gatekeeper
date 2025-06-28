@@ -303,50 +303,128 @@ builder.Services.AddAuthorization();
 #region Plugin Discovery and Loading
 Log.Information("Starting plugin discovery...");
 var loadedPlugins = new List<IPlugin>();
-var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-foreach (var assembly in assemblies)
+
+// Define the path to the plugins directory
+string pluginsPath = Path.Combine(AppContext.BaseDirectory, "plugins");
+Log.Information("Looking for plugins in: {PluginsPath}", pluginsPath);
+
+if (Directory.Exists(pluginsPath))
 {
+    // Load assemblies from the plugins directory
+    foreach (string dllPath in Directory.GetFiles(pluginsPath, "*.dll"))
+    {
+        try
+        {
+            Log.Debug("Attempting to load assembly: {DllPath}", dllPath);
+            Assembly assembly = Assembly.LoadFrom(dllPath);
+            Log.Information("Successfully loaded assembly: {AssemblyName}", assembly.FullName);
+
+            var pluginTypes = assembly.GetTypes()
+                .Where(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+
+            foreach (var type in pluginTypes)
+            {
+                try
+                {
+                    var plugin = (IPlugin)Activator.CreateInstance(type);
+                    if (plugin != null)
+                    {
+                        Log.Information("Found plugin: {PluginName} v{PluginVersion} from {AssemblyFullName}", plugin.Name, plugin.Version, assembly.FullName);
+                        plugin.ConfigureServices(builder.Services, builder.Configuration);
+                        loadedPlugins.Add(plugin);
+                        Log.Information("Configured plugin: {PluginName}", plugin.Name);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Error instantiating or configuring plugin type {PluginType} from assembly {AssemblyName}", type.FullName, assembly.FullName);
+                }
+            }
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+             Log.Warning("Could not load types from assembly {DllPath} during plugin discovery: {LoaderExceptions}", dllPath, string.Join(", ", ex.LoaderExceptions.Select(e => e?.Message ?? "N/A")));
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Error loading or inspecting assembly {DllPath} for plugins", dllPath);
+        }
+    }
+}
+else
+{
+    Log.Warning("Plugins directory not found: {PluginsPath}", pluginsPath);
+}
+
+// Also scan already loaded assemblies (e.g., if a plugin is directly referenced by the server project)
+var alreadyLoadedAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+foreach (var assembly in alreadyLoadedAssemblies)
+{
+    // Avoid reprocessing assemblies already loaded from the 'plugins' directory
+    if (Directory.Exists(pluginsPath) && assembly.IsDynamic == false && !string.IsNullOrEmpty(assembly.Location))
+    {
+        try
+        {
+            if (Path.GetDirectoryName(assembly.Location).Equals(pluginsPath, StringComparison.OrdinalIgnoreCase))
+            {
+                // Log.Debug("Skipping already processed assembly from plugins folder: {AssemblyName}", assembly.FullName);
+                continue;
+            }
+        }
+        catch (NotSupportedException)
+        {
+            // Assembly.Location can throw NotSupportedException for dynamic assemblies, skip them.
+            // Log.Debug("Skipping dynamic assembly or assembly without location: {AssemblyName}", assembly.FullName);
+            continue;
+        }
+    }
+
     try
     {
         var pluginTypes = assembly.GetTypes()
-            .Where(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+            .Where(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract && !loadedPlugins.Any(lp => lp.GetType() == t));
 
         foreach (var type in pluginTypes)
         {
             try
             {
-                var plugin = (IPlugin)Activator.CreateInstance(type);
-                if (plugin != null)
+                // Check if a plugin with the same name and version has already been loaded (e.g. from the 'plugins' folder)
+                var tempPlugin = (IPlugin)Activator.CreateInstance(type); // Create temporary instance for checking
+                if (tempPlugin != null && !loadedPlugins.Any(lp => lp.Name == tempPlugin.Name && lp.Version == tempPlugin.Version))
                 {
-                    Log.Information("Found plugin: {PluginName} v{PluginVersion}", plugin.Name, plugin.Version);
-                    plugin.ConfigureServices(builder.Services, builder.Configuration);
-                    loadedPlugins.Add(plugin);
-                    Log.Information("Configured plugin: {PluginName}", plugin.Name);
+                    Log.Information("Found plugin from already loaded assembly: {PluginName} v{PluginVersion} from {AssemblyFullName}", tempPlugin.Name, tempPlugin.Version, assembly.FullName);
+                    tempPlugin.ConfigureServices(builder.Services, builder.Configuration); // Configure the actual instance
+                    loadedPlugins.Add(tempPlugin); // Add the actual instance
+                    Log.Information("Configured plugin: {PluginName}", tempPlugin.Name);
+                }
+                else if (tempPlugin != null)
+                {
+                    Log.Debug("Plugin {PluginName} v{PluginVersion} from {AssemblyFullName} was already loaded (likely from plugins folder). Skipping.", tempPlugin.Name, tempPlugin.Version, assembly.FullName);
                 }
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Error instantiating or configuring plugin type {PluginType} from assembly {AssemblyName}", type.FullName, assembly.FullName);
+                Log.Error(ex, "Error instantiating or configuring plugin type {PluginType} from already loaded assembly {AssemblyName}", type.FullName, assembly.FullName);
             }
         }
     }
     catch (ReflectionTypeLoadException ex)
     {
-        Log.Warning("Could not load types from assembly {AssemblyName} during plugin discovery: {LoaderExceptions}", assembly.FullName, ex.LoaderExceptions.Select(e => e?.Message));
+        Log.Warning("Could not load types from already loaded assembly {AssemblyName} during plugin discovery: {LoaderExceptions}", assembly.FullName, string.Join(", ", ex.LoaderExceptions.Select(e => e?.Message ?? "N/A")));
     }
     catch (Exception ex)
     {
-        Log.Warning(ex, "Error inspecting assembly {AssemblyName} for plugins", assembly.FullName);
+        Log.Warning(ex, "Error inspecting already loaded assembly {AssemblyName} for plugins", assembly.FullName);
     }
 }
 
 if (!loadedPlugins.Any())
 {
-    Log.Information("No plugins found.");
+    Log.Information("No plugins found after checking filesystem and loaded assemblies.");
 }
 else
 {
-    Log.Information("Finished plugin discovery. Loaded {PluginCount} plugins.", loadedPlugins.Count);
+    Log.Information("Finished plugin discovery. Loaded {PluginCount} plugins in total.", loadedPlugins.Count);
 }
 builder.Services.AddSingleton<IReadOnlyList<IPlugin>>(loadedPlugins.AsReadOnly());
 #endregion
