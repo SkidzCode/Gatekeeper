@@ -12,8 +12,8 @@
   ],
   "include": [
     "src/**/*.ts", // Broaden to include all .ts files in src
-    "../GateKeeper.Plugin.Profile/Frontend/**/*.ts", // Include TypeScript files from Profile plugin
-    "../GateKeeper.Plugin.Sample/Frontend/**/*.ts" // Include TypeScript files from Sample plugin
+    "../GateKeeper.Plugin.Profile/Frontend/portal/plugins/**/*.ts", // Include TypeScript files from Profile plugin portal section
+    "../GateKeeper.Plugin.Sample/Frontend/portal/plugins/**/*.ts" // Include TypeScript files from Sample plugin portal section
   ],
   "exclude": [
     "src/**/*.spec.ts"

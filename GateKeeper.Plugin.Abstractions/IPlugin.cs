@@ -14,6 +14,13 @@ namespace GateKeeper.Plugin.Abstractions
         string NavigationLabel { get; }
         string RequiredRole { get; }
 
+        // New properties for Admin section
+        string? AdminAngularModulePath { get; }
+        string? AdminAngularModuleName { get; }
+        string? AdminDefaultRoutePath { get; }
+        string? AdminNavigationLabel { get; }
+        string? AdminRequiredRole { get; }
+
         void ConfigureServices(IServiceCollection services, IConfiguration configuration);
     }
 }

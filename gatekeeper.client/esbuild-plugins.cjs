@@ -30,11 +30,13 @@ const dynamicImportGlobPlugin = {
 
       // Define glob patterns for both internal and external plugins
       const internalPluginPattern = '**/!(*.spec).module.ts'; // Exclude spec files
-      const externalPluginPattern = 'GateKeeper.Plugin.*/Frontend/plugins/**/*.module.ts';
+      const externalPluginPattern = 'GateKeeper.Plugin.*/Frontend/portal/plugins/**/*.module.ts';
 
       // Fetch all .module.ts files from both locations
       let internalPluginPaths = await glob(internalPluginPattern, { cwd: internalPluginsRoot, absolute: true, onlyFiles: true });
+      console.log('[ESBUILD PLUGIN] Raw internalPluginPaths from glob:', internalPluginPaths);
       let externalPluginPaths = await glob(externalPluginPattern, { cwd: externalPluginsRoot, absolute: true, onlyFiles: true });
+      console.log('[ESBUILD PLUGIN] Raw externalPluginPaths from glob:', externalPluginPaths);
 
       let allPluginModulePaths = [...internalPluginPaths, ...externalPluginPaths];
 
@@ -84,9 +86,11 @@ const dynamicImportGlobPlugin = {
         let pluginKey;
         if (modulePath.includes('GateKeeper.Plugin.')) {
             // Example path: .../GateKeeper.Plugin.Sample/Frontend/plugins/sample/sample.module.ts
-            const match = modulePath.match(/plugins[\\\/]([^\\\/]+)[\\\/][^\\\/]+\.module\.ts$/);
-            if (match && match[1]) {
-                pluginKey = `plugins/${match[1]}/${match[1]}`;
+            const match = modulePath.match(/Frontend[\/](portal|admin)[\/]plugins[\/]([^\/]+)[\/][^\/]+\.module\.ts$/);
+            if (match && match[1] && match[2]) {
+                const section = match[1]; // 'portal' or 'admin'
+                const pluginFolder = match[2]; // This will be the plugin name directly
+                pluginKey = `${pluginFolder}/${pluginFolder}`;
             }
         } else {
             // Internal path logic remains the same

@@ -15,6 +15,13 @@ namespace GateKeeper.Plugin.Placeholder
         public string NavigationLabel => "Placeholder"; // Or empty
         public string RequiredRole => null; // Or specific role / empty string
 
+        // Admin section properties (null for now as no admin section exists)
+        public string? AdminAngularModulePath => null;
+        public string? AdminAngularModuleName => null;
+        public string? AdminDefaultRoutePath => null;
+        public string? AdminNavigationLabel => null;
+        public string? AdminRequiredRole => null;
+
         public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
         {
             // No services to register for this placeholder
