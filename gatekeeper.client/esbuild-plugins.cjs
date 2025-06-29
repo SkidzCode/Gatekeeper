@@ -5,6 +5,10 @@ const glob = require('fast-glob');
 const dynamicImportGlobPlugin = {
   name: 'dynamic-import-glob',
   setup(build) {
+    build.initialOptions.external = [
+      "@angular/*",
+      "tslib"
+    ];
     // Intercept import paths matching our "magic" string 'plugins:all'
     build.onResolve({ filter: /^plugins:all$/ }, args => ({
       path: args.path,
@@ -17,60 +21,96 @@ const dynamicImportGlobPlugin = {
       const importerDir = path.dirname(args.pluginData.importer);
       // process.cwd() in esbuild context is the project root where angular.json is
       const projectRoot = process.cwd();
-      const pluginsRoot = path.resolve(projectRoot, 'src/app/plugins');
+      const internalPluginsRoot = path.resolve(projectRoot, 'src/app/plugins');
+      const externalPluginsRoot = path.resolve(projectRoot, '../'); // Root of all C# projects
 
-      console.log('[ESBUILD PLUGIN] Importer directory:', importerDir);
       console.log('[ESBUILD PLUGIN] Project root:', projectRoot);
-      console.log('[ESBUILD PLUGIN] Plugins root:', pluginsRoot);
+      console.log('[ESBUILD PLUGIN] Internal plugins root:', internalPluginsRoot);
+      console.log('[ESBUILD PLUGIN] External plugins root:', externalPluginsRoot);
 
-      // We want to find top-level module files for plugins, e.g., plugins/sample/sample.module.ts
-      // Not plugins/sample/feature/feature.module.ts if that exists.
-      // The glob pattern '**/*.module.ts' might be too broad if plugins have nested modules.
-      // Let's assume for now it's one primary .module.ts per first-level plugin directory.
-      // Original problematic glob: const pluginModulePaths = await glob('*/!(sample-routing).module.ts', { cwd: pluginsRoot, absolute: true, onlyFiles: true });
+      // Define glob patterns for both internal and external plugins
+      const internalPluginPattern = '**/!(*.spec).module.ts'; // Exclude spec files
+      const externalPluginPattern = 'GateKeeper.Plugin.*/Frontend/plugins/**/*.module.ts';
 
-      // Fetch all .module.ts files within the plugins directory and its subdirectories.
-      let pluginModulePaths = await glob('**/*.module.ts', { cwd: pluginsRoot, absolute: true, onlyFiles: true });
+      // Fetch all .module.ts files from both locations
+      let internalPluginPaths = await glob(internalPluginPattern, { cwd: internalPluginsRoot, absolute: true, onlyFiles: true });
+      let externalPluginPaths = await glob(externalPluginPattern, { cwd: externalPluginsRoot, absolute: true, onlyFiles: true });
 
-      console.log('[ESBUILD PLUGIN] Initially discovered plugin module paths:', pluginModulePaths);
+      let allPluginModulePaths = [...internalPluginPaths, ...externalPluginPaths];
 
-      // Filter to keep only modules where the filename matches the directory name (e.g., profile/profile.module.ts)
-      // and it's a top-level module within its plugin directory.
-      pluginModulePaths = pluginModulePaths.filter(modulePath => {
-        const relativePath = path.relative(pluginsRoot, modulePath); // e.g., 'profile/profile.module.ts' or 'sample/feature/feature.module.ts'
-        const parts = relativePath.split(path.sep); // e.g., ['profile', 'profile.module.ts'] or ['sample', 'feature', 'feature.module.ts']
+      console.log('[ESBUILD PLUGIN] Discovered internal plugin paths:', internalPluginPaths);
+      console.log('[ESBUILD PLUGIN] Discovered external plugin paths:', externalPluginPaths);
+      console.log('[ESBUILD PLUGIN] All discovered plugin paths:', allPluginModulePaths);
 
-        // We are looking for modules like 'pluginName/pluginName.module.ts'
-        // So, parts.length should be 2.
-        // And parts[0] (directory name) should be equal to parts[1] without '.module.ts'.
-        if (parts.length === 2) {
-          const dirName = parts[0];
-          const moduleFileName = parts[1].replace(/\.module\.ts$/, '');
-          return dirName === moduleFileName;
+      // This filtering logic might need to be adjusted based on the new structure
+      // It assumes a structure like 'pluginName/pluginName.module.ts'
+      const filteredPluginPaths = [];
+      const seenPluginNames = new Set();
+
+      // Process external plugins first to give them priority
+      for (const modulePath of externalPluginPaths) {
+        const normalizedPath = path.normalize(modulePath);
+        const parts = normalizedPath.split(path.sep);
+        const moduleFileName = parts[parts.length - 1].replace(/\.module\.ts$/, '');
+        const dirName = parts[parts.length - 2];
+
+        if (moduleFileName === dirName && !moduleFileName.includes('-routing')) {
+          if (!seenPluginNames.has(dirName)) {
+            filteredPluginPaths.push(modulePath);
+            seenPluginNames.add(dirName);
+          }
         }
-        return false;
-      });
+      }
 
-      console.log('[ESBUILD PLUGIN] Filtered plugin module paths:', pluginModulePaths);
+      // Process internal plugins, but only if an external plugin with the same name hasn't been added yet
+      for (const modulePath of internalPluginPaths) {
+        const normalizedPath = path.normalize(modulePath);
+        const parts = normalizedPath.split(path.sep);
+        const moduleFileName = parts[parts.length - 1].replace(/\.module\.ts$/, '');
+        const dirName = parts[parts.length - 2];
 
-      const generatedMapEntries = pluginModulePaths.map(modulePath => {
-        // relativeFromPluginsRoot will be like 'sample/sample.module.ts'
-        const relativeFromPluginsRoot = path.relative(pluginsRoot, modulePath);
-        // pluginKey should be like 'plugins/sample/sample'
-        const pluginKey = path.join('plugins', relativeFromPluginsRoot.replace(/\.module\.ts$/, '')).replace(/\\/g, '/');
+        if (moduleFileName === dirName && !moduleFileName.includes('-routing')) {
+          if (!seenPluginNames.has(dirName)) {
+            filteredPluginPaths.push(modulePath);
+            seenPluginNames.add(dirName);
+          }
+        }
+      }
+
+      console.log('[ESBUILD PLUGIN] Filtered plugin module paths:', filteredPluginPaths);
+
+      const generatedMapEntries = filteredPluginPaths.map(modulePath => {
+        // For external paths, we need to construct the key differently
+        let pluginKey;
+        if (modulePath.includes('GateKeeper.Plugin.')) {
+            // Example path: .../GateKeeper.Plugin.Sample/Frontend/plugins/sample/sample.module.ts
+            const match = modulePath.match(/plugins[\\\/]([^\\\/]+)[\\\/][^\\\/]+\.module\.ts$/);
+            if (match && match[1]) {
+                pluginKey = `plugins/${match[1]}/${match[1]}`;
+            }
+        } else {
+            // Internal path logic remains the same
+            const relativeFromInternalRoot = path.relative(internalPluginsRoot, modulePath);
+            pluginKey = path.join('plugins', relativeFromInternalRoot.replace(/\.module\.ts$/, '')).replace(/\\/g, '/');
+        }
+
+        if (!pluginKey) {
+            console.warn(`[ESBUILD PLUGIN] Could not determine plugin key for path: ${modulePath}`);
+            return null; // Skip this entry
+        }
 
         let relativePathToImport = path.relative(importerDir, modulePath).replace(/\\/g, '/').replace(/\.ts$/, '');
-        if (!relativePathToImport.startsWith('.') && !path.isAbsolute(relativePathToImport)) {
+        if (!relativePathToImport.startsWith('.')) {
           relativePathToImport = './' + relativePathToImport;
         }
-        console.log(`[ESBUILD PLUGIN] Generating map entry: Key='${pluginKey}', ImportPath='${relativePathToImport}' (from module: ${modulePath})`);
+        console.log(`[ESBUILD PLUGIN] Generating map entry: Key='${pluginKey}', ImportPath='${relativePathToImport}'`);
         return `'${pluginKey}': () => import('${relativePathToImport}')`;
-      });
+      }).filter(Boolean); // Filter out null entries
 
       const contents = `
         // This file is generated by esbuild-plugins.cjs at build time.
         // Importer: ${args.pluginData.importer}
-        // Plugins Root: ${pluginsRoot}
+        
         export const pluginLoaders = {
           ${generatedMapEntries.join(',\n')}
         };

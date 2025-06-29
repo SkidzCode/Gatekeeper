@@ -1,17 +1,37 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { UserService } from '../../core/services/user/user.service'; // Corrected path
-import { User } from '../../shared/models/user.model'; // Corrected path
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+//import { UserService } from '@app/core/services/user/user.service';
+//import { User } from '@app/shared/models/user.model';
+import { UserService } from '../../../../gatekeeper.client/src/app/core/services/user/user.service';
+import { User } from '../../../../gatekeeper.client/src/app/shared/models/user.model';
+import { CommonModule } from '@angular/common';
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
 
 
 @Component({
-  selector: 'app-profile', // Changed selector
+  selector: 'app-profile',
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.scss'],
-  standalone: false // Explicitly set to false as per original component
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatCardModule,
+    MatIconModule,
+    MatDividerModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatSnackBarModule
+  ]
 })
-export class ProfileComponent implements OnInit { // Changed class name
+export class ProfileComponent implements OnInit {
   user: User | null = null;
   profileForm: FormGroup;
   selectedFile: File | null = null;

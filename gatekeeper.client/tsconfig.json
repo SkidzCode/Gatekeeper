@@ -15,8 +15,27 @@
     "experimentalDecorators": true,
     "moduleResolution": "bundler",
     "importHelpers": true,
+    "typeRoots": [
+      "./node_modules/@types"
+    ],
     "target": "ES2022",
-    "module": "ES2022"
+    "module": "ES2022",
+    "baseUrl": ".",
+    "paths": {
+      "@plugins/*": [
+        "../GateKeeper.Plugin.Sample/Frontend/plugins/*",
+        "./src/app/plugins/*"
+      ],
+      "@app/*": [
+        "./src/app/*"
+      ],
+      "@angular/*": [
+        "./node_modules/@angular/*"
+      ],
+      "tslib": [
+        "./node_modules/tslib"
+      ]
+    }
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

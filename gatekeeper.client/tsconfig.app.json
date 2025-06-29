@@ -11,7 +11,9 @@
     // "src/plugins.d.ts" // No longer needed here if include is broader
   ],
   "include": [
-    "src/**/*.ts" // Broaden to include all .ts files in src
+    "src/**/*.ts", // Broaden to include all .ts files in src
+    "../GateKeeper.Plugin.Profile/Frontend/**/*.ts", // Include TypeScript files from Profile plugin
+    "../GateKeeper.Plugin.Sample/Frontend/**/*.ts" // Include TypeScript files from Sample plugin
   ],
   "exclude": [
     "src/**/*.spec.ts"
