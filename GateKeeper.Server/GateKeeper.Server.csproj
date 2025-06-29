@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <SpaRoot>..\gatekeeper.client</SpaRoot>
     <SpaProxyLaunchCommand>npm start</SpaProxyLaunchCommand>
-    <SpaProxyServerUrl>https://localhost:54805</SpaProxyServerUrl>
+    <SpaProxyServerUrl>https://localhost:44405</SpaProxyServerUrl>
     <UserSecretsId>ccba6a05-2c75-4fc5-a0a0-02fa733ce508</UserSecretsId>
   </PropertyGroup>
 
@@ -40,7 +40,7 @@
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
     <ProjectReference Include="..\GateKeeper.Plugin.Abstractions\GateKeeper.Plugin.Abstractions.csproj" />
-    <ProjectReference Include="..\GateKeeper.Plugin.Placeholder\GateKeeper.Plugin.Placeholder.csproj" />
+    
     <ProjectReference Include="..\GateKeeper.Plugin.Sample\GateKeeper.Plugin.Sample.csproj" />
     <ProjectReference Include="..\GateKeeper.Plugin.Profile\GateKeeper.Plugin.Profile.csproj" />
   </ItemGroup>
@@ -49,5 +49,21 @@
     <Folder Include="Logs\" />
     <Folder Include="wwwroot\" />
   </ItemGroup>
+
+  <Target Name="CopyPluginDependencies" AfterTargets="Build">
+    <ItemGroup>
+      <PluginProjectReference Include="@(ProjectReference)" Condition="'%(ProjectReference.Name)' != 'gatekeeper.client' AND '%(ProjectReference.Name)' != 'GateKeeper.Plugin.Abstractions'" />
+    </ItemGroup>
+
+    <MSBuild Projects="@(PluginProjectReference)" Targets="Build" BuildInParallel="true">
+      <Output TaskParameter="TargetOutputs" ItemName="PluginBinaries" />
+    </MSBuild>
+
+    <ItemGroup>
+      <PluginFiles Include="%(PluginBinaries.RootDir)%(PluginBinaries.Directory)**\*.*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(OutputPath)plugins\%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

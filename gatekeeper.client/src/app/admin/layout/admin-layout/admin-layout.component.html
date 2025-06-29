@@ -9,6 +9,9 @@
       <a mat-list-item routerLink="/admin/notifications/send">Notifications</a>
       <a mat-list-item routerLink="/admin/settings">Settings</a>
       <a mat-list-item routerLink="/admin/logs">Logs</a>
+      <ng-container *ngFor="let link of pluginNavLinks">
+        <a mat-list-item [routerLink]="'/admin/' + link.adminRoutePath">{{ link.adminNavigationLabel }}</a>
+      </ng-container>
       <a mat-list-item (click)="logout()" *ngIf="isLoggedIn">Logout</a>
     </mat-nav-list>
   </mat-sidenav>

@@ -21,12 +21,6 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
-  <Target Name="CopyPluginToMainServerOutput" AfterTargets="Build">
-    <ItemGroup>
-      <PluginFiles Include="$(OutputPath)$(AssemblyName).dll" />
-      <PluginFiles Include="$(OutputPath)$(AssemblyName).pdb" Condition="Exists('$(OutputPath)$(AssemblyName).pdb')" />
-    </ItemGroup>
-    <Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(SolutionDir)GateKeeper.Server\bin\$(Configuration)\$(TargetFramework)\plugins\" SkipUnchangedFiles="true" />
-  </Target>
+  
 
 </Project>

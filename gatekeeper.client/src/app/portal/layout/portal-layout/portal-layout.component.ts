@@ -12,6 +12,9 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 
+import { PluginLoaderService } from '../../../core/services/plugin-loader.service';
+import { AngularPluginInfo } from '../../../core/models/plugin-info.model';
+
 @Component({
   selector: 'app-portal-layout',
   standalone: true,
@@ -34,6 +37,7 @@ export class PortalLayoutComponent implements AfterViewInit {
   isLoggedIn = false;
   isAdmin = false;
   username: string | null = null;
+  pluginNavLinks: AngularPluginInfo[] = [];
 
   opened: boolean = true;
   events: string[] = [];
@@ -43,13 +47,14 @@ export class PortalLayoutComponent implements AfterViewInit {
       shareReplay()
     );
 
-  constructor(private authService: AuthService, private router: Router, private cdRef: ChangeDetectorRef) {
+  constructor(private authService: AuthService, private router: Router, private cdRef: ChangeDetectorRef, private pluginLoader: PluginLoaderService) {
     this.authService.currentUser$.subscribe((user) => {
       this.isLoggedIn = !!user; // True if user is logged in
       this.username = user?.username || null; // Get username if user exists
       this.isAdmin = user?.roles.includes('Admin') || false; // Check if user is admin
       console.log(`User Roles: ${user?.roles}`);
     });
+    this.pluginNavLinks = this.pluginLoader.getPluginManifests();
   }
 
   ngAfterViewInit() {

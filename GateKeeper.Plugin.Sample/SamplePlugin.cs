@@ -15,12 +15,12 @@ namespace GateKeeper.Plugin.Sample
         public string NavigationLabel => "Sample Tools";
         public string RequiredRole => "User";
 
-        // Admin section properties (null for now as no admin section exists)
-        public string? AdminAngularModulePath => null;
-        public string? AdminAngularModuleName => null;
-        public string? AdminDefaultRoutePath => null;
-        public string? AdminNavigationLabel => null;
-        public string? AdminRequiredRole => null;
+        // Admin section properties
+        public string? AdminAngularModulePath => "admin/sample-admin/sample-admin.module";
+        public string? AdminAngularModuleName => "SampleAdminModule";
+        public string? AdminDefaultRoutePath => "sample-admin";
+        public string? AdminNavigationLabel => "Sample Admin";
+        public string? AdminRequiredRole => "Admin";
 
         public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
         {

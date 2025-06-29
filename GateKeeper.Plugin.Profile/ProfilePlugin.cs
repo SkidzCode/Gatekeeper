@@ -15,12 +15,12 @@ namespace GateKeeper.Plugin.Profile
         public string NavigationLabel => "Profile"; // Text for the navigation link
         public string RequiredRole => "User"; // Role required to access this plugin
 
-        // Admin section properties (null for now as no admin section exists)
-        public string? AdminAngularModulePath => null;
-        public string? AdminAngularModuleName => null;
-        public string? AdminDefaultRoutePath => null;
-        public string? AdminNavigationLabel => null;
-        public string? AdminRequiredRole => null;
+        // Admin section properties
+        public string? AdminAngularModulePath => "admin/profile-admin/profile-admin.module";
+        public string? AdminAngularModuleName => "ProfileAdminModule";
+        public string? AdminDefaultRoutePath => "profile-admin";
+        public string? AdminNavigationLabel => "Profile Admin";
+        public string? AdminRequiredRole => "Admin";
 
         public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
         {

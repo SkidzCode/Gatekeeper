@@ -5,6 +5,9 @@ import { map, shareReplay } from 'rxjs/operators';
 import { AuthService } from '../../../core/services/user/auth.service'; // Adjust the path to your AuthService
 import { Router } from '@angular/router';
 
+import { PluginLoaderService } from '../../../core/services/plugin-loader.service';
+import { AngularPluginInfo } from '../../../core/models/plugin-info.model';
+
 @Component({
   selector: 'app-admin-layout',
   standalone: false,
@@ -17,6 +20,7 @@ export class AdminLayoutComponent {
   isLoggedIn = false;
   isAdmin = false;
   username: string | null = null;
+  pluginNavLinks: AngularPluginInfo[] = [];
 
   opened: boolean = true;
   events: string[] = [];
@@ -26,13 +30,14 @@ export class AdminLayoutComponent {
       shareReplay()
     );
 
-  constructor(private authService: AuthService, private router: Router) {
+  constructor(private authService: AuthService, private router: Router, private pluginLoader: PluginLoaderService) {
     this.authService.currentUser$.subscribe((user) => {
       this.isLoggedIn = !!user; // True if user is logged in
       this.username = user?.username || null; // Get username if user exists
       this.isAdmin = user?.roles.includes('Admin') || false; // Check if user is admin
       console.log(`User Roles: ${user?.roles}`);
     });
+    this.pluginNavLinks = this.pluginLoader.getPluginManifests();
   }
 
   logout(): void {
