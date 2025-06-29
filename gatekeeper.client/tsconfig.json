@@ -23,19 +23,19 @@
     "baseUrl": ".",
     "paths": {
       "@app/*": [
-        "./src/app/*"
+        "src/app/*"
       ],
       "@core/*": [
-        "./src/app/core/*"
+        "src/app/core/*"
       ],
       "@shared/*": [
-        "./src/app/shared/*"
+        "src/app/shared/*"
       ],
       "@angular/*": [
-        "./node_modules/@angular/*"
+        "node_modules/@angular/*"
       ],
       "tslib": [
-        "./node_modules/tslib"
+        "node_modules/tslib"
       ]
     }
   },
