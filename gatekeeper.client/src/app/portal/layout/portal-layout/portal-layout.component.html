@@ -11,8 +11,9 @@
       <a mat-list-item routerLink="/portal/user/settings" *ngIf="isLoggedIn">Settings</a>
       <a mat-list-item routerLink="/portal/user/invite" *ngIf="isLoggedIn">Invite</a>
       <a mat-list-item routerLink="/portal/user/sessions" *ngIf="isLoggedIn">Sessions</a>
+      ---
       <ng-container *ngFor="let link of pluginNavLinks">
-        <a mat-list-item [routerLink]="'/portal/' + link.routePath">{{ link.navigationLabel }}</a>
+        <a mat-list-item [routerLink]="'/' + link.routePath"  *ngIf="isLoggedIn">{{ link.navigationLabel }}</a>
       </ng-container>
       <a mat-list-item (click)="logout()" *ngIf="isLoggedIn">Logout</a>
     </mat-nav-list>
