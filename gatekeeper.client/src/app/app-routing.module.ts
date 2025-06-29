@@ -83,8 +83,15 @@ function generatePluginChildRoutes(injector: Injector): Routes {
         console.log(`[AppRoutingModule] Executing loadChildren for plugin route: ${finalRoutePath}, pluginKey: ${pluginKey}`);
         return loader().then((m: any) => {
           console.log(`[AppRoutingModule] Module loaded for ${pluginKey}:`, m);
+
+          if (!manifest.angularModuleName || manifest.angularModuleName.trim() === '') {
+            console.error(`[AppRoutingModule] Plugin "${manifest.name}" (${pluginKey}) - 'angularModuleName' is missing or empty in its manifest. Cannot load module. Manifest details:`, manifest);
+            return PluginLoadErrorComponent;
+          }
+
           if (!m[manifest.angularModuleName]) {
-            console.error(`[AppRoutingModule] Module ${manifest.angularModuleName} not found in loaded module for ${pluginKey}. Available exports:`, Object.keys(m));
+            console.error(`[AppRoutingModule] Plugin "${manifest.name}" (${pluginKey}) - Module export "${manifest.angularModuleName}" not found in loaded module. Available exports:`, Object.keys(m));
+            return PluginLoadErrorComponent;
           }
           return m[manifest.angularModuleName];
         }).catch((err: any) => {
@@ -172,12 +179,16 @@ function generateAdminPluginChildRoutes(injector: Injector): Routes {
       loadChildren: () => {
         console.log(`[AppRoutingModule] Executing loadChildren for plugin route: ${finalRoutePath}, pluginKey: ${pluginKey}`);
         return loader().then((m: any) => {
-          if (!manifest.adminAngularModuleName) {
-            return null;
+          console.log(`[AppRoutingModule] Admin module loaded for ${pluginKey}:`, m);
+
+          if (!manifest.adminAngularModuleName || manifest.adminAngularModuleName.trim() === '') {
+            console.error(`[AppRoutingModule] Admin plugin "${manifest.name}" (${pluginKey}) - 'adminAngularModuleName' is missing or empty in its manifest. Cannot load module. Manifest details:`, manifest);
+            return PluginLoadErrorComponent;
           }
-          console.log(`[AppRoutingModule] Module loaded for ${pluginKey}:`, m);
+
           if (!m[manifest.adminAngularModuleName]) {
-            console.error(`[AppRoutingModule] Module ${manifest.adminAngularModuleName} not found in loaded module for ${pluginKey}. Available exports:`, Object.keys(m));
+            console.error(`[AppRoutingModule] Admin plugin "${manifest.name}" (${pluginKey}) - Module export "${manifest.adminAngularModuleName}" not found in loaded admin module. Available exports:`, Object.keys(m));
+            return PluginLoadErrorComponent;
           }
           return m[manifest.adminAngularModuleName];
         }).catch((err: any) => {
