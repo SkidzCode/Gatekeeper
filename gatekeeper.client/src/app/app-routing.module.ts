@@ -42,8 +42,20 @@ function generatePluginChildRoutes(injector: Injector): Routes {
   const mappedRoutes: (Route | null)[] = manifests.map(manifest => {
     console.log(`[AppRoutingModule] Processing manifest for: ${manifest.name}`);
     console.log(`[AppRoutingModule]   - angularModulePath: ${manifest.angularModulePath}`);
-    const pluginKey = `portal/${manifest.routePath.replace('portal/', '')}/${manifest.routePath.replace('portal/', '')}`;
-    console.log(`[AppRoutingModule]   - Generated pluginKey: ${pluginKey}`);
+
+    if (!manifest.angularModulePath || manifest.angularModulePath.trim() === '') {
+      console.error(`[AppRoutingModule] Plugin manifest for "${manifest.name}" is missing or has an empty 'angularModulePath'. Skipping route generation for this plugin.`);
+      return null;
+    }
+
+    const pathParts = manifest.angularModulePath.split('/');
+    if (pathParts.length === 0 || !pathParts[0]) {
+        console.error(`[AppRoutingModule] Plugin manifest for "${manifest.name}" has an invalid 'angularModulePath' ("${manifest.angularModulePath}"). Could not determine plugin folder. Skipping.`);
+        return null;
+    }
+    const pluginFolder = pathParts[0]; // Extracts the first segment (e.g., "profile")
+    const pluginKey = `portal/${pluginFolder}/${pluginFolder}`;
+    console.log(`[AppRoutingModule]   - Determined pluginFolder: "${pluginFolder}", Generated pluginKey: "${pluginKey}"`);
 
     const loader = (pluginLoaders as any)[pluginKey];
 
@@ -108,8 +120,31 @@ function generateAdminPluginChildRoutes(injector: Injector): Routes {
     }
     console.log(`[AppRoutingModule] Processing admin manifest for: ${manifest.name}`);
     console.log(`[AppRoutingModule]   - adminAngularModulePath: ${manifest.adminAngularModulePath}`);
-        const pluginKey = `admin/${manifest.adminRoutePath.replace('admin/', '')}/${manifest.adminRoutePath.replace('admin/', '')}`;
-    console.log(`[AppRoutingModule]   - Generated admin pluginKey: ${pluginKey}`);
+
+    if (!manifest.adminAngularModulePath || manifest.adminAngularModulePath.trim() === '') {
+      console.error(`[AppRoutingModule] Admin plugin manifest for "${manifest.name}" is missing or has an empty 'adminAngularModulePath'. Skipping.`);
+      return null;
+    }
+
+    // manifest.adminAngularModulePath is like "admin/profile-admin/profile-admin.module"
+    // We need to get "profile-admin" from this for the pluginFolder.
+    const relativePath = manifest.adminAngularModulePath.startsWith('admin/')
+        ? manifest.adminAngularModulePath.substring('admin/'.length)
+        : manifest.adminAngularModulePath; // Should ideally always start with 'admin/' based on esbuild logic a CJS
+
+    if (relativePath.trim() === '') {
+        console.error(`[AppRoutingModule] Admin plugin manifest for "${manifest.name}" has an 'adminAngularModulePath' ("${manifest.adminAngularModulePath}") that results in an empty relative path. Skipping.`);
+        return null;
+    }
+
+    const pathParts = relativePath.split('/');
+    if (pathParts.length === 0 || !pathParts[0]) {
+        console.error(`[AppRoutingModule] Admin plugin manifest for "${manifest.name}" has an invalid 'adminAngularModulePath' ("${manifest.adminAngularModulePath}" -> "${relativePath}"). Could not determine plugin folder. Skipping.`);
+        return null;
+    }
+    const pluginFolder = pathParts[0]; // Extracts "profile-admin"
+    const pluginKey = `admin/${pluginFolder}/${pluginFolder}`;
+    console.log(`[AppRoutingModule]   - Determined admin pluginFolder: "${pluginFolder}", Generated admin pluginKey: "${pluginKey}"`);
 
     const loader = (pluginLoaders as any)[pluginKey];
 
