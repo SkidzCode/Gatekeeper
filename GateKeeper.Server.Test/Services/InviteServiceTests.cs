@@ -1,6 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using GateKeeper.Server.Services;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Account;
 using GateKeeper.Server.Models.Account.Notifications;
@@ -10,6 +9,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using GateKeeper.Server.Services.Site;
 
 namespace GateKeeper.Server.Test.Services
 {
@@ -18,7 +18,6 @@ namespace GateKeeper.Server.Test.Services
     {
         private Mock<IInviteRepository> _mockInviteRepository;
         private Mock<ILogger<InviteService>> _mockLogger;
-        private Mock<IVerifyTokenService> _mockVerifyTokenService;
         private Mock<INotificationService> _mockNotificationService;
         private Mock<INotificationTemplateService> _mockNotificationTemplateService;
 
@@ -29,14 +28,12 @@ namespace GateKeeper.Server.Test.Services
         {
             _mockInviteRepository = new Mock<IInviteRepository>();
             _mockLogger = new Mock<ILogger<InviteService>>();
-            _mockVerifyTokenService = new Mock<IVerifyTokenService>();
             _mockNotificationService = new Mock<INotificationService>();
             _mockNotificationTemplateService = new Mock<INotificationTemplateService>();
 
             _inviteService = new InviteService(
                 _mockInviteRepository.Object,
                 _mockLogger.Object,
-                _mockVerifyTokenService.Object,
                 _mockNotificationService.Object,
                 _mockNotificationTemplateService.Object
             );

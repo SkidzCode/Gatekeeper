@@ -1,42 +1,25 @@
 ﻿using System.Xml.Linq;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Resources;
-using Microsoft.Extensions.Logging;
-// using Microsoft.Extensions.Configuration; // To be replaced by IOptions
-using Microsoft.Extensions.Options; // Added for IOptions
-using GateKeeper.Server.Models.Configuration; // Added for ResourceSettingsConfig
-using MySqlConnector;
-using System.Data;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Options; 
+using GateKeeper.Server.Models.Configuration;
 
-namespace GateKeeper.Server.Services
+namespace GateKeeper.Server.Services.Site
 {
-    public class ResourceService : IResourceService
+    public class ResourceService(ILogger<ResourceService> logger, IOptions<ResourceSettingsConfig> resourceSettingsOptions) : IResourceService
     {
-        private readonly ILogger<ResourceService> _logger;
-        // private readonly IConfiguration _configuration; // To be replaced
-        private readonly ResourceSettingsConfig _resourceSettings; // Added
-        private readonly string _resourceDirectory;
+        private readonly ILogger<ResourceService> _logger = logger;
+        private readonly ResourceSettingsConfig _resourceSettings = resourceSettingsOptions.Value;
+        private readonly string _resourceDirectory = InitializeResourceDirectory(resourceSettingsOptions.Value, logger);
 
-        public ResourceService(ILogger<ResourceService> logger, IOptions<ResourceSettingsConfig> resourceSettingsOptions) // Use IOptions
+        private static string InitializeResourceDirectory(ResourceSettingsConfig config, ILogger logger)
         {
-            _logger = logger;
-            _resourceSettings = resourceSettingsOptions.Value; // Store the typed config
-            
-            // Get the resource directory from the typed configuration
-            // The null check for _resourceSettings or _resourceSettings.Path should ideally be handled by startup validation if Path is [Required]
-            if (string.IsNullOrEmpty(_resourceSettings.Path))
+            if (string.IsNullOrEmpty(config.Path))
             {
-                _logger.LogWarning("Resource path is not configured in ResourceSettings. Falling back to default or potentially erroring if no fallback.");
-                // Fallback to a default if necessary, or throw if it's critical and not set.
-                // For now, keeping the original fallback logic but warning about it.
-                _resourceDirectory = "C:/Users/Skidz/source/repos/GateKeeper/GateKeeper.Server/Resources"; // Original fallback
-                // Consider: throw new InvalidOperationException("Resource path is not configured.");
+                logger.LogWarning("Resource path is not configured in ResourceSettings. Falling back to default or potentially erroring if no fallback.");
+                return "C:/Users/Skidz/source/repos/GateKeeper/GateKeeper.Server/Resources"; // Original fallback
             }
-            else
-            {
-                _resourceDirectory = _resourceSettings.Path;
-            }
+            return config.Path;
         }
 
         public List<ResourceEntry> ListEntries(string resourceFileName)

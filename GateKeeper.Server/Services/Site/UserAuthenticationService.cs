@@ -1,93 +1,58 @@
-using Microsoft.Extensions.Logging;
-// using MySqlConnector; // No longer directly needed for MySqlParameter if dbHelper is fully replaced
 using Microsoft.Extensions.Options;
 using GateKeeper.Server.Models.Configuration;
-using System;
-using System.Collections.Generic;
-// using System.Data; // No longer directly needed if dbHelper is fully replaced
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-// using System.Text; // No longer directly needed here
 using System.Threading.Tasks;
 using GateKeeper.Server.Interface;
 using Microsoft.IdentityModel.Tokens;
-// using System.Reflection.PortableExecutable; // Not used
-// using System.Runtime.CompilerServices; // Not used
-// using System.Xml; // Not used
 using GateKeeper.Server.Models.Account;
-// using System.Net; // Not used
-// using System.Text.RegularExpressions; // Not used
-// using Microsoft.AspNetCore.Identity.Data; // Not used
 using RegisterRequest = GateKeeper.Server.Models.Account.UserModels.RegisterRequest;
 using GateKeeper.Server.Models.Site;
 using System.Runtime.InteropServices;
 using System.Security;
 using GateKeeper.Server.Models.Account.Login;
-using Microsoft.AspNetCore.DataProtection;
 using GateKeeper.Server.Models.Account.UserModels;
 using GateKeeper.Server.Exceptions;
 
-namespace GateKeeper.Server.Services
+namespace GateKeeper.Server.Services.Site
 {
     /// <summary>
     /// Service handling user authentication and related operations.
     /// </summary>
-    public class UserAuthenticationService : IUserAuthenticationService
+    public class UserAuthenticationService(
+        IUserService userService,
+        IVerifyTokenService verificationService,
+        IOptions<JwtSettingsConfig> jwtSettingsOptions,
+        IOptions<PasswordSettingsConfig> passwordSettingsOptions,
+        IOptions<RegisterSettingsConfig> registerSettingsOptions,
+        IOptions<LoginSettingsConfig> loginSettingsOptions,
+        ILogger<UserAuthenticationService> logger,
+        ISettingsService settingsService,
+        IKeyManagementService keyManagementService,
+        IStringDataProtector stringDataProtector,
+        IHttpContextAccessor httpContextAccessor,
+        INotificationService notification,
+        INotificationTemplateService notificationTemplateService,
+        ISessionService sessionService,
+        IUserAuthenticationRepository userAuthRepository) : IUserAuthenticationService
     {
-        private readonly IStringDataProtector _protector;
-        private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly ILogger<UserAuthenticationService> _logger;
-        private readonly JwtSettingsConfig _jwtSettings;
-        private readonly PasswordSettingsConfig _passwordSettings;
-        private readonly RegisterSettingsConfig _registerSettings;
-        private readonly LoginSettingsConfig _loginSettings;
-        private readonly IVerifyTokenService _verificationService;
-        private readonly IUserService _userService;
-        private readonly ISettingsService _settingsService;
-        private readonly IKeyManagementService _keyManagementService;
-        private readonly INotificationTemplateService _notificationTemplateService;
-        private readonly INotificationService _notificationService;
-        private readonly ISessionService _sessionService;
-        private readonly IUserAuthenticationRepository _userAuthRepository; // Added
+        private readonly IStringDataProtector _protector = stringDataProtector;
+        private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
+        private readonly ILogger<UserAuthenticationService> _logger = logger;
+        private readonly JwtSettingsConfig _jwtSettings = jwtSettingsOptions.Value;
+        private readonly PasswordSettingsConfig _passwordSettings = passwordSettingsOptions.Value;
+        private readonly RegisterSettingsConfig _registerSettings = registerSettingsOptions.Value;
+        private readonly LoginSettingsConfig _loginSettings = loginSettingsOptions.Value;
+        private readonly IVerifyTokenService _verificationService = verificationService;
+        private readonly IUserService _userService = userService;
+        private readonly ISettingsService _settingsService = settingsService;
+        private readonly IKeyManagementService _keyManagementService = keyManagementService;
+        private readonly INotificationTemplateService _notificationTemplateService = notificationTemplateService;
+        private readonly INotificationService _notificationService = notification;
+        private readonly ISessionService _sessionService = sessionService;
+        private readonly IUserAuthenticationRepository _userAuthRepository = userAuthRepository;
 
-        private const string cookieName = "LoginAttempts";
-
-        /// <summary>
-        /// Constructor for UserAuthenticationService.
-        /// </summary>
-        public UserAuthenticationService(
-            IUserService userService,
-            IVerifyTokenService verificationService,
-            IOptions<JwtSettingsConfig> jwtSettingsOptions,
-            IOptions<PasswordSettingsConfig> passwordSettingsOptions,
-            IOptions<RegisterSettingsConfig> registerSettingsOptions,
-            IOptions<LoginSettingsConfig> loginSettingsOptions,
-            ILogger<UserAuthenticationService> logger,
-            ISettingsService settingsService,
-            IKeyManagementService keyManagementService,
-            IStringDataProtector stringDataProtector,
-            IHttpContextAccessor httpContextAccessor,
-            INotificationService notification,
-            INotificationTemplateService notificationTemplateService,
-            ISessionService sessionService,
-            IUserAuthenticationRepository userAuthRepository) // Added
-        {
-            _jwtSettings = jwtSettingsOptions.Value;
-            _passwordSettings = passwordSettingsOptions.Value;
-            _registerSettings = registerSettingsOptions.Value;
-            _loginSettings = loginSettingsOptions.Value;
-            _logger = logger;
-            _verificationService = verificationService;
-            _userService = userService;
-            _settingsService = settingsService;
-            _keyManagementService = keyManagementService;
-            _protector = stringDataProtector;
-            _httpContextAccessor = httpContextAccessor;
-            _notificationService = notification;
-            _notificationTemplateService = notificationTemplateService;
-            _sessionService = sessionService;
-            _userAuthRepository = userAuthRepository; // Added
-        }
+        private const string CookieName = "LoginAttempts";
 
         /// <inheritdoc />
         public async Task<RegistrationResponse> RegisterUserAsync(RegisterRequest registerRequest)
@@ -123,6 +88,12 @@ namespace GateKeeper.Server.Services
                 }
             }
 
+            if (tokenResponse.User == null)
+            {
+                _logger.LogError("Token verification failed or user not found for token: {Token}", registerRequest.Token);
+                throw new RegistrationException("Token verification failed or user not found for token.");
+            }
+
             if (!await ValidatePasswordStrengthAsync(registerRequest.Password))
             {
                 throw new RegistrationException("Password does not meet the required complexity.");
@@ -132,13 +103,21 @@ namespace GateKeeper.Server.Services
 
             if (!userServiceResponse.IsSuccessful)
             {
-                throw new RegistrationException(userServiceResponse.FailureReason ?? "User registration failed due to an unknown reason.");
+                throw new RegistrationException(
+                    !string.IsNullOrEmpty(userServiceResponse.FailureReason) ? 
+                        userServiceResponse.FailureReason : 
+                        "User registration failed due to an unknown reason.");
             }
             response.User = userServiceResponse.User; // Ensure the user object in the response is the one from the service
 
             await _userAuthRepository.AssignRoleToUserAsync(response.User.Id, "NewUser"); // Changed
 
             var template = await _notificationTemplateService.GetNotificationTemplateByNameAsync("Verify Email Template");
+            if (template == null)
+            {
+                _logger.LogError("Notification template 'Verify Email Template' not found.");
+                throw new RegistrationException("Email verification template not found.");
+            }
             await _notificationService.InsertNotificationAsync(new Notification()
             {
                 Channel = "Email",
@@ -151,7 +130,7 @@ namespace GateKeeper.Server.Services
                 ToEmail = registerRequest.Email,
                 ToName = $"{registerRequest.FirstName} {registerRequest.LastName}"
             });
-            
+
             if (_registerSettings.RequireInvite) // Use _registerSettings
             {
                 await _verificationService.CompleteTokensAsync(tokenResponse.User.Id, "Invite", registerRequest.Token);
@@ -163,9 +142,11 @@ namespace GateKeeper.Server.Services
         /// <inheritdoc />
         public async Task<LoginResponse> LoginAsync(UserLoginRequest userLogin, string ipAddress, string userAgent)
         {
-            LoginResponse response = new LoginResponse();
+            LoginResponse response = new LoginResponse
+            {
+                User = await _userService.GetUser(userLogin.Identifier)
+            };
 
-            response.User = await _userService.GetUser(userLogin.Identifier);
             await UpdateLoginAttemptsAndThrowIfLockedAsync(response.User, response);
 
             // User Not Found Condition
@@ -176,6 +157,8 @@ namespace GateKeeper.Server.Services
                 throw new UserNotFoundException($"User '{userLogin.Identifier}' not found or essential data missing.");
             }
             
+            var hashedPassword = PasswordHelper.HashPassword(userLogin.Password, response.User.Salt);
+
             int? userId = response.User?.Id ?? null; // userId can be safely accessed now
             List<Setting> theSettings = await _settingsService.GetAllSettingsAsync(userId);
             response.Settings = theSettings.Where(s => s.UserId == null).ToList();
@@ -191,7 +174,7 @@ namespace GateKeeper.Server.Services
                 })
                 .ToList();
 
-            var hashedPassword = PasswordHelper.HashPassword(userLogin.Password, response.User.Salt);
+            
 
             // Invalid Credentials Condition
             if (hashedPassword != response.User.Password)
@@ -206,7 +189,7 @@ namespace GateKeeper.Server.Services
             response.VerificationId = response.RefreshToken.Split('.')[0];
             // response.IsSuccessful = true; // Removed as success is indicated by not throwing
             response.Settings = userSettings;
-            await DeleteCookie();
+            DeleteCookie();
 
             var currentSession = new SessionModel()
             {
@@ -224,7 +207,7 @@ namespace GateKeeper.Server.Services
 
             await _sessionService.InsertSession(currentSession);
             response.SessionId = currentSession.Id;
-            
+
             return response;
         }
 
@@ -248,8 +231,7 @@ namespace GateKeeper.Server.Services
         /// <inheritdoc />
         public async Task<TokenVerificationResponse> VerifyNewUser(string verificationCode)
         {
-            TokenVerificationResponse response = new(); 
-            response = await _verificationService.VerifyTokenAsync(
+            TokenVerificationResponse response = await _verificationService.VerifyTokenAsync(
                 new VerifyTokenRequest()
                 {
                     VerificationCode = verificationCode,
@@ -313,7 +295,7 @@ namespace GateKeeper.Server.Services
                 // If response2.IsVerified is false, but user is not null, then we might clear PHI.
                 if (response.User != null && !response2.IsVerified)
                 {
-                     await response.User.ClearPHIAsync();
+                    await response.User.ClearPHIAsync();
                 }
                 throw new InvalidTokenException(response2.FailureReason ?? "Invalid refresh token or user not found for token.");
             }
@@ -325,7 +307,7 @@ namespace GateKeeper.Server.Services
             response.VerificationId = response.RefreshToken.Split('.')[0];
             // response.IsSuccessful = true; // Removed
             response.Settings = userSettings;
-            await DeleteCookie();
+            DeleteCookie();
 
             response.SessionId = await _sessionService.RefreshSession(response.User.Id, refreshToken.Split('.')[0], response.VerificationId);
             return response;
@@ -336,6 +318,11 @@ namespace GateKeeper.Server.Services
             try
             {
                 var template = await _notificationTemplateService.GetNotificationTemplateByNameAsync("Reset Password");
+                if (template == null)
+                {
+                    _logger.LogError("Notification template 'Reset Password' not found.");
+                    throw new InvalidOperationException("Password reset template not found.");
+                }
                 await _notificationService.InsertNotificationAsync(new Notification()
                 {
                     Channel = "Email",
@@ -372,6 +359,10 @@ namespace GateKeeper.Server.Services
             {
                 throw new InvalidTokenException(response.FailureReason ?? "Invalid password reset token.");
             }
+            if (response.User == null)
+            {
+                throw new InvalidOperationException("User not found for the provided password reset token.");
+            }
 
             await _userService.ChangePassword(response.User.Id, resetRequest.NewPassword);
             return response;
@@ -393,9 +384,9 @@ namespace GateKeeper.Server.Services
             // Pass the _passwordSettings directly to the helper.
             return await PasswordHelper.ValidatePasswordStrengthAsync(_passwordSettings, password);
         }
-        
+
         /// <inheritdoc />
-        public async Task<bool> LogoutFromDeviceAsync(int userId, string sessionId)
+        public async Task<bool> LogoutFromDeviceAsync(int userId, string? sessionId)
         {
             await _sessionService.LogoutSession(sessionId, userId);
             return true;
@@ -413,13 +404,13 @@ namespace GateKeeper.Server.Services
             var tokenHandler = new JwtSecurityTokenHandler();
 
             // 1) Retrieve the current signing key from the key-management service (as a SecureString).
-            SecureString secureKey = await _keyManagementService.GetCurrentKeyAsync();
+            SecureString? secureKey = await _keyManagementService.GetCurrentKeyAsync();
             if (secureKey == null)
                 throw new InvalidOperationException("No active signing key available.");
 
             // 2) Convert SecureString to byte[] (this includes base64 decoding).
             byte[] keyBytes;
-            IntPtr bstrPtr = Marshal.SecureStringToBSTR(secureKey);
+            nint bstrPtr = Marshal.SecureStringToBSTR(secureKey);
             try
             {
                 string base64Key = Marshal.PtrToStringBSTR(bstrPtr);
@@ -439,14 +430,8 @@ namespace GateKeeper.Server.Services
                 new Claim(ClaimTypes.Email, user.Email),
             };
 
-            // Add roles as separate claims
-            if (user.Roles != null)
-            {
-                foreach (var role in user.Roles)
-                {
-                    claims.Add(new Claim(ClaimTypes.Role, role));
-                }
-            }
+            claims.AddRange(user.Roles.Select(role => new Claim(ClaimTypes.Role, role)));
+
 
             // 4) Create signing credentials
             var securityKey = new SymmetricSecurityKey(keyBytes);
@@ -483,8 +468,7 @@ namespace GateKeeper.Server.Services
             // bool lockoutEnabled = _loginSettings.LockoutEnabled; // LockoutEnabled is not directly used in the following logic, but MaxFailedAccessAttempts implies it.
 
             // Read the current attempt count and lockout timestamp from encrypted cookie
-            var attemptsCookie = _httpContextAccessor.HttpContext.Request.Cookies[cookieName];
-            string decryptedValue = "";
+            var attemptsCookie = _httpContextAccessor.HttpContext.Request.Cookies[CookieName];
             DateTimeOffset? lockoutExpiry = null;
             int currentAttempts = 0;
 
@@ -492,7 +476,7 @@ namespace GateKeeper.Server.Services
             {
                 try
                 {
-                    decryptedValue = _protector.Unprotect(attemptsCookie);
+                    var decryptedValue = _protector.Unprotect(attemptsCookie);
                     var parts = decryptedValue.Split('|');
                     if (parts.Length == 1) // Old format or just attempts
                     {
@@ -529,7 +513,7 @@ namespace GateKeeper.Server.Services
                 currentAttempts = 0;
                 lockoutExpiry = null;
                 // Clear the cookie explicitly here or let it be overwritten
-                _httpContextAccessor.HttpContext.Response.Cookies.Delete(cookieName);
+                _httpContextAccessor.HttpContext.Response.Cookies.Delete(CookieName);
             }
 
             // Increment attempts
@@ -555,9 +539,9 @@ namespace GateKeeper.Server.Services
                 try
                 {
                     var encryptedCookieValue = _protector.Protect(cookieValueToStore);
-                    _logger.LogInformation("Lockout condition: Successfully protected cookie value. Encrypted length: {Length}", encryptedCookieValue?.Length ?? -1); // LOGGING
+                    _logger.LogInformation("Lockout condition: Successfully protected cookie value. Encrypted length: {Length}", encryptedCookieValue.Length); // LOGGING
 
-                    _httpContextAccessor.HttpContext.Response.Cookies.Append(cookieName, encryptedCookieValue, cookieOptions);
+                    _httpContextAccessor.HttpContext.Response.Cookies.Append(CookieName, encryptedCookieValue, cookieOptions);
                     _logger.LogInformation("Lockout condition: Appended lockout cookie to response."); // LOGGING
                 }
                 catch (Exception ex)
@@ -575,12 +559,12 @@ namespace GateKeeper.Server.Services
             {
                 // Store only attempts if not locked out or lockout is disabled
                 cookieValueToStore = currentAttempts.ToString();
-                 // If lockout is not enabled, or not yet exceeding max attempts, cookie lasts for CookieExpiryMinutes
+                // If lockout is not enabled, or not yet exceeding max attempts, cookie lasts for CookieExpiryMinutes
                 cookieOptions.Expires = DateTime.UtcNow.AddMinutes(cookieExpiryMinutes);
 
                 // This part also needs to append the cookie
                 var encryptedCookieValue = _protector.Protect(cookieValueToStore);
-                _httpContextAccessor.HttpContext.Response.Cookies.Append(cookieName, encryptedCookieValue, cookieOptions);
+                _httpContextAccessor.HttpContext.Response.Cookies.Append(CookieName, encryptedCookieValue, cookieOptions);
             }
 
             // This specific assignment to loginResponse.ToMany seems redundant now with exception throwing
@@ -589,12 +573,12 @@ namespace GateKeeper.Server.Services
 
         // OriginalLoginAttemptsForRefreshAsync method removed
 
-        private async Task DeleteCookie()
+        private void DeleteCookie()
         {
             if (_httpContextAccessor.HttpContext == null) return;
 
             // If login is successful, remove the cookie to reset attempts
-            _httpContextAccessor.HttpContext.Response.Cookies.Delete(cookieName);
+            _httpContextAccessor.HttpContext.Response.Cookies.Delete(CookieName);
         }
 
         #endregion

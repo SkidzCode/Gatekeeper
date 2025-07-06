@@ -6,10 +6,10 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using GateKeeper.Server.Interface;
-using GateKeeper.Server.Services;
 using GateKeeper.Server.Models.Account;
 using GateKeeper.Server.Models.Account.Login;
 using GateKeeper.Server.Extension;
+using GateKeeper.Server.Services.Site;
 
 namespace GateKeeper.Server.Controllers
 {

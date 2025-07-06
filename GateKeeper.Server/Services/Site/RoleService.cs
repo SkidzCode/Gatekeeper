@@ -1,29 +1,12 @@
-﻿using Dapper;
-using GateKeeper.Server.Interface;
+﻿using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Account;
-using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
-namespace GateKeeper.Server.Services
+namespace GateKeeper.Server.Services.Site
 {
-    public class RoleService : IRoleService
+    public class RoleService(IRoleRepository roleRepository, ILogger<RoleService> logger) : IRoleService
     {
-        private readonly IRoleRepository _roleRepository;
-        private readonly ILogger<RoleService> _logger;
-
-        /// <summary>
-        /// Constructor for the RoleService.
-        /// </summary>
-        /// <param name="roleRepository">Role repository for data access.</param>
-        /// <param name="logger">Logger for RoleService.</param>
-        public RoleService(
-            IRoleRepository roleRepository,
-            ILogger<RoleService> logger)
-        {
-            _roleRepository = roleRepository;
-            _logger = logger;
-        }
+        private readonly IRoleRepository _roleRepository = roleRepository;
+        private readonly ILogger<RoleService> _logger = logger;
 
         /// <summary>
         /// Inserts a new Role.
@@ -40,7 +23,7 @@ namespace GateKeeper.Server.Services
         }
 
         /// <summary>
-        /// Gets a single Role by Id.
+        /// Gets a single Role by id.
         /// </summary>
         /// <param name="id">Unique Id of the Role.</param>
         /// <returns>Role object or null if not found.</returns>
@@ -64,7 +47,7 @@ namespace GateKeeper.Server.Services
         /// <summary>
         /// Updates a Role.
         /// </summary>
-        /// <param name="role">Role object containing Id and (optionally) a new RoleName.</param>
+        /// <param name="role">Role object containing id and (optionally) a new RoleName.</param>
         /// <returns>The updated Role.</returns>
         public async Task<Role> UpdateRole(Role role)
         {

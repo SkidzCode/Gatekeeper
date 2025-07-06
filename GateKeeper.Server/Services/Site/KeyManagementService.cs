@@ -7,40 +7,37 @@ using GateKeeper.Server.Models.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 
-namespace GateKeeper.Server.Services
+namespace GateKeeper.Server.Services.Site
 {
-    public class KeyManagementService : IKeyManagementService
+    public class KeyManagementService(
+        IKeyManagementRepository keyManagementRepository,
+        ILogger<KeyManagementService> logger,
+        IOptions<KeyManagementConfig> keyManagementConfigOptions) : IKeyManagementService
     {
-        private readonly IKeyManagementRepository _keyManagementRepository;
-        private readonly ILogger<KeyManagementService> _logger;
-        private readonly byte[] _masterEncryptionKeyBytes;
+        private readonly IKeyManagementRepository _keyManagementRepository = keyManagementRepository;
+        private readonly ILogger<KeyManagementService> _logger = logger;
+        private readonly byte[] _masterEncryptionKeyBytes = InitializeMasterKey(keyManagementConfigOptions.Value, logger);
 
-        public KeyManagementService(
-            IKeyManagementRepository keyManagementRepository,
-            ILogger<KeyManagementService> logger,
-            IOptions<KeyManagementConfig> keyManagementConfigOptions)
+        private static byte[] InitializeMasterKey(KeyManagementConfig config, ILogger logger)
         {
-            _keyManagementRepository = keyManagementRepository;
-            _logger = logger;
-            var keyManagementConfig = keyManagementConfigOptions.Value;
-
-            if (string.IsNullOrEmpty(keyManagementConfig.MasterKey))
+            if (string.IsNullOrEmpty(config.MasterKey))
             {
-                _logger.LogError("MasterKey is not configured in KeyManagementConfig.");
+                logger.LogError("MasterKey is not configured in KeyManagementConfig.");
                 throw new InvalidOperationException("MasterKey is not configured.");
             }
             try
             {
-                _masterEncryptionKeyBytes = Convert.FromBase64String(keyManagementConfig.MasterKey);
-                if (_masterEncryptionKeyBytes.Length != 32) // AES-256 requires a 32-byte key
+                byte[] keyBytes = Convert.FromBase64String(config.MasterKey);
+                if (keyBytes.Length != 32) // AES-256 requires a 32-byte key
                 {
-                    _logger.LogError("MasterKey, after Base64 decoding, is not 32 bytes long.");
+                    logger.LogError("MasterKey, after Base64 decoding, is not 32 bytes long.");
                     throw new InvalidOperationException("MasterKey must be a 32-byte key after Base64 decoding.");
                 }
+                return keyBytes;
             }
             catch (FormatException ex)
             {
-                _logger.LogError(ex, "MasterKey is not a valid Base64 string.");
+                logger.LogError(ex, "MasterKey is not a valid Base64 string.");
                 throw new InvalidOperationException("MasterKey is not a valid Base64 string.", ex);
             }
         }
@@ -58,9 +55,9 @@ namespace GateKeeper.Server.Services
             // Optionally: await _keyManagementRepository.DeactivateOldKeysAsync();
         }
 
-        public async Task<SecureString> GetCurrentKeyAsync()
+        public async Task<SecureString?> GetCurrentKeyAsync()
         {
-            byte[] encryptedKey = await _keyManagementRepository.GetActiveEncryptedKeyAsync();
+            byte[]? encryptedKey = await _keyManagementRepository.GetActiveEncryptedKeyAsync();
             if (encryptedKey == null || encryptedKey.Length == 0)
             {
                 _logger.LogWarning("No active key found in the database. Attempting to rotate key.");

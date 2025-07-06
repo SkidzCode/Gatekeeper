@@ -5,5 +5,5 @@ namespace GateKeeper.Server.Interface;
 public interface IKeyManagementService
 {
     Task RotateKeyAsync(DateTime expirationDate);
-    Task<SecureString> GetCurrentKeyAsync();
+    Task<SecureString?> GetCurrentKeyAsync();
 }

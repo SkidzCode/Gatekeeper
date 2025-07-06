@@ -1,13 +1,10 @@
-﻿using System;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using GateKeeper.Server.Interface;
+﻿using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Account;
 using GateKeeper.Server.Models.Account.Login;
 using GateKeeper.Server.Models.Account.UserModels;
-using GateKeeper.Server.Extension; // For SanitizeForLogging
+using GateKeeper.Server.Extension;
 
-namespace GateKeeper.Server.Services
+namespace GateKeeper.Server.Services.Site
 {
     public interface IVerifyTokenService
     {
@@ -20,27 +17,11 @@ namespace GateKeeper.Server.Services
     /// <summary>
     /// Service handling verification token operations.
     /// </summary>
-    public class VerifyTokenService : IVerifyTokenService
+    public class VerifyTokenService(IVerifyTokenRepository verifyTokenRepository, ILogger<VerifyTokenService> logger, IUserService userService) : IVerifyTokenService
     {
-        private readonly IVerifyTokenRepository _verifyTokenRepository;
-        private readonly ILogger<VerifyTokenService> _logger;
-        private readonly IUserService _userService;
-        // private readonly IEmailService _emailService; // Kept for now, remove if not used after refactor
-
-        /// <summary>
-        /// Constructor for VerifyTokenService.
-        /// </summary>
-        public VerifyTokenService(
-            IVerifyTokenRepository verifyTokenRepository,
-            ILogger<VerifyTokenService> logger,
-            IUserService userService,
-            IEmailService emailService) // IEmailService might not be needed directly by this service anymore
-        {
-            _verifyTokenRepository = verifyTokenRepository;
-            _logger = logger;
-            _userService = userService;
-            // _emailService = emailService;
-        }
+        private readonly IVerifyTokenRepository _verifyTokenRepository = verifyTokenRepository;
+        private readonly ILogger<VerifyTokenService> _logger = logger;
+        private readonly IUserService _userService = userService;
 
         /// <inheritdoc />
         public async Task<TokenVerificationResponse> VerifyTokenAsync(VerifyTokenRequest verifyRequest)
@@ -153,8 +134,8 @@ namespace GateKeeper.Server.Services
             }
             else if (!string.IsNullOrEmpty(token)) // If token is passed but not in expected format, it might be just the ID
             {
-                 _logger.LogWarning("RevokeTokensAsync received a token '{TokenValue}' not in 'tokenId.rawValue' format. Assuming it's a tokenId.", token.SanitizeForLogging());
-                 tokenId = token; // Or treat as an error, depending on expected usage
+                _logger.LogWarning("RevokeTokensAsync received a token '{TokenValue}' not in 'tokenId.rawValue' format. Assuming it's a tokenId.", token.SanitizeForLogging());
+                tokenId = token; // Or treat as an error, depending on expected usage
             }
 
 

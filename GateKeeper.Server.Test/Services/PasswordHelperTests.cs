@@ -1,12 +1,12 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using GateKeeper.Server.Services;
 using Microsoft.Extensions.Configuration;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
 using System;
-using GateKeeper.Server.Models.Configuration; // For Convert
+using GateKeeper.Server.Models.Configuration;
+using GateKeeper.Server.Services.Site; // For Convert
 
 namespace GateKeeper.Server.Test.Services
 {

@@ -8,56 +8,43 @@ using GateKeeper.Server.Models.Account.UserModels;
 using GateKeeper.Server.Models.Site;
 using Microsoft.Extensions.Logging; // Added for logging
 
-namespace GateKeeper.Server.Services
+namespace GateKeeper.Server.Services.Site
 {
-    public class NotificationService : INotificationService
+    public class NotificationService(
+        INotificationRepository notificationRepository,
+        IEmailService emailService,
+        IUserService userService,
+        IVerifyTokenService verifyTokenService,
+        ILogger<NotificationService> logger)
+        : INotificationService
     {
-        private readonly INotificationRepository _notificationRepository;
-        private readonly IEmailService _emailService;
-        private readonly IUserService _userService;
-        private readonly IVerifyTokenService _verifyTokenService;
-        private readonly ILogger<NotificationService> _logger; // Added logger
-
-        public NotificationService(
-            INotificationRepository notificationRepository,
-            IEmailService emailService,
-            IUserService userService,
-            IVerifyTokenService verifyTokenService,
-            ILogger<NotificationService> logger) // Added logger parameter
-        {
-            _notificationRepository = notificationRepository;
-            _emailService = emailService;
-            _userService = userService;
-            _verifyTokenService = verifyTokenService;
-            _logger = logger; // Initialize logger
-        }
 
         public async Task<List<Notification>> GetAllNotificationsAsync()
         {
-            _logger.LogInformation("Fetching all notifications.");
-            return await _notificationRepository.GetAllAsync();
+            logger.LogInformation("Fetching all notifications.");
+            return await notificationRepository.GetAllAsync();
         }
 
         public async Task<List<Notification>> GetNotificationsByRecipientAsync(int recipientId)
         {
-            _logger.LogInformation("Fetching notifications for recipient ID: {RecipientId}", recipientId);
-            return await _notificationRepository.GetByRecipientIdAsync(recipientId);
+            logger.LogInformation("Fetching notifications for recipient ID: {RecipientId}", recipientId);
+            return await notificationRepository.GetByRecipientIdAsync(recipientId);
         }
 
         public async Task<List<Notification>> GetNotSentNotificationsAsync(DateTime currentTime)
         {
-            _logger.LogInformation("Fetching not sent notifications scheduled before or at: {CurrentTime}", currentTime);
-            return await _notificationRepository.GetNotSentAsync(currentTime);
+            logger.LogInformation("Fetching not sent notifications scheduled before or at: {CurrentTime}", currentTime);
+            return await notificationRepository.GetNotSentAsync(currentTime);
         }
 
         public async Task<NotificationInsertResponse> InsertNotificationAsync(Notification notification)
         {
             if (notification == null)
             {
-                _logger.LogError("Attempted to insert a null notification.");
+                logger.LogError("Attempted to insert a null notification.");
                 throw new ArgumentNullException(nameof(notification));
             }
-            _logger.LogInformation("Inserting notification for recipient: {ToEmail}, Subject: {Subject}", notification.ToEmail, notification.Subject);
+            logger.LogInformation("Inserting notification for recipient: {ToEmail}, Subject: {Subject}", notification.ToEmail, notification.Subject);
 
             var response = new NotificationInsertResponse();
 
@@ -69,10 +56,10 @@ namespace GateKeeper.Server.Services
             }
 
             // Get FromUser details
-            User userFrom = await _userService.GetUser(notification.FromId);
+            User userFrom = await userService.GetUser(notification.FromId);
             if (userFrom == null)
             {
-                _logger.LogError("FromUser with ID {FromId} not found for notification.", notification.FromId);
+                logger.LogError("FromUser with ID {FromId} not found for notification.", notification.FromId);
                 // Handle error appropriately, perhaps throw or return an error response
                 throw new InvalidOperationException($"FromUser with ID {notification.FromId} not found.");
             }
@@ -88,7 +75,7 @@ namespace GateKeeper.Server.Services
             User userTo = null;
             if (notification.RecipientId > 0)
             {
-                userTo = await _userService.GetUser(notification.RecipientId);
+                userTo = await userService.GetUser(notification.RecipientId);
                 if (userTo != null)
                 {
                     if (string.IsNullOrEmpty(notification.ToName))
@@ -98,7 +85,7 @@ namespace GateKeeper.Server.Services
                 }
                 else
                 {
-                     _logger.LogWarning("RecipientUser with ID {RecipientId} not found, but RecipientId was provided.", notification.RecipientId);
+                    logger.LogWarning("RecipientUser with ID {RecipientId} not found, but RecipientId was provided.", notification.RecipientId);
                 }
             }
 
@@ -120,16 +107,16 @@ namespace GateKeeper.Server.Services
             if (!string.IsNullOrEmpty(notification.TokenType) && notification.Message.Contains("{{Verification_Code}}"))
             {
                 int userIdForToken = userTo?.Id ?? userFrom.Id; // Prioritize ToUser for token, fallback to FromUser
-                 if (userTo == null && notification.RecipientId > 0)
+                if (userTo == null && notification.RecipientId > 0)
                 {
-                    _logger.LogWarning("Token generation for notification: ToUser was specified by RecipientId {RecipientId} but not found. Token will be generated for FromUser ID {FromId}.", notification.RecipientId, userFrom.Id);
+                    logger.LogWarning("Token generation for notification: ToUser was specified by RecipientId {RecipientId} but not found. Token will be generated for FromUser ID {FromId}.", notification.RecipientId, userFrom.Id);
                 }
                 else if (userTo == null)
                 {
-                     _logger.LogInformation("Token generation for notification: ToUser is not specified or not found. Token will be generated for FromUser ID {FromId}.", userFrom.Id);
+                    logger.LogInformation("Token generation for notification: ToUser is not specified or not found. Token will be generated for FromUser ID {FromId}.", userFrom.Id);
                 }
 
-                verificationCode = await _verifyTokenService.GenerateTokenAsync(userIdForToken, notification.TokenType);
+                verificationCode = await verifyTokenService.GenerateTokenAsync(userIdForToken, notification.TokenType);
                 notification.Message = notification.Message.Replace("{{Verification_Code}}", WebUtility.UrlEncode(verificationCode));
 
                 if (!string.IsNullOrEmpty(verificationCode) && verificationCode.Contains("."))
@@ -141,63 +128,63 @@ namespace GateKeeper.Server.Services
                     response.VerificationId = verificationCode; // Handle cases where token might not have a dot
                 }
             }
-            
+
             if (userTo != null) // Only replace {{Username}} if userTo is resolved
             {
-                 notification.Subject = notification.Subject.Replace("{{Username}}", userTo.Username);
+                notification.Subject = notification.Subject.Replace("{{Username}}", userTo.Username);
             }
 
 
-            response.NotificationId = await _notificationRepository.InsertAsync(notification);
-            _logger.LogInformation("Notification inserted with ID: {NotificationId}", response.NotificationId);
+            response.NotificationId = await notificationRepository.InsertAsync(notification);
+            logger.LogInformation("Notification inserted with ID: {NotificationId}", response.NotificationId);
             return response;
         }
 
         public async Task ProcessPendingNotificationsAsync()
         {
             var currentTime = DateTime.UtcNow;
-            _logger.LogInformation("Processing pending notifications up to: {CurrentTime}", currentTime);
+            logger.LogInformation("Processing pending notifications up to: {CurrentTime}", currentTime);
             var pendingNotifications = await GetNotSentNotificationsAsync(currentTime);
 
             if (!pendingNotifications.Any())
             {
-                _logger.LogInformation("No pending notifications to process.");
+                logger.LogInformation("No pending notifications to process.");
                 return;
             }
 
             foreach (var notification in pendingNotifications)
             {
-                _logger.LogInformation("Processing notification ID: {NotificationId}, Channel: {Channel}", notification.Id, notification.Channel);
+                logger.LogInformation("Processing notification ID: {NotificationId}, Channel: {Channel}", notification.Id, notification.Channel);
                 if (notification.Channel.Equals("email", StringComparison.OrdinalIgnoreCase))
                 {
                     try
                     {
-                        var fromUser = await _userService.GetUser(notification.FromId);
+                        var fromUser = await userService.GetUser(notification.FromId);
                         if (fromUser == null)
                         {
-                            _logger.LogError("FromUser not found for notification ID: {NotificationId}. Skipping email.", notification.Id);
+                            logger.LogError("FromUser not found for notification ID: {NotificationId}. Skipping email.", notification.Id);
                             continue;
                         }
-                        await _emailService.SendEmailAsync(notification.ToEmail, notification.ToName, fromUser.Username, notification.Subject, notification.Message);
-                        _logger.LogInformation("Email sent for notification ID: {NotificationId}", notification.Id);
+                        await emailService.SendEmailAsync(notification.ToEmail, notification.ToName, fromUser.Username, notification.Subject, notification.Message);
+                        logger.LogInformation("Email sent for notification ID: {NotificationId}", notification.Id);
 
                         notification.IsSent = true;
                         notification.UpdatedAt = DateTime.UtcNow;
-                        await _notificationRepository.UpdateAsync(notification);
-                        _logger.LogInformation("Notification ID: {NotificationId} marked as sent.", notification.Id);
+                        await notificationRepository.UpdateAsync(notification);
+                        logger.LogInformation("Notification ID: {NotificationId} marked as sent.", notification.Id);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Error processing email notification ID: {NotificationId}", notification.Id);
+                        logger.LogError(ex, "Error processing email notification ID: {NotificationId}", notification.Id);
                         // Decide on error handling: retry, mark as failed, etc.
                     }
                 }
                 else
                 {
-                    _logger.LogWarning("Unsupported notification channel '{Channel}' for notification ID: {NotificationId}", notification.Channel, notification.Id);
+                    logger.LogWarning("Unsupported notification channel '{Channel}' for notification ID: {NotificationId}", notification.Channel, notification.Id);
                 }
             }
-            _logger.LogInformation("Finished processing {Count} pending notifications.", pendingNotifications.Count);
+            logger.LogInformation("Finished processing {Count} pending notifications.", pendingNotifications.Count);
         }
     }
 }

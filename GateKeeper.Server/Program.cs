@@ -1,5 +1,4 @@
 using GateKeeper.Server.Interface;
-using GateKeeper.Server.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -12,7 +11,8 @@ using Serilog.Formatting.Compact;
 using GateKeeper.Server.Models.Configuration; // Added for typed configurations
 using Microsoft.Extensions.Options; // Added for IOptions
 using System.Data; // Added for IDbConnection
-using MySqlConnector; // Added for MySqlConnection
+using MySqlConnector;
+using GateKeeper.Server.Services.Site; // Added for MySqlConnection
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -122,7 +122,12 @@ builder.Services.AddOptions<SerilogConfig>()
 builder.Services.AddScoped<IDbConnection>(sp =>
 {
     var dbConfig = sp.GetRequiredService<IOptions<DatabaseConfig>>().Value;
-    return new MySqlConnection(dbConfig.GateKeeperConnection);
+    var gateKeeperConnectionString = dbConfig.Connections.FirstOrDefault(c => c.Name == "GateKeeperConnection")?.ConnectionString;
+    if (string.IsNullOrEmpty(gateKeeperConnectionString))
+    {
+        throw new InvalidOperationException("GateKeeperConnection string not found in configuration.");
+    }
+    return new MySqlConnection(gateKeeperConnectionString);
 });
 
 // Register Repositories
@@ -165,11 +170,18 @@ builder.Services.AddTransient<IStringDataProtector>(provider =>
 
 builder.Services.AddHangfire(config =>
 {
+    var dbConfig = builder.Services.BuildServiceProvider().GetRequiredService<IOptions<DatabaseConfig>>().Value;
+    var hangfireConnectionString = dbConfig.Connections.FirstOrDefault(c => c.Name == "HangfireConnection")?.ConnectionString;
+    if (string.IsNullOrEmpty(hangfireConnectionString))
+    {
+        throw new InvalidOperationException("HangfireConnection string not found in configuration.");
+    }
+
     config.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
         .UseSimpleAssemblyNameTypeSerializer()
         .UseRecommendedSerializerSettings()
         .UseStorage(new MySqlStorage(
-            builder.Configuration.GetConnectionString("HangfireConnection"),
+            hangfireConnectionString,
             new MySqlStorageOptions
             {
                 QueuePollInterval = TimeSpan.FromSeconds(15),

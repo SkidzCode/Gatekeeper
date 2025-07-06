@@ -1,12 +1,9 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Microsoft.AspNetCore.DataProtection; // For IDataProtector
-using GateKeeper.Server.Services;
-using GateKeeper.Server.Interface; // For IStringDataProtector
-using System;
+using Microsoft.AspNetCore.DataProtection;
+using GateKeeper.Server.Interface; 
 using System.Text;
-using System.Security.Cryptography; // For CryptographicException
-using System.Linq; // For SequenceEqual
+using System.Security.Cryptography; 
+using GateKeeper.Server.Services.Site; 
 
 namespace GateKeeper.Server.Test.Services
 {

@@ -1,7 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Microsoft.Extensions.Logging;
-using GateKeeper.Server.Services;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Account;
 using GateKeeper.Server.Models.Account.Login;
@@ -10,6 +9,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using GateKeeper.Server.Services.Site;
 
 namespace GateKeeper.Server.Test.Services
 {

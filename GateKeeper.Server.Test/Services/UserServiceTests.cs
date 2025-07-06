@@ -1,13 +1,13 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using GateKeeper.Server.Services;
 using GateKeeper.Server.Interface;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using GateKeeper.Server.Models.Account.UserModels;
 using System; // For DateTime
-using System.Linq; // For ToList
+using System.Linq;
+using GateKeeper.Server.Services.Site; // For ToList
 
 namespace GateKeeper.Server.Test.Services
 {

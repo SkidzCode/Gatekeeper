@@ -1,6 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using GateKeeper.Server.Services;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Account;
 using GateKeeper.Server.Models.Account.UserModels;
@@ -17,6 +16,7 @@ using System.Security;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using GateKeeper.Server.Exceptions;
+using GateKeeper.Server.Services.Site;
 
 namespace GateKeeper.Server.Test.Services
 {

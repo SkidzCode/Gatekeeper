@@ -1,6 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using GateKeeper.Server.Services;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Site;
 using GateKeeper.Server.Models.Configuration;
@@ -9,7 +8,8 @@ using Microsoft.Extensions.Logging; // Added for ILogger
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System;
-using System.Linq; // Keep for It.IsAny if still used, or general LINQ operations
+using System.Linq;
+using GateKeeper.Server.Services.Site; // Keep for It.IsAny if still used, or general LINQ operations
 
 namespace GateKeeper.Server.Test.Services
 {

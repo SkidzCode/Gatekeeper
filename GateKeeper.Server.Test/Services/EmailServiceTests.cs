@@ -6,6 +6,7 @@ using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Configuration; // Added for EmailSettingsConfig
 using System.Net.Mail;
 using System.Threading.Tasks;
+using GateKeeper.Server.Services.Site;
 
 namespace GateKeeper.Server.Test.Services
 {

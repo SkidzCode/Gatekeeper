@@ -1,13 +1,13 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using GateKeeper.Server.Services;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Site;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System;
-using System.Linq; // Keep if used for LINQ expressions in parameter matching
+using System.Linq;
+using GateKeeper.Server.Services.Site; // Keep if used for LINQ expressions in parameter matching
 
 namespace GateKeeper.Server.Test.Services
 {

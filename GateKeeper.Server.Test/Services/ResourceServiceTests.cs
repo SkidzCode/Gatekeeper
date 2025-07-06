@@ -1,6 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using GateKeeper.Server.Services;
 using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Resources;
 using Microsoft.Extensions.Logging;
@@ -11,7 +10,8 @@ using System.Collections.Generic;
 using System.Linq; // Required for LINQ operations on XDocument
 using System;
 using GateKeeper.Server.Models.Configuration;
-using Microsoft.Extensions.Options; // Required for InvalidOperationException, etc.
+using Microsoft.Extensions.Options;
+using GateKeeper.Server.Services.Site; // Required for InvalidOperationException, etc.
 
 namespace GateKeeper.Server.Test.Services
 {

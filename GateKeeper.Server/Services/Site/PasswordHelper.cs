@@ -1,12 +1,9 @@
-﻿
-using System;
-using System.Linq;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
-using GateKeeper.Server.Models.Configuration; // Added for PasswordSettingsConfig
+using GateKeeper.Server.Models.Configuration;
 
-namespace GateKeeper.Server.Services;
+namespace GateKeeper.Server.Services.Site;
 
 // ... (other using statements and class definition remain the same)
 

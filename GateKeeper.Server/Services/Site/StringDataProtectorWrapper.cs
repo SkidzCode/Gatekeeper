@@ -1,25 +1,18 @@
 using GateKeeper.Server.Interface;
 using Microsoft.AspNetCore.DataProtection;
-using System;
 using System.Text;
 
-namespace GateKeeper.Server.Services
+namespace GateKeeper.Server.Services.Site
 {
-    public class StringDataProtectorWrapper : IStringDataProtector
+    public class StringDataProtectorWrapper(IDataProtector dataProtector) : IStringDataProtector
     {
-        private readonly IDataProtector _dataProtector;
-
-        public StringDataProtectorWrapper(IDataProtector dataProtector)
-        {
-            _dataProtector = dataProtector ?? throw new ArgumentNullException(nameof(dataProtector));
-        }
+        private readonly IDataProtector _dataProtector = dataProtector ?? throw new ArgumentNullException(nameof(dataProtector));
 
         public string Protect(string plaintext)
         {
-            if (plaintext == null)
-            {
-                return null;
-            }
+            if (string.IsNullOrEmpty(plaintext))
+                return plaintext;
+
             var plaintextBytes = Encoding.UTF8.GetBytes(plaintext);
             var protectedBytes = _dataProtector.Protect(plaintextBytes);
             return Convert.ToBase64String(protectedBytes);
@@ -27,10 +20,8 @@ namespace GateKeeper.Server.Services
 
         public string Unprotect(string protectedData)
         {
-            if (protectedData == null)
-            {
-                return null;
-            }
+            if (string.IsNullOrEmpty(protectedData))
+                return protectedData;
             try
             {
                 var protectedBytes = Convert.FromBase64String(protectedData);
@@ -43,7 +34,7 @@ namespace GateKeeper.Server.Services
                 // This might indicate tampering or an invalid cookie format.
                 // Depending on policy, you might log this or return null/throw.
                 // For now, returning null to indicate failure to unprotect.
-                return null; 
+                return null;
             }
             catch (System.Security.Cryptography.CryptographicException)
             {

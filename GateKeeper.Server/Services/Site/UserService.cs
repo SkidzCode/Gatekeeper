@@ -1,26 +1,12 @@
 ﻿using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Account.UserModels;
-using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System; // Required for DBNull
 
-namespace GateKeeper.Server.Services
+namespace GateKeeper.Server.Services.Site
 {
-    public class UserService : IUserService
+    public class UserService(IUserRepository userRepository, ILogger<UserService> logger) : IUserService
     {
-        private readonly IUserRepository _userRepository;
-        private readonly ILogger<UserService> _logger;
-
-        /// <summary>
-        /// Constructor for the UserService.
-        /// </summary>
-        public UserService(IUserRepository userRepository, ILogger<UserService> logger)
-        {
-            _userRepository = userRepository;
-            _logger = logger;
-        }
+        private readonly IUserRepository _userRepository = userRepository;
+        private readonly ILogger<UserService> _logger = logger;
 
         /// <summary>
         /// Registers a new user.
@@ -43,7 +29,7 @@ namespace GateKeeper.Server.Services
                 LastName = user.LastName,
                 Email = user.Email,
                 Username = user.Username,
-                Password = PasswordHelper.HashPassword(user.Password, salt), // Hash here
+                Password = PasswordHelper.HashPassword(user.Password ?? "", salt), // Hash here
                 Phone = user.Phone
                 // Id will be set by the repository if successful
             };

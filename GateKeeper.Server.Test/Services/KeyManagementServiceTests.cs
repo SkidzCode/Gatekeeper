@@ -1,6 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using GateKeeper.Server.Services;
 using GateKeeper.Server.Interface;
 using Microsoft.Extensions.Logging;
 using System.Security;
@@ -11,6 +10,7 @@ using System.Security.Cryptography;
 using Microsoft.Extensions.Options;
 using GateKeeper.Server.Models.Configuration;
 using System.Linq;
+using GateKeeper.Server.Services.Site;
 
 namespace GateKeeper.Server.Test.Services
 {

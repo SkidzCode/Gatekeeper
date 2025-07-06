@@ -1,28 +1,13 @@
 ﻿using GateKeeper.Server.Interface;
 using GateKeeper.Server.Models.Site;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using GateKeeper.Server.Extension; // Keep for SanitizeForLogging if used, otherwise remove
+using GateKeeper.Server.Extension;
 
-namespace GateKeeper.Server.Services
+namespace GateKeeper.Server.Services.Site
 {
-    public class SettingsService : ISettingsService
+    public class SettingsService(ISettingsRepository settingsRepository, ILogger<SettingsService> logger) : ISettingsService
     {
-        private readonly ISettingsRepository _settingsRepository;
-        private readonly ILogger<SettingsService> _logger;
-
-        /// <summary>
-        /// Constructor for the SettingsService.
-        /// </summary>
-        /// <param name="settingsRepository">Repository for settings data access.</param>
-        /// <param name="logger">Logger for SettingsService.</param>
-        public SettingsService(ISettingsRepository settingsRepository, ILogger<SettingsService> logger)
-        {
-            _settingsRepository = settingsRepository;
-            _logger = logger;
-        }
+        private readonly ISettingsRepository _settingsRepository = settingsRepository;
+        private readonly ILogger<SettingsService> _logger = logger;
 
         /// <summary>
         /// Retrieves all settings.
@@ -44,7 +29,7 @@ namespace GateKeeper.Server.Services
         }
 
         /// <summary>
-        /// Retrieves a specific setting by its Id.
+        /// Retrieves a specific setting by its id.
         /// </summary>
         /// <param name="id">Unique ID of the setting.</param>
         /// <returns>Setting object or null if not found.</returns>
@@ -66,7 +51,7 @@ namespace GateKeeper.Server.Services
         /// Inserts a new setting.
         /// </summary>
         /// <param name="setting">Setting object containing necessary fields.</param>
-        /// <returns>The inserted Setting with the new Id.</returns>
+        /// <returns>The inserted Setting with the new id.</returns>
         public async Task<Setting> AddSettingAsync(Setting setting)
         {
             try
@@ -185,7 +170,7 @@ namespace GateKeeper.Server.Services
         /// <summary>
         /// Adds or updates a setting.
         /// </summary>
-        /// <param name="userId">User Id associated with this operation.</param>
+        /// <param name="userId">User id associated with this operation.</param>
         /// <param name="setting">Setting object containing necessary fields.</param>
         /// <returns>The inserted or updated Setting object, or null if operation failed.</returns>
         public async Task<Setting?> AddOrUpdateSettingAsync(int userId, Setting setting)
